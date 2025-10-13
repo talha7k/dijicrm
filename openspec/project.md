@@ -80,6 +80,6 @@ This is a CRM (Customer Relationship Management) system focused on invoice and b
 
 - **Firebase**: Primary backend for authentication, database (Firestore), and file storage
 - **Stripe/Payment Processors**: For payment processing (future integration)
-- **Email Services**: For notifications and invoice delivery (SendGrid/Mailgun)
+- **Email Services**: For notifications and invoice delivery (SMTP)
 - **Analytics**: Google Analytics or similar for usage tracking
 - **CDN**: For static asset delivery and performance optimization

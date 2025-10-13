@@ -6,7 +6,7 @@ import { useDocumentDelivery } from "$lib/hooks/useDocumentDelivery";
 export const POST = async ({ request }: any) => {
   try {
     const body = await request.json();
-    const { events } = body; // SendGrid webhook format
+    const { events } = body; // Email service webhook format
 
     if (!events || !Array.isArray(events)) {
       throw error(400, "Invalid webhook payload: events array required");
