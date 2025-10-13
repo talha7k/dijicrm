@@ -28,6 +28,7 @@ function createDocumentGenerationStore() {
       templateId: string,
       data: Record<string, any>,
       format: "html" | "pdf" = "pdf",
+      companyId?: string,
     ) {
       update((state) => ({ ...state, loading: true, error: null }));
 
@@ -41,6 +42,7 @@ function createDocumentGenerationStore() {
             templateId,
             data,
             format,
+            companyId,
           }),
         });
 

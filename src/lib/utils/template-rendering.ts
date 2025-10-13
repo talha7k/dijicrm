@@ -2,6 +2,7 @@ import type {
   DocumentTemplate,
   TemplatePlaceholder,
 } from "$lib/types/document";
+import type { CompanyBranding } from "$lib/types/branding";
 
 /**
  * Renders a document template by replacing placeholders with actual data
@@ -20,6 +21,94 @@ export function renderTemplate(
   }
 
   return html;
+}
+
+/**
+ * Injects company branding into rendered HTML
+ */
+export function injectBrandingIntoHtml(
+  html: string,
+  branding: CompanyBranding,
+): string {
+  let brandedHtml = html;
+
+  // Inject logo if available
+  if (branding.logoUrl) {
+    // Add logo to the top of the document
+    const logoHtml = `
+      <div style="text-align: center; margin-bottom: 20px;">
+        <img src="${branding.logoUrl}" alt="Company Logo" style="max-width: 200px; max-height: 100px;" />
+      </div>
+    `;
+
+    // Insert logo after the opening body tag or at the beginning
+    if (brandedHtml.includes("<body>")) {
+      brandedHtml = brandedHtml.replace(/(<body[^>]*>)/, `$1${logoHtml}`);
+    } else {
+      brandedHtml = logoHtml + brandedHtml;
+    }
+  }
+
+  // Inject stamp if configured
+  if (branding.stampText) {
+    const stampPosition = branding.stampPosition || "bottom-right";
+    const stampFontSize = branding.stampFontSize || 12;
+    const stampColor = branding.stampColor || "#000000";
+
+    // Position styles based on stamp position
+    let positionStyles = "";
+    switch (stampPosition) {
+      case "top-left":
+        positionStyles = "position: absolute; top: 20px; left: 20px;";
+        break;
+      case "top-right":
+        positionStyles = "position: absolute; top: 20px; right: 20px;";
+        break;
+      case "bottom-left":
+        positionStyles = "position: absolute; bottom: 20px; left: 20px;";
+        break;
+      case "bottom-right":
+      default:
+        positionStyles = "position: absolute; bottom: 20px; right: 20px;";
+        break;
+    }
+
+    const stampHtml = `
+      <div style="${positionStyles} font-size: ${stampFontSize}px; color: ${stampColor}; opacity: 0.7; transform: rotate(-15deg); pointer-events: none;">
+        ${branding.stampText}
+      </div>
+    `;
+
+    // Wrap content in relative positioned container and add stamp
+    brandedHtml = `
+      <div style="position: relative; min-height: 100vh;">
+        ${brandedHtml}
+        ${stampHtml}
+      </div>
+    `;
+  }
+
+  // Apply brand colors if specified
+  if (branding.primaryColor || branding.secondaryColor) {
+    // Add CSS custom properties for brand colors
+    const colorVars = `
+      <style>
+        :root {
+          --brand-primary: ${branding.primaryColor || "#007bff"};
+          --brand-secondary: ${branding.secondaryColor || "#6c757d"};
+        }
+      </style>
+    `;
+
+    // Insert color variables in head or at the beginning
+    if (brandedHtml.includes("<head>")) {
+      brandedHtml = brandedHtml.replace(/(<head[^>]*>)/, `$1${colorVars}`);
+    } else {
+      brandedHtml = colorVars + brandedHtml;
+    }
+  }
+
+  return brandedHtml;
 }
 
 /**

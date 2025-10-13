@@ -182,7 +182,8 @@
         };
 
         // Generate document
-        await generationStore.generateDocument(requirement.templateId, documentData, "pdf");
+        const companyId = "company-1"; // TODO: Get from auth context
+        await generationStore.generateDocument(requirement.templateId, documentData, "pdf", companyId);
 
         if ($generationStore.result) {
           const generatedDoc: GeneratedDocument = {

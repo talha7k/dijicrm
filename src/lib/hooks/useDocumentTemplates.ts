@@ -8,11 +8,15 @@ const mockTemplates: DocumentTemplate[] = [
     id: "template-invoice-001",
     companyId: "company-001",
     name: "Standard Invoice Template",
-    description: "Professional invoice template with company branding",
+    description:
+      "Professional invoice template with automatic company branding (logo and stamp)",
     type: "invoice",
     htmlContent: `
       <div class="invoice-container">
         <header class="invoice-header">
+          <div class="company-logo" style="text-align: center; margin-bottom: 20px;">
+            <!-- Company logo will be automatically injected here -->
+          </div>
           <h1>Invoice</h1>
           <div class="company-info">
             <h2>{{companyName}}</h2>
@@ -89,6 +93,21 @@ const mockTemplates: DocumentTemplate[] = [
         label: "Total Amount",
         type: "currency",
         required: true,
+      },
+      // Branding placeholders (optional - branding is auto-injected)
+      {
+        key: "companyLogo",
+        label: "Company Logo URL",
+        type: "text",
+        required: false,
+        defaultValue: "",
+      },
+      {
+        key: "stampText",
+        label: "Document Stamp Text",
+        type: "text",
+        required: false,
+        defaultValue: "",
       },
     ],
     isActive: true,

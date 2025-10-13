@@ -10,20 +10,17 @@
   import { Textarea } from "$lib/components/ui/textarea";
 
   import Icon from "@iconify/svelte";
-  import { requireCompany } from "$lib/utils/auth";
+  import { brandingService } from "$lib/services/brandingService";
+  import type { CompanyBranding } from "$lib/types/branding";
+  import { useSMTPConfig } from "$lib/hooks/useSMTPConfig";
 
   let mounted = $state(false);
 
-  onMount(() => {
-    mounted = true;
-    // Company access is checked at layout level
-  });
-
-  // SMTP Configuration
+  // SMTP Configuration state from hook
   let smtpConfig = $state({
     enabled: false,
     host: "",
-    port: 587,
+    port: "587",
     secure: false, // Use TLS
     auth: {
       user: "",
@@ -38,11 +35,109 @@
   let isTesting = $state(false);
   let testResult = $state<{ success: boolean; message: string } | null>(null);
 
-  async function handleSaveSMTP() {
+  // Branding configuration
+  let branding = $state<CompanyBranding>({
+    logoUrl: "",
+    stampText: "",
+    stampPosition: "bottom-right",
+    stampFontSize: 12,
+    stampColor: "#000000",
+    primaryColor: "#007bff",
+    secondaryColor: "#6c757d",
+  });
+
+  // Logo upload state
+  let selectedLogoFile = $state<File | null>(null);
+  let isUploadingLogo = $state(false);
+  let logoPreview = $state<string | null>(null);
+
+  // SMTP hook
+  const smtpStore = useSMTPConfig();
+
+  onMount(async () => {
+    mounted = true;
+
+    // Load existing configurations
+    // TODO: Get companyId from auth context
+    const companyId = "company-1";
+
     try {
-      // TODO: Save SMTP configuration to Firebase
-      console.log("Saving SMTP config:", smtpConfig);
-      alert("SMTP configuration saved successfully!");
+      // Load SMTP config
+      await smtpStore.initialize(companyId);
+      const loadedSMTPConfig = smtpStore.getCurrentConfig();
+      if (loadedSMTPConfig) {
+        smtpConfig = {
+          ...loadedSMTPConfig,
+          port: loadedSMTPConfig.port.toString(), // Convert to string for Select component
+        };
+      }
+
+      // Load branding config
+      const brandingResult = await brandingService.loadBranding(companyId);
+      if (brandingResult.success && brandingResult.branding) {
+        branding = { ...branding, ...brandingResult.branding };
+        if (branding.logoUrl) {
+          logoPreview = branding.logoUrl;
+        }
+      } else if (brandingResult.error) {
+        console.warn("Failed to load branding config:", brandingResult.error);
+        // Continue with default branding - don't show error to user
+      }
+    } catch (error) {
+      console.error("Failed to load configurations:", error);
+      // Show error to user but don't block the page
+      alert("Failed to load existing configurations. You can still configure new settings.");
+    }
+  });
+
+  async function handleSaveSMTP() {
+    // TODO: Get companyId from auth context
+    const companyId = "company-1";
+
+    // Basic validation
+    if (smtpConfig.enabled) {
+      if (!smtpConfig.host.trim()) {
+        alert("SMTP host is required when SMTP is enabled.");
+        return;
+      }
+      if (!smtpConfig.auth.user.trim()) {
+        alert("SMTP username is required when SMTP is enabled.");
+        return;
+      }
+      if (!smtpConfig.auth.pass.trim()) {
+        alert("SMTP password is required when SMTP is enabled.");
+        return;
+      }
+      if (!smtpConfig.fromEmail.trim()) {
+        alert("From email is required when SMTP is enabled.");
+        return;
+      }
+      if (!smtpConfig.fromName.trim()) {
+        alert("From name is required when SMTP is enabled.");
+        return;
+      }
+
+      const portNum = parseInt(smtpConfig.port);
+      if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+        alert("Please enter a valid port number (1-65535).");
+        return;
+      }
+    }
+
+    try {
+      // Convert port back to number for saving
+      const configToSave = {
+        ...smtpConfig,
+        port: parseInt(smtpConfig.port),
+      };
+
+      const result = await smtpStore.saveConfig(companyId, configToSave);
+
+      if (result.success) {
+        alert("SMTP configuration saved successfully!");
+      } else {
+        alert(`Failed to save SMTP configuration: ${result.error}`);
+      }
     } catch (error) {
       console.error("Failed to save SMTP config:", error);
       alert("Failed to save SMTP configuration. Please try again.");
@@ -59,6 +154,12 @@
     testResult = null;
 
     try {
+      // Convert port to number for API
+      const configForTest = {
+        ...smtpConfig,
+        port: parseInt(smtpConfig.port),
+      };
+
       const response = await fetch("/api/test-email", {
         method: "POST",
         headers: {
@@ -66,7 +167,7 @@
         },
         body: JSON.stringify({
           to: testEmail,
-          smtpConfig,
+          smtpConfig: configForTest,
         }),
       });
 
@@ -84,16 +185,141 @@
     }
   }
 
-  function handlePortChange(port: string) {
-    const portNum = parseInt(port);
-    if (!isNaN(portNum)) {
-      smtpConfig.port = portNum;
-      // Auto-set secure based on common ports
-      if (portNum === 465) {
-        smtpConfig.secure = true;
-      } else if (portNum === 587 || portNum === 25) {
-        smtpConfig.secure = false;
+  // Branding functions
+  async function handleLogoUpload() {
+    if (!selectedLogoFile) {
+      alert("Please select a logo file first.");
+      return;
+    }
+
+    const companyId = "company-1"; // TODO: Get from auth context
+    isUploadingLogo = true;
+
+    try {
+      const result = await brandingService.uploadLogo(companyId, selectedLogoFile);
+
+      if (result.success && result.url) {
+        // Update branding with new logo
+        const updateResult = await brandingService.updateLogo(companyId, result.url);
+
+        if (updateResult.success) {
+          branding.logoUrl = result.url;
+          logoPreview = result.url;
+          selectedLogoFile = null;
+          alert("Logo uploaded successfully!");
+        } else {
+          alert(`Failed to update branding: ${updateResult.error}`);
+        }
+      } else {
+        alert(`Failed to upload logo: ${result.error}`);
       }
+    } catch (error) {
+      console.error("Logo upload error:", error);
+      alert("Failed to upload logo. Please try again.");
+    } finally {
+      isUploadingLogo = false;
+    }
+  }
+
+  async function handleLogoFileSelect(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+
+    if (file) {
+      // Validation
+      const maxSize = 2 * 1024 * 1024; // 2MB
+      const allowedTypes = ["image/jpeg", "image/png", "image/svg+xml", "image/webp"];
+      const maxWidth = 2000;
+      const maxHeight = 2000;
+
+      if (file.size > maxSize) {
+        alert("File size must be less than 2MB.");
+        target.value = ""; // Clear the input
+        return;
+      }
+
+      if (!allowedTypes.includes(file.type)) {
+        alert("Please select a valid image file (JPEG, PNG, SVG, or WebP).");
+        target.value = ""; // Clear the input
+        return;
+      }
+
+      // Check dimensions for non-SVG files
+      if (file.type !== "image/svg+xml") {
+        try {
+          const dimensions = await getImageDimensions(file);
+          if (dimensions.width > maxWidth || dimensions.height > maxHeight) {
+            alert(`Image dimensions must be ${maxWidth}x${maxHeight} pixels or smaller. Selected image is ${dimensions.width}x${dimensions.height} pixels.`);
+            target.value = ""; // Clear the input
+            return;
+          }
+        } catch (error) {
+          console.warn("Could not validate image dimensions:", error);
+          // Continue anyway - the upload will handle it
+        }
+      }
+
+      selectedLogoFile = file;
+
+      // Create preview for non-SVG files
+      if (file.type !== "image/svg+xml") {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          logoPreview = e.target?.result as string;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // For SVG, just set a placeholder preview
+        logoPreview = "data:image/svg+xml;base64," + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#f3f4f6"/><text x="32" y="35" text-anchor="middle" font-family="Arial" font-size="12" fill="#6b7280">SVG</text></svg>');
+      }
+    }
+  }
+
+  // Helper function to get image dimensions
+  function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve({ width: img.width, height: img.height });
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Could not load image"));
+      };
+
+      img.src = url;
+    });
+  }
+
+  async function handleSaveBranding() {
+    const companyId = "company-1"; // TODO: Get from auth context
+
+    try {
+      const result = await brandingService.saveBranding(companyId, branding);
+
+      if (result.success) {
+        alert("Branding configuration saved successfully!");
+      } else {
+        alert(`Failed to save branding: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Save branding error:", error);
+      alert("Failed to save branding configuration. Please try again.");
+    }
+  }
+
+  function handlePortChange(port: string) {
+    smtpConfig.port = port;
+    const portNum = parseInt(port);
+    // Auto-set secure based on common ports
+    if (portNum === 465) {
+      smtpConfig.secure = true;
+    } else if (portNum === 587 || portNum === 25) {
+      smtpConfig.secure = false;
     }
   }
 </script>
@@ -135,7 +361,7 @@
             </div>
             <div>
               <Label for="smtp-port">Port</Label>
-              <Select value={smtpConfig.port.toString()} onValueChange={handlePortChange}>
+              <Select type="single" bind:value={smtpConfig.port} onValueChange={handlePortChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select port" />
                 </SelectTrigger>
@@ -255,16 +481,147 @@
       </CardContent>
     </Card>
 
-    <!-- Additional Settings Sections -->
+    <!-- Company Branding -->
     <Card>
       <CardHeader>
-        <CardTitle>Company Information</CardTitle>
-        <CardDescription>Basic company details and branding</CardDescription>
+        <CardTitle>Company Branding</CardTitle>
+        <CardDescription>Customize your company's logo and document branding</CardDescription>
       </CardHeader>
-      <CardContent>
-        <p class="text-sm text-muted-foreground">
-          Company information settings will be added here in a future update.
-        </p>
+      <CardContent class="space-y-6">
+        <!-- Logo Upload Section -->
+        <div class="space-y-4">
+          <h4 class="text-sm font-medium">Company Logo</h4>
+
+          <!-- Current Logo Display -->
+          {#if logoPreview}
+            <div class="flex items-center space-x-4 p-4 border rounded-lg">
+              <img src={logoPreview} alt="Company Logo" class="h-16 w-16 object-contain" />
+              <div class="flex-1">
+                <p class="text-sm text-muted-foreground">Current logo</p>
+              </div>
+            </div>
+          {/if}
+
+          <!-- Logo Upload -->
+          <div class="space-y-2">
+            <Label for="logo-upload">Upload New Logo</Label>
+            <Input
+              id="logo-upload"
+              type="file"
+              accept="image/*"
+              onchange={handleLogoFileSelect}
+              disabled={isUploadingLogo}
+            />
+            <p class="text-xs text-muted-foreground">
+              Supported formats: JPEG, PNG, SVG, WebP. Maximum size: 2MB.
+            </p>
+          </div>
+
+          <!-- Upload Button -->
+          {#if selectedLogoFile}
+            <div class="flex items-center space-x-4">
+              <Button
+                onclick={handleLogoUpload}
+                disabled={isUploadingLogo}
+                size="sm"
+              >
+                {#if isUploadingLogo}
+                  <Icon icon="lucide:loader" class="h-4 w-4 mr-2 animate-spin" />
+                  Uploading...
+                {:else}
+                  <Icon icon="lucide:upload" class="h-4 w-4 mr-2" />
+                  Upload Logo
+                {/if}
+              </Button>
+              <p class="text-sm text-muted-foreground">
+                Selected: {selectedLogoFile.name} ({(selectedLogoFile.size / 1024 / 1024).toFixed(2)} MB)
+              </p>
+            </div>
+          {/if}
+        </div>
+
+        <!-- Stamp Configuration -->
+        <div class="space-y-4 border-t pt-4">
+          <h4 class="text-sm font-medium">Document Stamp</h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label for="stamp-text">Stamp Text</Label>
+              <Input
+                id="stamp-text"
+                bind:value={branding.stampText}
+                placeholder="e.g., Approved, Draft, Final"
+              />
+            </div>
+            <div>
+              <Label for="stamp-position">Stamp Position</Label>
+              <Select type="single" bind:value={branding.stampPosition}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select position" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="top-left">Top Left</SelectItem>
+                  <SelectItem value="top-right">Top Right</SelectItem>
+                  <SelectItem value="bottom-left">Bottom Left</SelectItem>
+                  <SelectItem value="bottom-right">Bottom Right</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label for="stamp-font-size">Font Size (pt)</Label>
+              <Input
+                id="stamp-font-size"
+                type="number"
+                bind:value={branding.stampFontSize}
+                min="8"
+                max="24"
+              />
+            </div>
+            <div>
+              <Label for="stamp-color">Stamp Color</Label>
+              <Input
+                id="stamp-color"
+                type="color"
+                bind:value={branding.stampColor}
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Brand Colors -->
+        <div class="space-y-4 border-t pt-4">
+          <h4 class="text-sm font-medium">Brand Colors</h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label for="primary-color">Primary Color</Label>
+              <Input
+                id="primary-color"
+                type="color"
+                bind:value={branding.primaryColor}
+              />
+            </div>
+            <div>
+              <Label for="secondary-color">Secondary Color</Label>
+              <Input
+                id="secondary-color"
+                type="color"
+                bind:value={branding.secondaryColor}
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Save Branding Button -->
+        <div class="flex justify-end border-t pt-4">
+          <Button onclick={handleSaveBranding}>
+            <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
+            Save Branding
+          </Button>
+        </div>
       </CardContent>
     </Card>
   </DashboardLayout>
