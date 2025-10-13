@@ -9,8 +9,7 @@
   import * as Table from '$lib/components/ui/table';
   import type { UserProfile } from '$lib/types/user';
 
-  // Require company access
-  requireCompany();
+   // Company access is checked at layout level
 
   const clientStore = useClientManagement;
   let clients = $state<UserProfile[]>([]);

@@ -8,12 +8,10 @@
 
   let mounted = $state(false);
 
-  onMount(() => {
-    mounted = true;
-    if (!requireCompany()) {
-      return;
-    }
-  });
+   onMount(() => {
+     mounted = true;
+     // Company access is checked at layout level
+   });
 
   function handleTemplateSave(template: DocumentTemplate) {
     // TODO: Save template to Firebase

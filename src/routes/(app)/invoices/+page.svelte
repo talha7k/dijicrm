@@ -16,12 +16,10 @@
   let searchQuery = $state("");
   let selectedStatus = $state("all");
 
-  onMount(() => {
-    mounted = true;
-    if (!requireCompany()) {
-      return;
-    }
-  });
+   onMount(() => {
+     mounted = true;
+     // Company access is checked at layout level
+   });
 
   // Mock invoice data - will be replaced with Firebase integration
   let invoices = $state([

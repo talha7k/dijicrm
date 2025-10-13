@@ -27,22 +27,37 @@ import {
   };
   import { redirectToDashboard } from '$lib/utils/auth';
 
+  // Track if we've already handled initial navigation to prevent loops
+  let hasHandledInitialNavigation = $state(false);
+  let hasInitializedPresence = $state(false);
+
   $effect(() => {
-    if (firekitUser.initialized && !firekitUser.isAuthenticated) {
+    if (firekitUser.initialized && !firekitUser.isAuthenticated && !hasHandledInitialNavigation) {
+      hasHandledInitialNavigation = true;
       goto("/sign-in");
     }
-    if (firekitUser.initialized && firekitUser.isAuthenticated && !firekitPresence.initialized) {
-      firekitPresence.initialize(firekitUser.user, config);
+  });
+
+  $effect(() => {
+    if (firekitUser.initialized && firekitUser.isAuthenticated && !hasInitializedPresence && firekitUser.user) {
+      hasInitializedPresence = true;
+      // Small delay to ensure user data is stable before initializing presence
+      setTimeout(() => {
+        if (!firekitPresence.initialized) {
+          firekitPresence.initialize(firekitUser.user, config);
+        }
+      }, 100);
     }
   });
 
   // Redirect to appropriate dashboard based on role after authentication
   $effect(() => {
     const user = get(userProfile);
-    if (firekitUser.initialized && firekitUser.isAuthenticated && user.data?.role) {
+    if (firekitUser.initialized && firekitUser.isAuthenticated && user.data?.role && !hasHandledInitialNavigation) {
       // Only redirect if we're on a generic route like /app
       const currentPath = window.location.pathname;
       if (currentPath === '/app' || currentPath === '/(app)') {
+        hasHandledInitialNavigation = true;
         redirectToDashboard();
       }
     }
@@ -52,31 +67,29 @@ import {
     const user = firekitUser.user;
     if (user && user.uid) {
       const doc = firekitDoc<UserProfile>(`users/${user.uid}`);
-      $effect(() => {
-        userProfile.set({
-          data: doc.data ?? undefined,
-          loading: doc.loading,
-          error: doc.error,
-          update: async (data: Partial<UserProfile>) => {
-            await firekitDocMutations.update(`users/${user.uid}`, data);
+      userProfile.set({
+        data: doc.data ?? undefined,
+        loading: doc.loading,
+        error: doc.error,
+        update: async (data: Partial<UserProfile>) => {
+          await firekitDocMutations.update(`users/${user.uid}`, data);
 
-            // Check for displayName
-            if (
-              data.displayName &&
-              data.displayName !== (user as any).displayName
-            ) {
-              await (user as any).updateDisplayName(data.displayName);
-            }
+          // Check for displayName
+          if (
+            data.displayName &&
+            data.displayName !== (user as any).displayName
+          ) {
+            await (user as any).updateDisplayName(data.displayName);
+          }
 
-            if (data.photoURL && data.photoURL !== (user as any).photoURL) {
-              await (user as any).updatePhotoURL(data.photoURL);
-            }
+          if (data.photoURL && data.photoURL !== (user as any).photoURL) {
+            await (user as any).updatePhotoURL(data.photoURL);
+          }
 
-            if (data.email && data.email !== (user as any).email) {
-              await (user as any).updateEmail(data.email);
-            }
-          },
-        });
+          if (data.email && data.email !== (user as any).email) {
+            await (user as any).updateEmail(data.email);
+          }
+        },
       });
     } else {
       userProfile.set({

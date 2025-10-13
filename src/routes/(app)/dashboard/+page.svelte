@@ -13,13 +13,10 @@
 
   let mounted = $state(false);
 
-  onMount(() => {
-    mounted = true;
-    // Check if user has company role
-    if (!requireCompany()) {
-      return; // Will redirect
-    }
-  });
+   onMount(() => {
+     mounted = true;
+     // Company access is checked at layout level
+   });
 
   let metrics = useCompanyMetrics();
 

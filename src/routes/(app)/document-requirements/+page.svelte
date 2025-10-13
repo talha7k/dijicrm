@@ -25,12 +25,10 @@
   let selectedProduct = $state("all");
   let showCreateDialog = $state(false);
 
-  onMount(() => {
-    mounted = true;
-    if (!requireCompany()) {
-      return;
-    }
-  });
+   onMount(() => {
+     mounted = true;
+     // Company access is checked at layout level
+   });
 
   let requirementsStore = useDocumentRequirements();
   let productsStore = useProducts();

@@ -9,8 +9,7 @@
   import * as Card from '$lib/components/ui/card/index.js';
   import { toast } from 'svelte-sonner';
 
-  // Require company access
-  requireCompany();
+   // Company access is checked at layout level
 
   const clientStore = useClientManagement;
 

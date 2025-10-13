@@ -12,8 +12,7 @@
   import { toast } from 'svelte-sonner';
   import type { UserProfile } from '$lib/types/user';
 
-  // Require company access
-  requireCompany();
+   // Company access is checked at layout level
 
   const clientStore = useClientManagement;
   const clientId = $page.params.id as string;

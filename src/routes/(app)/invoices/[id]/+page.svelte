@@ -22,12 +22,10 @@
    let mounted = $state(false);
    let showPaymentDialog = $state(false);
 
-   onMount(() => {
-     mounted = true;
-     if (!requireCompany()) {
-       return;
-     }
-   });
+    onMount(() => {
+      mounted = true;
+      // Company access is checked at layout level
+    });
 
    let paymentsStore = usePayments();
 
