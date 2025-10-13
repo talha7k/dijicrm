@@ -1,12 +1,13 @@
-# Svelte FireKit Starter
+# Dijicrm
 
-A comprehensive starter template for building full-stack Svelte applications with Firebase integration. This template includes authentication, blog functionality, marketing pages, and a basic app setup with sidebar navigation.
+A multi-dashboard portal for clients and companies to manage invoices. Built with SvelteKit and Firebase, this CRM system provides separate dashboards for client access and company administration, featuring invoice management, billing, notifications, and account settings.
 
 ## Features
 
 - 🔥 Firebase Authentication
-- 📝 Blog system using MDsveX
-
+- 📊 Multi-dashboard system (Client & Company)
+- 💳 Invoice management and billing
+- 🔔 Notification system
 - 🎨 Styling with Shadcn/Svelte
 - 🛡️ Protected routes with auth guards
 - 📱 Responsive design
@@ -32,11 +33,11 @@ A comprehensive starter template for building full-stack Svelte applications wit
 
 ### Installation
 
-1. Use this template by clicking "Use this template" on GitHub or fork the repository:
+1. Clone the repository:
 
    ```bash
-   git clone https://github.com/talha7k/svelte-firebase-starter-kit.git
-   cd svelte-firebase-starter-kit
+   git clone https://github.com/talha7k/dijicrm.git
+   cd dijicrm
    ```
 
 2. Install dependencies:
@@ -69,28 +70,37 @@ A comprehensive starter template for building full-stack Svelte applications wit
 ```
 ├── src/
 │   ├── lib/
-│   │   ├── components/     # Reusable components
-│   │   ├── firebase/      # Firebase configuration
-│   │   └── utils/         # Utility functions
+│   │   ├── components/     # Reusable UI components
+│   │   │   ├── app/       # Application-specific components (account, billing, nav, notifications)
+│   │   │   ├── auth/      # Authentication components
+│   │   │   ├── marketing/ # Marketing page components
+│   │   │   ├── shared/    # Shared utility components
+│   │   │   └── ui/        # Shadcn/Svelte UI components
+│   │   ├── hooks/         # Svelte hooks
+│   │   ├── schemas/       # Validation schemas
+│   │   ├── stores/        # Svelte stores
+│   │   ├── types/         # TypeScript type definitions
+│   │   └── utils.ts       # Utility functions
 │   ├── routes/
-│   │   ├── app/          # Protected application routes
-│   │   ├── auth/         # Authentication pages
-│   │   ├── blog/         # Blog pages
-│   │   └── +page.svelte  # Landing page
-│   └── posts/            # MDsveX blog posts
-├── static/               # Static assets
-└── svelte.config.js      # Svelte configuration
+│   │   ├── (app)/        # Protected application routes (dashboard, billing, account, notifications)
+│   │   ├── (auth)/       # Authentication pages
+│   │   ├── (marketing)/  # Marketing pages (home, features, pricing, contact, blog)
+│   │   ├── api/          # API routes
+│   │   └── +layout.svelte # Root layout
+│   └── posts/             # Blog posts (MDsveX)
+├── static/                # Static assets
+└── svelte.config.js       # Svelte configuration
 ```
 
 ## Authentication
 
-The template includes pre-built authentication flows:
+The system includes pre-built authentication flows with role-based access:
 
 - Sign In (`/auth/signin`)
 - Sign Up (`/auth/signup`)
 - Forgot Password (`/auth/forgot-password`)
 
-Protected routes are handled by the auth guard in `src/routes/app/+layout.ts`.
+Protected routes are handled by auth guards, providing separate dashboards for clients and company administrators. Client dashboards focus on invoice viewing and payment, while company dashboards include full management capabilities.
 
 ### Using Protected Routes
 
@@ -109,56 +119,6 @@ export const load: LayoutLoad = async ({ url }) => {
 
   return { user };
 };
-```
-
-## Blog System
-
-The blog system uses MDsveX for Markdown processing.
-
-### Creating a New Blog Post
-
-1. Create a new `.md` file in `src/posts/`
-2. Add frontmatter:
-
-   ```markdown
-   ---
-   title: "Your Post Title"
-   publishedAt: "2024-01-19"
-   author: "Your Name"
-   tags: ["svelte", "firebase", "typescript"]
-   excerpt: "Brief description of your post"
-   categories: ["Tutorial"]
-   featuredImage:
-     {
-       url: "https://placehold.co/1200x630",
-       alt: "Featured Image Alt Text",
-       caption: "Image caption",
-     }
-   seo:
-     {
-       title: "SEO-optimized title",
-       description: "SEO description for better search engine visibility",
-       keywords: ["keyword1", "keyword2", "keyword3"],
-       ogImage: "https://placehold.co/1200x630",
-     }
-   published: true
-   ---
-
-   Your content here...
-   ```
-
-### Code Blocks
-
-Code blocks are supported in markdown posts:
-
-```svelte
- <script>
-   let count = 0;
- </script>
-
-  <button onclick={() => count++}>
-   Count is {count}
- </button>
 ```
 
 ## ShadcN Components
@@ -209,4 +169,3 @@ Contributions are welcome! Please read our contributing guidelines before submit
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-# dijicrm
