@@ -1,8 +1,16 @@
 ## MODIFIED Requirements
 
-### Requirement: Company Settings Management
+### Requirement: Company Settings Access
 
-The company dashboard SHALL provide comprehensive settings management including SMTP configuration and company branding options.
+Company users SHALL have direct access to company-wide settings and configurations including SMTP email settings and company branding options.
+
+#### Scenario: Access company settings
+
+- **WHEN** company user clicks settings
+- **THEN** they are navigated to the company settings page
+- **AND** can modify billing preferences, notification templates, and system configurations
+- **AND** can configure SMTP email server settings
+- **AND** can upload company logo and configure document branding
 
 #### Scenario: SMTP Configuration Management
 

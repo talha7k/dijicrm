@@ -1,8 +1,20 @@
 ## MODIFIED Requirements
 
-### Requirement: PDF Generation with Branding
+### Requirement: PDF Conversion
 
-The document generation system SHALL include company branding elements (logo and stamp) in generated PDFs when available.
+Generated HTML documents SHALL be converted to PDF format for professional presentation and SHALL include company branding elements (logo and stamp) when available.
+
+#### Scenario: HTML to PDF conversion
+
+- **WHEN** document is generated
+- **THEN** system converts HTML to PDF with proper formatting
+- **AND** maintains layout, fonts, and styling
+
+#### Scenario: PDF optimization
+
+- **WHEN** generating PDFs for email delivery
+- **THEN** system optimizes file size and quality
+- **AND** ensures compatibility across PDF viewers
 
 #### Scenario: Invoice Generation with Logo
 
@@ -21,6 +33,8 @@ The document generation system SHALL include company branding elements (logo and
 - **WHEN** generating a document PDF for a company without branding configuration
 - **THEN** the document generates successfully without branding elements
 - **AND** uses default styling and layout
+
+## ADDED Requirements
 
 ### Requirement: Branding Data Integration
 
