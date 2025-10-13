@@ -1,0 +1,7 @@
+node_modules/
+.svelte-kit/
+dist/
+.env*
+.firebase/
+*.log
+.DS_Store
