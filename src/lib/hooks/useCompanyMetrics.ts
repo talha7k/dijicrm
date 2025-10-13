@@ -1,5 +1,4 @@
-import { derived } from "svelte/store";
-import { userProfile } from "$lib/stores/user";
+import { writable } from "svelte/store";
 
 export interface CompanyMetrics {
   totalInvoices: number;
@@ -72,14 +71,9 @@ const mockCompanyMetrics: CompanyMetrics = {
 export function useCompanyMetrics() {
   // In a real app, this would query Firebase for company-specific metrics
   // For now, return mock data
-  return derived(userProfile, ($userProfile) => {
-    if (!$userProfile.data) return { data: null, loading: true, error: null };
-
-    // Simulate loading
-    return {
-      data: mockCompanyMetrics,
-      loading: false,
-      error: null,
-    };
+  return writable({
+    data: mockCompanyMetrics,
+    loading: false,
+    error: null,
   });
 }
