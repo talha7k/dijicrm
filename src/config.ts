@@ -117,6 +117,11 @@ export const companyNavItems: SidebarNav[] = [
         icon: "lucide:user",
       },
       {
+        title: "Company Settings",
+        url: "/settings",
+        icon: "lucide:settings",
+      },
+      {
         title: "Notifications",
         url: "/notifications",
         icon: "lucide:bell",

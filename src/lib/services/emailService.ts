@@ -29,49 +29,84 @@ export interface EmailResult {
   deliveryId?: string;
 }
 
-// Mock email service - replace with actual SendGrid/Mailgun implementation
-class EmailService {
-  private apiKey: string;
-  private fromEmail: string;
-  private fromName: string;
+export interface SMTPConfig {
+  enabled: boolean;
+  host: string;
+  port: number;
+  secure: boolean;
+  auth: {
+    user: string;
+    pass: string;
+  };
+  fromEmail: string;
+  fromName: string;
+}
 
-  constructor() {
-    this.apiKey = process.env.SENDGRID_API_KEY || "mock-api-key";
-    this.fromEmail = process.env.FROM_EMAIL || "noreply@tk-crm.com";
-    this.fromName = process.env.FROM_NAME || "TK-Crm";
+// Email service supporting both SMTP and mock implementations
+class EmailService {
+  private smtpConfig: SMTPConfig | null = null;
+  private mockFromEmail: string = "noreply@tk-crm.com";
+  private mockFromName: string = "TK-Crm";
+
+  // Configure SMTP settings
+  setSMTPConfig(config: SMTPConfig) {
+    this.smtpConfig = config.enabled ? config : null;
+  }
+
+  // Get current SMTP config (for UI display)
+  getSMTPConfig(): SMTPConfig | null {
+    return this.smtpConfig;
   }
 
   async sendEmail(options: EmailOptions): Promise<EmailResult> {
     try {
-      // Mock implementation - replace with actual email service
-      console.log("Sending email:", {
-        to: options.to,
-        subject: options.subject,
-        hasAttachments: options.attachments?.length || 0,
-      });
+      if (this.smtpConfig) {
+        // Use SMTP via API endpoint
+        const response = await fetch("/api/email/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            smtpConfig: this.smtpConfig,
+            emailOptions: options,
+          }),
+        });
 
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 100));
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to send email via SMTP");
+        }
 
-      // Mock success/failure (90% success rate for testing)
-      const shouldSucceed = Math.random() > 0.1;
-
-      if (shouldSucceed) {
+        const result = await response.json();
         return {
           success: true,
-          messageId: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          deliveryId: `delivery-${Date.now()}`,
+          messageId: result.messageId,
+          deliveryId: result.deliveryId,
         };
       } else {
+        // Mock implementation for development
+        console.log("Sending email (mock):", {
+          to: options.to,
+          subject: options.subject,
+          hasAttachments: options.attachments?.length || 0,
+        });
+
+        // Simulate API call delay
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // Mock success response
         return {
-          success: false,
-          error: "Mock email delivery failure",
+          success: true,
+          messageId: `mock-${Date.now()}`,
+          deliveryId: `delivery-${Date.now()}`,
         };
       }
     } catch (error) {
+      console.error("Email send error:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown email error",
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }

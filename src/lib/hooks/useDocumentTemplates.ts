@@ -1,5 +1,4 @@
-import { derived } from "svelte/store";
-import { userProfile } from "$lib/stores/user";
+import { writable } from "svelte/store";
 import type { DocumentTemplate } from "$lib/types/document";
 import { Timestamp } from "firebase/firestore";
 
@@ -176,29 +175,20 @@ const mockTemplates: DocumentTemplate[] = [
 
 export function useDocumentTemplates() {
   // In a real app, this would query Firebase based on the current user's company ID
-  return derived(userProfile, ($userProfile) => {
-    if (!$userProfile.data) return { data: [], loading: true, error: null };
-
-    // Simulate loading and filter by company
-    return {
-      data: mockTemplates.filter(
-        (template) => template.companyId === "company-001",
-      ), // Mock company ID
-      loading: false,
-      error: null,
-    };
+  return writable({
+    data: mockTemplates.filter(
+      (template) => template.companyId === "company-001",
+    ), // Mock company ID
+    loading: false,
+    error: null,
   });
 }
 
 export function useDocumentTemplate(templateId: string) {
-  return derived(userProfile, ($userProfile) => {
-    if (!$userProfile.data) return { data: null, loading: true, error: null };
-
-    const template = mockTemplates.find((t) => t.id === templateId);
-    return {
-      data: template || null,
-      loading: false,
-      error: template ? null : "Template not found",
-    };
+  const template = mockTemplates.find((t) => t.id === templateId);
+  return writable({
+    data: template || null,
+    loading: false,
+    error: template ? null : "Template not found",
   });
 }

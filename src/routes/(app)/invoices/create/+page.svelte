@@ -27,11 +27,11 @@
      // Company access is checked at layout level
    });
 
-   let productsStore = useProducts();
-   let requirementsStore = useDocumentRequirements();
-   let generationStore = useDocumentGeneration;
-   let deliveryStore = useDocumentDelivery;
-   let clientStore = useClientManagement;
+    let productsStore = useProducts();
+    let requirementsStore = useDocumentRequirements();
+    let generationStore = useDocumentGeneration();
+    let deliveryStore = useDocumentDelivery();
+    let clientStore = useClientManagement();
 
   // Load data on mount
   $effect(() => {
