@@ -2,11 +2,14 @@
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import Icon from '@iconify/svelte';
-	import { appNavItems } from '../../../../config';
+	import { clientNavItems, companyNavItems } from '../../../../config';
 	import { isSidebarOpen } from '$lib/stores/sidebar';
+	import { userProfile } from '$lib/stores/user';
+
+	let navItems = $derived($userProfile.data?.role === 'client' ? clientNavItems : companyNavItems);
 </script>
 
-{#each appNavItems as mainItem (mainItem.title)}
+{#each navItems as mainItem (mainItem.title)}
 	<Sidebar.Group>
 		<Sidebar.GroupLabel>{mainItem.title}</Sidebar.GroupLabel>
 		{#each mainItem.items as item (item.title)}

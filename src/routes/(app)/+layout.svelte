@@ -1,19 +1,20 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
-  import AppSidebar from "$lib/components/app/nav/app-sidebar.svelte";
-  import AutoBreadcrumb from "$lib/components/shared/auto-breadcrumb.svelte";
-  import DarkModeToggle from "$lib/components/shared/dark-mode-toggle.svelte";
-  import { Separator } from "$lib/components/ui/separator";
-  import * as Sidebar from "$lib/components/ui/sidebar";
-  import {
-    firekitUser,
-    firekitPresence,
-    firekitDoc,
-    firekitDocMutations,
-  } from "svelte-firekit";
-   import { userProfile } from "$lib/stores/user";
-   import { isSidebarOpen } from "$lib/stores/sidebar";
-   import type { UserProfile } from "$lib/types/user";
+import { goto } from "$app/navigation";
+import { get } from "svelte/store";
+import AppSidebar from "$lib/components/app/nav/app-sidebar.svelte";
+import AutoBreadcrumb from "$lib/components/shared/auto-breadcrumb.svelte";
+import DarkModeToggle from "$lib/components/shared/dark-mode-toggle.svelte";
+import { Separator } from "$lib/components/ui/separator";
+import * as Sidebar from "$lib/components/ui/sidebar";
+import {
+  firekitUser,
+  firekitPresence,
+  firekitDoc,
+  firekitDocMutations,
+} from "svelte-firekit";
+ import { userProfile } from "$lib/stores/user";
+ import { isSidebarOpen } from "$lib/stores/sidebar";
+ import type { UserProfile } from "$lib/types/user";
   let { children } = $props();
   const config: any = {
     geolocation: {
@@ -24,12 +25,26 @@
     sessionTTL: 30 * 60 * 1000, // 30 minutes
     updateInterval: 60 * 1000, // 1 minute
   };
+  import { redirectToDashboard } from '$lib/utils/auth';
+
   $effect(() => {
     if (firekitUser.initialized && !firekitUser.isAuthenticated) {
       goto("/sign-in");
     }
-    if (firekitUser.initialized && !firekitPresence.initialized) {
+    if (firekitUser.initialized && firekitUser.isAuthenticated && !firekitPresence.initialized) {
       firekitPresence.initialize(firekitUser.user, config);
+    }
+  });
+
+  // Redirect to appropriate dashboard based on role after authentication
+  $effect(() => {
+    const user = get(userProfile);
+    if (firekitUser.initialized && firekitUser.isAuthenticated && user.data?.role) {
+      // Only redirect if we're on a generic route like /app
+      const currentPath = window.location.pathname;
+      if (currentPath === '/app' || currentPath === '/(app)') {
+        redirectToDashboard();
+      }
     }
   });
 

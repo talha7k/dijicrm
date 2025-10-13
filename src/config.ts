@@ -34,18 +34,79 @@ export const marketingNavItems: NavItem[] = [
   },
 ];
 
-export const appNavItems: SidebarNav[] = [
+export const clientNavItems: SidebarNav[] = [
   {
-    title: "Platform",
+    title: "Client Portal",
+    items: [
+      {
+        title: "Dashboard",
+        url: "/client-dashboard",
+        icon: "lucide:layout-dashboard",
+      },
+      {
+        title: "Invoices",
+        url: "/client-dashboard/invoices",
+        icon: "lucide:file-text",
+      },
+      {
+        title: "Payments",
+        url: "/client-dashboard/payments",
+        icon: "lucide:credit-card",
+      },
+      {
+        title: "Account",
+        url: "/client-dashboard/account",
+        icon: "lucide:user",
+      },
+    ],
+  },
+];
+
+export const companyNavItems: SidebarNav[] = [
+  {
+    title: "Company Portal",
     items: [
       {
         title: "Dashboard",
         url: "/dashboard",
         icon: "lucide:layout-dashboard",
       },
+      {
+        title: "Invoices",
+        url: "/invoices",
+        icon: "lucide:file-text",
+      },
+      {
+        title: "Clients",
+        url: "/clients",
+        icon: "lucide:users",
+      },
+      {
+        title: "Billing",
+        url: "/billing",
+        icon: "lucide:credit-card",
+      },
+    ],
+  },
+  {
+    title: "Settings",
+    items: [
+      {
+        title: "Account",
+        url: "/account",
+        icon: "lucide:user",
+      },
+      {
+        title: "Notifications",
+        url: "/notifications",
+        icon: "lucide:bell",
+      },
     ],
   },
 ];
+
+// Legacy export for backward compatibility
+export const appNavItems: SidebarNav[] = companyNavItems;
 
 export const socialLinks: SocialLink[] = [
   {
