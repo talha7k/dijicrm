@@ -7,6 +7,7 @@
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
    import { requireClient } from '$lib/utils/auth';
+   import { formatDateShort } from '$lib/utils';
    import { useClientInvoices, type ClientInvoice } from '$lib/hooks/useClientInvoices';
    import { useClientDocuments } from '$lib/hooks/useClientDocuments';
    import type { GeneratedDocument } from '$lib/types/document';
@@ -52,13 +53,7 @@
     }).format(amount);
   }
 
-  function formatDate(date: Date) {
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }).format(date);
-  }
+
 </script>
 
 {#if mounted}
@@ -103,7 +98,7 @@
                 <div class="space-y-1">
                   <p class="text-sm font-medium">{invoice.number}</p>
                   <p class="text-sm text-muted-foreground">{invoice.description}</p>
-                  <p class="text-xs text-muted-foreground">Due: {formatDate(invoice.dueDate)}</p>
+                  <p class="text-xs text-muted-foreground">Due: {formatDateShort(invoice.dueDate)}</p>
                 </div>
                 <div class="text-right space-y-1">
                   <p class="text-sm font-medium">{formatCurrency(invoice.amount)}</p>
@@ -146,7 +141,7 @@
                      {document.data.clientName} - {document.data.companyName}
                    </p>
                    <p class="text-xs text-muted-foreground">
-                     Sent: {formatDate(document.sentAt?.toDate() || new Date())}
+                     Sent: {formatDateShort(document.sentAt)}
                    </p>
                  </div>
                  <div class="text-right space-y-1">

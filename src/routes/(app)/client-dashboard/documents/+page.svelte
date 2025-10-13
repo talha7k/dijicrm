@@ -6,6 +6,7 @@
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
   import { requireClient } from '$lib/utils/auth';
+  import { formatDateShort } from '$lib/utils';
   import { useClientDocuments } from '$lib/hooks/useClientDocuments';
   import type { GeneratedDocument } from '$lib/types/document';
 
@@ -32,21 +33,6 @@
       default: return 'bg-gray-100 text-gray-800';
     }
   }
-
-  function formatDate(date: any): string {
-    if (!date) return "N/A";
-    try {
-      const dateObj = date.toDate ? date.toDate() : new Date(date);
-      return dateObj.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-    } catch {
-      return "Invalid Date";
-    }
-  }
-
   function viewDocument(document: GeneratedDocument) {
     documents.markAsViewed(document.id);
     // TODO: Open document viewer modal or navigate to document detail page
@@ -81,12 +67,12 @@
                       {document.data.clientName} - {document.data.companyName}
                     </p>
                     <div class="flex gap-4 text-xs text-muted-foreground">
-                      <span>Sent: {formatDate(document.sentAt)}</span>
+                      <span>Sent: {formatDateShort(document.sentAt)}</span>
                       {#if document.viewedAt}
-                        <span>Viewed: {formatDate(document.viewedAt)}</span>
+                        <span>Viewed: {formatDateShort(document.viewedAt)}</span>
                       {/if}
                       {#if document.completedAt}
-                        <span>Completed: {formatDate(document.completedAt)}</span>
+                        <span>Completed: {formatDateShort(document.completedAt)}</span>
                       {/if}
                     </div>
                   </div>

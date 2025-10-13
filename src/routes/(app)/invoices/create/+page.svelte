@@ -154,8 +154,12 @@
         title: `Invoice for ${invoiceData.clientName}`,
         description: `Invoice created on ${new Date().toLocaleDateString()}`,
         selectedProducts: invoiceData.items.map(item => item.productId),
-        status: isInvitedClient ? "draft" : "generated", // Delay for invited clients
+        status: isInvitedClient ? "draft" : "sent", // Delay for invited clients
         documents: [],
+        totalAmount: totalAmount(),
+        paidAmount: 0,
+        outstandingAmount: totalAmount(),
+        payments: [],
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
         createdBy: "user-1", // TODO: Get from auth

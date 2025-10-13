@@ -5,6 +5,7 @@
   import { Progress } from "$lib/components/ui/progress";
 
   import Icon from "@iconify/svelte";
+  import { formatDateShort } from "$lib/utils";
   import type { DocumentDelivery } from "$lib/types/document";
 
   interface Props {
@@ -49,21 +50,6 @@
       case "complained": return "lucide:alert-triangle";
       case "pending": return "lucide:clock";
       default: return "lucide:help-circle";
-    }
-  }
-
-  function formatDate(date: any): string {
-    if (!date) return "N/A";
-    try {
-      const dateObj = date.toDate ? date.toDate() : new Date(date);
-      return dateObj.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return "Invalid Date";
     }
   }
 </script>
@@ -144,7 +130,7 @@
 
                 {#if delivery.sentAt}
                   <span class="text-xs text-muted-foreground">
-                    {formatDate(delivery.sentAt)}
+                    {formatDateShort(delivery.sentAt)}
                   </span>
                 {/if}
               </div>

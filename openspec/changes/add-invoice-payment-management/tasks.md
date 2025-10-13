@@ -1,37 +1,37 @@
 ## 1. Payment Data Model Enhancement
 
-- [ ] 1.1 Create Payment interface with amount, date, method, invoice reference
-- [ ] 1.2 Extend BusinessCase interface to include payment tracking fields
-- [ ] 1.3 Add payment status to invoice lifecycle (sent → partially_paid → paid)
-- [ ] 1.4 Create usePayments hook for payment management
+- [x] 1.1 Create Payment interface with amount, date, method, invoice reference
+- [x] 1.2 Extend BusinessCase interface to include payment tracking fields
+- [x] 1.3 Add payment status to invoice lifecycle (sent → partially_paid → paid)
+- [x] 1.4 Create usePayments hook for payment management
 
 ## 2. Payment Recording Interface
 
-- [ ] 2.1 Create payment recording form component
-- [ ] 2.2 Add payment recording to invoice detail view
-- [ ] 2.3 Implement payment method selection dropdown
-- [ ] 2.4 Add payment validation (positive amounts, valid dates)
+- [x] 2.1 Create payment recording form component
+- [x] 2.2 Add payment recording to invoice detail view
+- [x] 2.3 Implement payment method selection dropdown
+- [x] 2.4 Add payment validation (positive amounts, valid dates)
 
 ## 3. Invoice Status Management
 
-- [ ] 3.1 Update invoice status calculation logic
-- [ ] 3.2 Implement automatic status transitions on payment
-- [ ] 3.3 Add outstanding balance calculations
-- [ ] 3.4 Update invoice list to show payment status
+- [x] 3.1 Update invoice status calculation logic
+- [x] 3.2 Implement automatic status transitions on payment
+- [x] 3.3 Add outstanding balance calculations
+- [x] 3.4 Update invoice list to show payment status
 
 ## 4. Payment History and Tracking
 
-- [ ] 4.1 Create payment history component for invoices
-- [ ] 4.2 Add payment audit trail with timestamps
-- [ ] 4.3 Implement payment search and filtering
-- [ ] 4.4 Add payment export functionality
+- [x] 4.1 Create payment history component for invoices
+- [x] 4.2 Add payment audit trail with timestamps
+- [x] 4.3 Implement payment search and filtering
+- [ ] 4.4 Add payment export functionality (Future enhancement)
 
 ## 5. Company Dashboard Integration
 
-- [ ] 5.1 Update company metrics to include payment data
-- [ ] 5.2 Add payment activity to recent activity feed
-- [ ] 5.3 Enhance outstanding balance calculations
-- [ ] 5.4 Update payment-related dashboard widgets
+- [x] 5.1 Update company metrics to include payment data
+- [x] 5.2 Add payment activity to recent activity feed
+- [x] 5.3 Enhance outstanding balance calculations
+- [x] 5.4 Update payment-related dashboard widgets
 
 ## 6. Client Payment Portal (Future)
 

@@ -9,6 +9,7 @@
 
   import Icon from "@iconify/svelte";
   import { requireCompany } from "$lib/utils/auth";
+  import { formatDateShort } from "$lib/utils";
   import { goto } from "$app/navigation";
 
   let mounted = $state(false);
@@ -28,7 +29,9 @@
       id: "INV-001",
       clientName: "Acme Corp",
       amount: 2500,
-      status: "sent",
+      paidAmount: 1250,
+      outstandingAmount: 1250,
+      status: "partially_paid",
       createdAt: new Date("2024-01-15"),
       dueDate: new Date("2024-02-15"),
       items: [
@@ -39,6 +42,8 @@
       id: "INV-002",
       clientName: "TechStart Inc",
       amount: 1500,
+      paidAmount: 1500,
+      outstandingAmount: 0,
       status: "paid",
       createdAt: new Date("2024-01-10"),
       dueDate: new Date("2024-02-10"),
@@ -50,12 +55,27 @@
       id: "INV-003",
       clientName: "Global Solutions",
       amount: 3200,
+      paidAmount: 0,
+      outstandingAmount: 3200,
       status: "draft",
       createdAt: new Date("2024-01-20"),
       dueDate: new Date("2024-02-20"),
       items: [
         { productName: "Consulting Subscription", quantity: 1, price: 2000 },
         { productName: "Web Development Service", quantity: 1, price: 1200 }
+      ]
+    },
+    {
+      id: "INV-004",
+      clientName: "StartupXYZ",
+      amount: 1800,
+      paidAmount: 0,
+      outstandingAmount: 1800,
+      status: "sent",
+      createdAt: new Date("2024-01-05"),
+      dueDate: new Date("2024-01-20"), // Overdue
+      items: [
+        { productName: "Mobile App Development", quantity: 1, price: 1800 }
       ]
     }
   ]);
@@ -77,8 +97,7 @@
   }
 
   function handleViewInvoice(invoice: any) {
-    // TODO: Open invoice view modal or navigate to detail page
-    console.log("View invoice:", invoice);
+    goto(`/invoices/${invoice.id}`);
   }
 
   function handleEditInvoice(invoice: any) {
@@ -96,6 +115,7 @@
   function getStatusColor(status: string): string {
     switch (status) {
       case "paid": return "bg-green-100 text-green-800";
+      case "partially_paid": return "bg-yellow-100 text-yellow-800";
       case "sent": return "bg-blue-100 text-blue-800";
       case "overdue": return "bg-red-100 text-red-800";
       case "draft": return "bg-gray-100 text-gray-800";
@@ -108,14 +128,6 @@
       style: "currency",
       currency: "USD",
     }).format(amount);
-  }
-
-  function formatDate(date: Date): string {
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
   }
 </script>
 
@@ -133,13 +145,14 @@
           <SelectTrigger class="w-40">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
-            <SelectItem value="sent">Sent</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="overdue">Overdue</SelectItem>
-          </SelectContent>
+           <SelectContent>
+             <SelectItem value="all">All Status</SelectItem>
+             <SelectItem value="draft">Draft</SelectItem>
+             <SelectItem value="sent">Sent</SelectItem>
+             <SelectItem value="partially_paid">Partially Paid</SelectItem>
+             <SelectItem value="paid">Paid</SelectItem>
+             <SelectItem value="overdue">Overdue</SelectItem>
+           </SelectContent>
         </Select>
       </div>
 
@@ -183,21 +196,33 @@
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              <div class="space-y-3">
-                <div class="flex items-center text-sm text-muted-foreground">
-                  <Icon icon="lucide:dollar-sign" class="h-4 w-4 mr-2" />
-                  {formatCurrency(invoice.amount)}
-                </div>
-                <div class="flex items-center text-sm text-muted-foreground">
-                  <Icon icon="lucide:calendar" class="h-4 w-4 mr-2" />
-                  Due: {formatDate(invoice.dueDate)}
-                </div>
-                <div class="flex items-center text-sm text-muted-foreground">
-                  <Icon icon="lucide:package" class="h-4 w-4 mr-2" />
-                  {invoice.items.length} item{invoice.items.length > 1 ? "s" : ""}
-                </div>
-              </div>
+             <CardContent>
+               <div class="space-y-3">
+                 <div class="flex items-center text-sm text-muted-foreground">
+                   <Icon icon="lucide:dollar-sign" class="h-4 w-4 mr-2" />
+                   Total: {formatCurrency(invoice.amount)}
+                 </div>
+                 {#if invoice.paidAmount > 0}
+                   <div class="flex items-center text-sm text-green-600">
+                     <Icon icon="lucide:check-circle" class="h-4 w-4 mr-2" />
+                     Paid: {formatCurrency(invoice.paidAmount)}
+                   </div>
+                 {/if}
+                 {#if invoice.outstandingAmount > 0}
+                   <div class="flex items-center text-sm text-red-600">
+                     <Icon icon="lucide:alert-circle" class="h-4 w-4 mr-2" />
+                     Outstanding: {formatCurrency(invoice.outstandingAmount)}
+                   </div>
+                 {/if}
+                 <div class="flex items-center text-sm text-muted-foreground">
+                   <Icon icon="lucide:calendar" class="h-4 w-4 mr-2" />
+                   Due: {formatDateShort(invoice.dueDate)}
+                 </div>
+                 <div class="flex items-center text-sm text-muted-foreground">
+                   <Icon icon="lucide:package" class="h-4 w-4 mr-2" />
+                   {invoice.items.length} item{invoice.items.length > 1 ? "s" : ""}
+                 </div>
+               </div>
 
               <div class="flex gap-2 mt-4">
                 <Button variant="outline" size="sm" onclick={() => handleViewInvoice(invoice)}>

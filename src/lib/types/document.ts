@@ -97,6 +97,21 @@ export interface DocumentDelivery {
   lastRetryAt?: Timestamp; // Timestamp of last retry attempt
 }
 
+export interface Payment {
+  id: string;
+  invoiceId: string; // Reference to BusinessCase/invoice
+  companyId: string;
+  clientId: string;
+  amount: number;
+  paymentDate: Timestamp;
+  paymentMethod: string; // e.g., "bank_transfer", "credit_card", "check", "cash"
+  reference?: string; // Check number, transaction ID, etc.
+  notes?: string;
+  recordedBy: string; // User ID who recorded the payment
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 export interface BusinessCase {
   id: string;
   companyId: string;
@@ -104,8 +119,18 @@ export interface BusinessCase {
   title: string;
   description?: string;
   selectedProducts: string[]; // Product IDs
-  status: "draft" | "generated" | "sent" | "in_progress" | "completed";
+  status:
+    | "draft"
+    | "generated"
+    | "sent"
+    | "partially_paid"
+    | "paid"
+    | "overdue";
   documents: string[]; // Generated document IDs
+  totalAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+  payments: string[]; // Payment IDs
   createdAt: Timestamp;
   updatedAt: Timestamp;
   createdBy: string;

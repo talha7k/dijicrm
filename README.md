@@ -6,13 +6,91 @@ A multi-dashboard portal for clients and companies to manage invoices. Built wit
 
 - 🔥 Firebase Authentication
 - 📊 Multi-dashboard system (Client & Company)
-- 💳 Invoice management and billing
+- 💳 Invoice management and billing with payment tracking
+- 📄 Automated document generation and delivery
+- 👥 Client relationship management
 - 🔔 Notification system
 - 🎨 Styling with Shadcn/Svelte
 - 🛡️ Protected routes with auth guards
 - 📱 Responsive design
 - 📄 Pre-built marketing pages (Home, Features, Pricing, Contact)
 - 🔒 Authentication flows (Sign in, Sign up, Forgot password)
+
+## How It Works
+
+DijiCRM provides a comprehensive business management system with integrated workflows for invoices, payments, documents, and client relationships. Here's how the key business flows work:
+
+### 📋 Invoice & Business Case Management
+
+1. **Creating Invoices**: Company users create invoices by selecting products/services and assigning them to clients. Each invoice becomes a "Business Case" that tracks the entire client relationship.
+
+2. **Invoice Status Flow**:
+   - `draft`: Invoice created but not yet sent
+   - `sent`: Invoice delivered to client
+   - `partially_paid`: Some payment received, outstanding balance remains
+   - `paid`: Invoice fully paid
+   - `overdue`: Past due date with outstanding balance
+
+3. **Automatic Document Generation**: When an invoice is sent, the system automatically generates required documents (contracts, invoices, etc.) based on document requirements configured for each product.
+
+### 💰 Payment Management
+
+1. **Recording Payments**: Company users can record payments against invoices with full details including payment method, reference numbers, and notes.
+
+2. **Payment Tracking**: Each business case tracks:
+   - Total amount
+   - Amount paid
+   - Outstanding balance
+   - Payment history with timestamps
+
+3. **Automatic Status Updates**: Invoice status automatically transitions based on payment activity:
+   - Outstanding balance = 0 → `paid`
+   - Partial payment received → `partially_paid`
+
+### 📄 Document Generation & Delivery
+
+1. **Document Requirements**: Products can have mandatory or optional documents that must be generated when creating business cases.
+
+2. **Template System**: Documents are generated from HTML templates with placeholder replacement (client name, amounts, dates, etc.).
+
+3. **Automated Delivery**: Generated documents are automatically emailed to clients, with delivery status tracking.
+
+4. **Document History**: All document versions and delivery attempts are tracked for audit purposes.
+
+### 👥 Client Management
+
+1. **Client Invitation**: Companies can invite clients via email to create accounts.
+
+2. **Client Status Flow**:
+   - `invited`: Email sent, account not yet activated
+   - `active`: Client has activated account and can access their dashboard
+
+3. **Client Dashboard**: Active clients can view their invoices, download documents, and track payment status.
+
+### 🔄 Integrated Workflows
+
+**Company Workflow**:
+
+1. Create/select client
+2. Create invoice with products
+3. System generates required documents
+4. Send invoice and documents to client
+5. Record payments as received
+6. Track outstanding balances
+
+**Client Workflow**:
+
+1. Receive invitation email
+2. Activate account
+3. View invoices and documents
+4. Download required paperwork
+5. Make payments (future feature)
+
+**Dashboard Integration**:
+
+- Company dashboard shows metrics: total invoices, outstanding amounts, active clients, overdue invoices
+- Recent activity feed tracks all business events
+- Payment activity is highlighted in company metrics
 
 ## Tech Stack
 
@@ -74,21 +152,28 @@ A multi-dashboard portal for clients and companies to manage invoices. Built wit
 │   │   │   ├── app/       # Application-specific components (account, billing, nav, notifications)
 │   │   │   ├── auth/      # Authentication components
 │   │   │   ├── marketing/ # Marketing page components
-│   │   │   ├── shared/    # Shared utility components
+│   │   │   ├── shared/    # Shared utility components (payment forms, document viewers, etc.)
 │   │   │   └── ui/        # Shadcn/Svelte UI components
-│   │   ├── hooks/         # Svelte hooks
+│   │   ├── hooks/         # Svelte hooks (usePayments, useCompanyMetrics, etc.)
 │   │   ├── schemas/       # Validation schemas
+│   │   ├── services/      # External service integrations (email, Firebase storage)
 │   │   ├── stores/        # Svelte stores
-│   │   ├── types/         # TypeScript type definitions
+│   │   ├── types/         # TypeScript type definitions (Payment, BusinessCase, etc.)
 │   │   └── utils.ts       # Utility functions
 │   ├── routes/
-│   │   ├── (app)/        # Protected application routes (dashboard, billing, account, notifications)
+│   │   ├── (app)/        # Protected application routes
+│   │   │   ├── dashboard/ # Company dashboard with metrics
+│   │   │   ├── invoices/  # Invoice management (create, list, detail)
+│   │   │   ├── clients/   # Client relationship management
+│   │   │   ├── billing/   # Billing and subscription management
+│   │   │   └── account/   # User account settings
 │   │   ├── (auth)/       # Authentication pages
 │   │   ├── (marketing)/  # Marketing pages (home, features, pricing, contact, blog)
-│   │   ├── api/          # API routes
+│   │   ├── api/          # API routes for document generation/delivery
 │   │   └── +layout.svelte # Root layout
 │   └── posts/             # Blog posts (MDsveX)
 ├── static/                # Static assets
+├── openspec/              # OpenSpec change proposals and specifications
 └── svelte.config.js       # Svelte configuration
 ```
 
@@ -161,6 +246,17 @@ await firekitAuth.sendPasswordReset(email);
    ```bash
    npm build
    ```
+
+## Development Workflow
+
+This project uses OpenSpec for managing feature development and architectural changes:
+
+- **Change Proposals**: Major features start with a proposal in `openspec/changes/`
+- **Specifications**: Detailed specs define requirements and implementation approach
+- **Task Tracking**: Implementation tasks are tracked in proposal task files
+- **Validation**: Changes are validated against OpenSpec guidelines
+
+See `openspec/AGENTS.md` for detailed guidelines on creating and implementing changes.
 
 ## Contributing
 

@@ -7,6 +7,7 @@
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
   import { requireCompany } from '$lib/utils/auth';
+  import { formatDateTime } from '$lib/utils';
   import { useCompanyMetrics, type CompanyMetrics } from '$lib/hooks/useCompanyMetrics';
   import Icon from '@iconify/svelte';
 
@@ -27,16 +28,6 @@
       style: 'currency',
       currency: 'USD'
     }).format(amount);
-  }
-
-  function formatDate(date: Date) {
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
   }
 
   function getActivityIcon(type: CompanyMetrics['recentActivity'][0]['type']) {
@@ -100,7 +91,7 @@
                 </div>
                 <div class="flex-1 space-y-1">
                   <p class="text-sm font-medium">{activity.description}</p>
-                  <p class="text-xs text-muted-foreground">{formatDate(activity.timestamp)}</p>
+                  <p class="text-xs text-muted-foreground">{formatDateTime(activity.timestamp)}</p>
                 </div>
                 {#if activity.amount}
                   <div class="text-right">

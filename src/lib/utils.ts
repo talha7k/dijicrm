@@ -120,6 +120,54 @@ export function formatDate(
   }
 }
 
+/**
+ * Formats a date or Firebase Timestamp for display in a consistent format
+ * Handles both Date objects and Firebase Timestamps
+ */
+export function formatDateShort(date: Date | any): string {
+  let dateToFormat: Date;
+
+  if (date && typeof date === "object" && "toDate" in date) {
+    // Firebase Timestamp
+    dateToFormat = date.toDate();
+  } else if (date instanceof Date) {
+    dateToFormat = date;
+  } else {
+    dateToFormat = new Date(date);
+  }
+
+  return dateToFormat.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/**
+ * Formats a date or Firebase Timestamp with date and time for display
+ * Handles both Date objects and Firebase Timestamps
+ */
+export function formatDateTime(date: Date | any): string {
+  let dateToFormat: Date;
+
+  if (date && typeof date === "object" && "toDate" in date) {
+    // Firebase Timestamp
+    dateToFormat = date.toDate();
+  } else if (date instanceof Date) {
+    dateToFormat = date;
+  } else {
+    dateToFormat = new Date(date);
+  }
+
+  return dateToFormat.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 // Re-export bits-ui types for UI components
 export type {
   WithElementRef,

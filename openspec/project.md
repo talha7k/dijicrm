@@ -25,6 +25,7 @@ Dijicrm is a multi-dashboard portal for clients and companies to manage invoices
 - Always use variables instead of hard-coded values (colors, strings, etc. should be in config or constants)
 - Component props use `let { prop = default } = $props();` syntax for Svelte 5 runes
 - **Always use Shadcn/Svelte UI components instead of raw HTML elements** - Never use native `<select>`, `<input>`, `<button>`, etc. directly
+- **Use utility functions from `$lib/utils.ts` to reduce code duplication** - Common operations like date formatting, string manipulation, and calculations should be centralized in utility functions rather than duplicated across components
 
 ### Architecture Patterns
 
@@ -36,6 +37,7 @@ Dijicrm is a multi-dashboard portal for clients and companies to manage invoices
 - **File Organization**: Group by feature (e.g., `lib/components/app/invoices/`) rather than by type
 - **Authentication**: Role-based access with protected routes using auth guards
 - **Error Handling**: Centralized error handling with user-friendly messages
+- **Utility Functions**: Extract common logic into reusable utility functions in `$lib/utils.ts` to avoid code duplication and ensure consistency across the application
 
 ### Testing Strategy
 
