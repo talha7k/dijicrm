@@ -15,8 +15,15 @@ const mockTemplates: DocumentTemplate[] = [
       <div class="invoice-container">
         <header class="invoice-header">
           <div class="company-logo" style="text-align: center; margin-bottom: 20px;">
-            <!-- Company logo will be automatically injected here -->
+            <img src="{{companyLogo}}" alt="Company Logo" style="max-width: 200px; max-height: 100px;" />
           </div>
+
+          <!-- ZATCA QR Code -->
+          {{#if zatcaQRCode}}
+          <div class="zatca-qr-code" style="position: absolute; bottom: 20px; right: 20px; width: 100px; height: 100px;">
+            <img src="data:image/png;base64,{{zatcaQRCode}}" alt="ZATCA QR Code" style="width: 100%; height: 100%;" />
+          </div>
+          {{/if}}
           <h1>Invoice</h1>
           <div class="company-info">
             <h2>{{companyName}}</h2>
@@ -53,11 +60,18 @@ const mockTemplates: DocumentTemplate[] = [
           </tbody>
         </table>
 
-        <div class="total-section">
-          <p><strong>Total: {{amount}}</strong></p>
-        </div>
-      </div>
-    `,
+         <div class="total-section">
+           <p><strong>Total: {{amount}}</strong></p>
+         </div>
+
+         <!-- ZATCA QR Code -->
+         {{#if zatcaQRCode}}
+         <div class="zatca-qr-code" style="position: absolute; bottom: 20px; right: 20px; width: 100px; height: 100px;">
+           <img src="data:image/png;base64,{{zatcaQRCode}}" alt="ZATCA QR Code" style="width: 100%; height: 100%;" />
+         </div>
+         {{/if}}
+       </div>
+     `,
     placeholders: [
       {
         key: "companyName",
@@ -98,9 +112,16 @@ const mockTemplates: DocumentTemplate[] = [
       {
         key: "companyLogo",
         label: "Company Logo URL",
-        type: "text",
+        type: "image",
         required: false,
         defaultValue: "",
+      },
+      {
+        key: "zatcaQRCode",
+        label: "ZATCA QR Code",
+        type: "text",
+        required: false,
+        description: "QR code for ZATCA compliance (auto-generated)",
       },
       {
         key: "stampText",
@@ -108,6 +129,13 @@ const mockTemplates: DocumentTemplate[] = [
         type: "text",
         required: false,
         defaultValue: "",
+      },
+      {
+        key: "zatcaQRCode",
+        label: "ZATCA QR Code",
+        type: "text",
+        required: false,
+        description: "QR code for ZATCA compliance (auto-generated)",
       },
     ],
     isActive: true,

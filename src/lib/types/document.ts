@@ -19,9 +19,10 @@ export interface DocumentTemplate {
 export interface TemplatePlaceholder {
   key: string; // e.g., "clientName", "amount"
   label: string; // Human readable label
-  type: "text" | "number" | "date" | "currency" | "boolean";
+  type: "text" | "number" | "date" | "currency" | "boolean" | "image";
   required: boolean;
   defaultValue?: string;
+  description?: string; // Optional description for the placeholder
   validation?: {
     pattern?: string;
     minLength?: number;

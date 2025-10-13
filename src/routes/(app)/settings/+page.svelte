@@ -37,6 +37,8 @@
 
   // Branding configuration
   let branding = $state<CompanyBranding>({
+    companyName: "",
+    vatNumber: "",
     logoUrl: "",
     stampText: "",
     stampPosition: "bottom-right",
@@ -298,6 +300,19 @@
   async function handleSaveBranding() {
     const companyId = "company-1"; // TODO: Get from auth context
 
+    // Validation
+    if (branding.companyName && branding.companyName.trim().length === 0) {
+      alert("Company name cannot be empty if provided.");
+      return;
+    }
+
+    if (branding.vatNumber) {
+      if (!/^[0-9]{15}$/.test(branding.vatNumber)) {
+        alert("VAT number must be exactly 15 digits.");
+        return;
+      }
+    }
+
     try {
       const result = await brandingService.saveBranding(companyId, branding);
 
@@ -487,8 +502,39 @@
         <CardTitle>Company Branding</CardTitle>
         <CardDescription>Customize your company's logo and document branding</CardDescription>
       </CardHeader>
-      <CardContent class="space-y-6">
-        <!-- Logo Upload Section -->
+       <CardContent class="space-y-6">
+         <!-- Company Information Section -->
+         <div class="space-y-4">
+           <h4 class="text-sm font-medium">Company Information</h4>
+
+           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div>
+               <Label for="company-name">Company Name</Label>
+               <Input
+                 id="company-name"
+                 bind:value={branding.companyName}
+                 placeholder="Your Company Name"
+                 required
+               />
+             </div>
+             <div>
+               <Label for="vat-number">VAT Number</Label>
+               <Input
+                 id="vat-number"
+                 bind:value={branding.vatNumber}
+                 placeholder="15-digit Saudi VAT number"
+                 maxlength="15"
+                 pattern="[0-9]{15}"
+                 required
+               />
+               <p class="text-xs text-muted-foreground mt-1">
+                 Saudi VAT numbers must be exactly 15 digits
+               </p>
+             </div>
+           </div>
+         </div>
+
+         <!-- Logo Upload Section -->
         <div class="space-y-4">
           <h4 class="text-sm font-medium">Company Logo</h4>
 
