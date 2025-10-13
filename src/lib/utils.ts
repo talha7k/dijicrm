@@ -1,5 +1,11 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type {
+  WithElementRef,
+  WithoutChildren,
+  WithoutChildrenOrChild,
+  WithoutChild,
+} from "bits-ui";
 
 type DateStyle = Intl.DateTimeFormatOptions["dateStyle"];
 
@@ -113,3 +119,11 @@ export function formatDate(
     return new Date(date).toLocaleDateString();
   }
 }
+
+// Re-export bits-ui types for UI components
+export type {
+  WithElementRef,
+  WithoutChildren,
+  WithoutChildrenOrChild,
+  WithoutChild,
+};

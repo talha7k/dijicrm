@@ -1,8 +1,7 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
-	import type { WithElementRef, WithoutChildren } from "bits-ui";
+	import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
 	import type { HTMLAttributes } from "svelte/elements";
-	import { cn } from "$lib/utils";
+	import { cn, type WithElementRef, type WithoutChildren } from "$lib/utils.js";
 
 	let {
 		ref = $bindable(null),
@@ -13,11 +12,12 @@
 
 <span
 	bind:this={ref}
+	data-slot="breadcrumb-ellipsis"
 	role="presentation"
 	aria-hidden="true"
 	class={cn("flex size-9 items-center justify-center", className)}
 	{...restProps}
 >
-	<Icon icon="lucide:ellipsis" class="size-4" />
+	<EllipsisIcon class="size-4" />
 	<span class="sr-only">More</span>
 </span>

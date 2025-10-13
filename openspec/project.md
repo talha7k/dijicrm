@@ -24,6 +24,7 @@ Dijicrm is a multi-dashboard portal for clients and companies to manage invoices
 - Use Prettier for code formatting with default settings
 - Always use variables instead of hard-coded values (colors, strings, etc. should be in config or constants)
 - Component props use `let { prop = default } = $props();` syntax for Svelte 5 runes
+- **Always use Shadcn/Svelte UI components instead of raw HTML elements** - Never use native `<select>`, `<input>`, `<button>`, etc. directly
 
 ### Architecture Patterns
 

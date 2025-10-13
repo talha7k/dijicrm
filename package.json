@@ -13,6 +13,7 @@
     "lint": "prettier --check ."
   },
   "devDependencies": {
+    "@internationalized/date": "^3.8.1",
     "@lucide/svelte": "^0.544.0",
     "@sveltejs/adapter-auto": "^3.3.1",
     "@sveltejs/kit": "^2.46.5",
@@ -20,9 +21,12 @@
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.14",
+    "@tanstack/table-core": "^8.20.5",
     "autoprefixer": "^10.4.21",
     "bits-ui": "^2.11.5",
     "clsx": "^2.1.1",
+    "embla-carousel-svelte": "^8.6.0",
+    "layerchart": "2.0.0-next.27",
     "mdsvex": "^0.12.6",
     "mode-watcher": "^1.1.0",
     "prettier": "^3.6.2",
@@ -31,6 +35,7 @@
     "svelte": "^5.39.11",
     "svelte-check": "^4.3.3",
     "svelte-sonner": "^1.0.5",
+    "sveltekit-superforms": "^2.26.1",
     "tailwind-merge": "^3.3.1",
     "tailwind-variants": "^3.1.1",
     "tailwindcss": "^4.1.14",

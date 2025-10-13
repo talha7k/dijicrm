@@ -1,0 +1,346 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+  import DashboardLayout from "$lib/components/shared/dashboard-layout.svelte";
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
+  import { Button } from "$lib/components/ui/button";
+  import { Input } from "$lib/components/ui/input";
+  import { Label } from "$lib/components/ui/label";
+  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "$lib/components/ui/select";
+  import { Textarea } from "$lib/components/ui/textarea";
+  import { Badge } from "$lib/components/ui/badge";
+
+  import Icon from "@iconify/svelte";
+  import { requireCompany } from "$lib/utils/auth";
+  import { useProducts } from "$lib/hooks/useProducts";
+  import { goto } from "$app/navigation";
+
+  let mounted = $state(false);
+
+  onMount(() => {
+    mounted = true;
+    if (!requireCompany()) {
+      return;
+    }
+  });
+
+  let productsStore = useProducts();
+
+  // Load data on mount
+  $effect(() => {
+    if (mounted) {
+      const companyId = "company-1"; // TODO: Get from auth context
+      productsStore.loadProducts(companyId);
+    }
+  });
+
+  let invoiceData = $state({
+    clientName: "",
+    clientEmail: "",
+    dueDate: "",
+    notes: "",
+    items: [] as InvoiceItem[],
+  });
+
+  let selectedProductId = $state("");
+  let itemQuantity = $state(1);
+
+  interface InvoiceItem {
+    id: string;
+    productId: string;
+    productName: string;
+    quantity: number;
+    price: number;
+    total: number;
+  }
+
+  let totalAmount = $derived(() => {
+    return invoiceData.items.reduce((sum, item) => sum + item.total, 0);
+  });
+
+  function addProductToInvoice() {
+    if (!selectedProductId) {
+      alert("Please select a product");
+      return;
+    }
+
+    const product = $productsStore.data?.find(p => p.id === selectedProductId);
+    if (!product) {
+      alert("Product not found");
+      return;
+    }
+
+    const existingItem = invoiceData.items.find(item => item.productId === selectedProductId);
+    if (existingItem) {
+      // Update quantity if product already exists
+      existingItem.quantity += itemQuantity;
+      existingItem.total = existingItem.quantity * existingItem.price;
+    } else {
+      // Add new item
+      const newItem: InvoiceItem = {
+        id: `item-${Date.now()}`,
+        productId: product.id,
+        productName: product.name,
+        quantity: itemQuantity,
+        price: product.price || 0,
+        total: (product.price || 0) * itemQuantity,
+      };
+      invoiceData.items = [...invoiceData.items, newItem];
+    }
+
+    // Reset form
+    selectedProductId = "";
+    itemQuantity = 1;
+  }
+
+  function removeItem(itemId: string) {
+    invoiceData.items = invoiceData.items.filter(item => item.id !== itemId);
+  }
+
+  function updateItemQuantity(itemId: string, quantity: number) {
+    if (quantity < 1) return;
+
+    invoiceData.items = invoiceData.items.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          quantity,
+          total: quantity * item.price,
+        };
+      }
+      return item;
+    });
+  }
+
+  function handleSaveDraft() {
+    // TODO: Save as draft
+    console.log("Saving draft:", invoiceData);
+    alert("Invoice saved as draft");
+  }
+
+  function handleSendInvoice() {
+    if (!invoiceData.clientName || !invoiceData.clientEmail || invoiceData.items.length === 0) {
+      alert("Please fill in all required fields and add at least one item");
+      return;
+    }
+
+    // TODO: Generate invoice and send
+    console.log("Sending invoice:", invoiceData);
+    alert("Invoice sent successfully!");
+    goto("/invoices");
+  }
+
+  function formatCurrency(amount: number): string {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
+  }
+</script>
+
+{#if mounted}
+  <DashboardLayout title="Create Invoice" description="Create a new invoice with product line items">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Invoice Form -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Client Information -->
+        <Card>
+          <CardHeader>
+            <CardTitle>Client Information</CardTitle>
+            <CardDescription>Enter the client details for this invoice</CardDescription>
+          </CardHeader>
+          <CardContent class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <Label for="client-name">Client Name</Label>
+                <Input
+                  id="client-name"
+                  bind:value={invoiceData.clientName}
+                  placeholder="Enter client name"
+                  required
+                />
+              </div>
+              <div>
+                <Label for="client-email">Client Email</Label>
+                <Input
+                  id="client-email"
+                  type="email"
+                  bind:value={invoiceData.clientEmail}
+                  placeholder="Enter client email"
+                  required
+                />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <Label for="due-date">Due Date</Label>
+                <Input
+                  id="due-date"
+                  type="date"
+                  bind:value={invoiceData.dueDate}
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <Label for="notes">Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                bind:value={invoiceData.notes}
+                placeholder="Additional notes for the client"
+                rows={3}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Add Products -->
+        <Card>
+          <CardHeader>
+            <CardTitle>Add Products/Services</CardTitle>
+            <CardDescription>Select products or services to add to this invoice</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div class="flex gap-4 items-end">
+              <div class="flex-1">
+                <Label for="product-select">Product/Service</Label>
+                <Select type="single" bind:value={selectedProductId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a product or service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {#each $productsStore.data || [] as product (product.id)}
+                      <SelectItem value={product.id}>
+                        <div class="flex items-center justify-between w-full">
+                          <span>{product.name}</span>
+                          <Badge variant="outline">
+                            {product.price ? formatCurrency(product.price) : "Contact pricing"}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    {/each}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div class="w-24">
+                <Label for="quantity">Quantity</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
+                  bind:value={itemQuantity}
+                />
+              </div>
+              <Button onclick={addProductToInvoice} disabled={!selectedProductId}>
+                <Icon icon="lucide:plus" class="h-4 w-4 mr-2" />
+                Add
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Invoice Items -->
+        {#if invoiceData.items.length > 0}
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoice Items</CardTitle>
+              <CardDescription>Review and adjust the items on this invoice</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="space-y-4">
+                {#each invoiceData.items as item (item.id)}
+                  <div class="flex items-center gap-4 p-4 border rounded-lg">
+                    <div class="flex-1">
+                      <h4 class="font-medium">{item.productName}</h4>
+                      <p class="text-sm text-muted-foreground">{formatCurrency(item.price)} each</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <Label for="qty-{item.id}" class="text-sm">Qty:</Label>
+                      <Input
+                        id="qty-{item.id}"
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        class="w-16"
+                        onchange={(e) => updateItemQuantity(item.id, parseInt((e.target as HTMLInputElement).value) || 1)}
+                      />
+                    </div>
+                    <div class="text-right min-w-[100px]">
+                      <p class="font-medium">{formatCurrency(item.total)}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onclick={() => removeItem(item.id)}
+                    >
+                      <Icon icon="lucide:trash" class="h-3 w-3" />
+                    </Button>
+                  </div>
+                {/each}
+              </div>
+            </CardContent>
+          </Card>
+        {/if}
+      </div>
+
+      <!-- Invoice Summary -->
+      <div class="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Invoice Summary</CardTitle>
+          </CardHeader>
+          <CardContent class="space-y-4">
+            <div class="flex justify-between">
+              <span>Items:</span>
+              <span>{invoiceData.items.length}</span>
+            </div>
+            <div class="flex justify-between text-lg font-bold">
+              <span>Total:</span>
+              <span>{formatCurrency(totalAmount())}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Actions -->
+        <Card>
+          <CardHeader>
+            <CardTitle>Actions</CardTitle>
+          </CardHeader>
+          <CardContent class="space-y-2">
+            <Button
+              onclick={handleSaveDraft}
+              variant="outline"
+              class="w-full"
+              disabled={invoiceData.items.length === 0}
+            >
+              <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
+              Save as Draft
+            </Button>
+            <Button
+              onclick={handleSendInvoice}
+              class="w-full"
+              disabled={!invoiceData.clientName || !invoiceData.clientEmail || invoiceData.items.length === 0}
+            >
+              <Icon icon="lucide:send" class="h-4 w-4 mr-2" />
+              Send Invoice
+            </Button>
+          </CardContent>
+        </Card>
+
+        <!-- Document Requirements Notice -->
+        {#if invoiceData.items.length > 0}
+          <Card>
+            <CardHeader>
+              <CardTitle class="text-sm">Document Requirements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p class="text-sm text-muted-foreground">
+                Based on the products/services selected, additional documents may be required from the client.
+                These will be automatically identified when the invoice is sent.
+              </p>
+            </CardContent>
+          </Card>
+        {/if}
+      </div>
+    </div>
+  </DashboardLayout>
+{/if}
