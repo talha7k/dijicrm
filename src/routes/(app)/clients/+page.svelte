@@ -35,8 +35,8 @@
   function getStatusBadge(client: UserProfile) {
     const status = client.metadata?.accountStatus || 'unknown';
     const variant = status === 'active' ? 'default' as const :
-                   status === 'invited' ? 'secondary' as const :
-                   status === 'suspended' ? 'destructive' as const : 'outline' as const;
+                    status === 'invited' ? 'secondary' as const :
+                    status === 'inactive' ? 'destructive' as const : 'outline' as const;
 
     return { status: status.charAt(0).toUpperCase() + status.slice(1), variant };
   }

@@ -275,7 +275,7 @@
             <div class="space-y-1">
               <Label for="isActive">Account Status</Label>
               <p class="text-sm text-muted-foreground">
-                {formData.isActive ? 'Client account is active' : 'Client account is deactivated'}
+                {formData.isActive ? 'Client account is active' : 'Client account is inactive'}
               </p>
             </div>
             <Switch

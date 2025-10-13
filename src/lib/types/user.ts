@@ -45,7 +45,7 @@ export interface UserProfile {
       platform: string;
     };
     lastIPAddress?: string;
-    accountStatus: "active" | "suspended" | "deactivated" | "invited";
+    accountStatus: "invited" | "active" | "inactive";
   };
 
   // Invitation system for pre-registered clients

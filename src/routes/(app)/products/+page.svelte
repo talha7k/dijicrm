@@ -10,11 +10,14 @@
   import { Label } from "$lib/components/ui/label";
   import { Textarea } from "$lib/components/ui/textarea";
 
-  import Icon from "@iconify/svelte";
-  import { requireCompany } from "$lib/utils/auth";
-  import { useProducts } from "$lib/hooks/useProducts";
-  import ProductForm from "$lib/components/shared/product-form.svelte";
-  import type { Product } from "$lib/hooks/useProducts";
+   import Icon from "@iconify/svelte";
+   import { requireCompany } from "$lib/utils/auth";
+   import { useProducts } from "$lib/hooks/useProducts";
+   import { useDocumentTemplates } from "$lib/hooks/useDocumentTemplates";
+   import ProductForm from "$lib/components/shared/product-form.svelte";
+   import DocumentRequirementsSummary from "$lib/components/shared/document-requirements-summary.svelte";
+   import type { Product } from "$lib/hooks/useProducts";
+   import type { DocumentTemplate } from "$lib/types/document";
 
   let mounted = $state(false);
   let searchQuery = $state("");
@@ -29,6 +32,7 @@
   });
 
   let productsStore = useProducts();
+  let templatesStore = useDocumentTemplates();
 
   // Load data on mount
   $effect(() => {
@@ -132,6 +136,7 @@
             </DialogDescription>
           </DialogHeader>
           <ProductForm
+            templates={$templatesStore.data}
             on:save={(e) => handleProductSave(e.detail)}
             on:cancel={() => showCreateDialog = false}
           />
@@ -180,13 +185,14 @@
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div class="space-y-3">
-                <div class="flex items-center text-sm text-muted-foreground">
-                  <Icon icon="lucide:dollar-sign" class="h-4 w-4 mr-2" />
-                  {formatPrice(product.price)}
-                </div>
-              </div>
+             <CardContent>
+               <div class="space-y-3">
+                 <div class="flex items-center text-sm text-muted-foreground">
+                   <Icon icon="lucide:dollar-sign" class="h-4 w-4 mr-2" />
+                   {formatPrice(product.price)}
+                 </div>
+                 <DocumentRequirementsSummary requirements={product.documentRequirements || []} />
+               </div>
 
               <div class="flex gap-2 mt-4">
                 <Button variant="outline" size="sm" onclick={() => handleEditProduct(product)}>

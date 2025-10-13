@@ -216,7 +216,7 @@ function createClientManagementStore() {
           isActive,
           metadata: {
             ...this.getClient(clientId)?.metadata,
-            accountStatus: isActive ? "active" : "deactivated",
+            accountStatus: isActive ? "active" : "inactive",
           },
         } as Partial<UserProfile>);
       } catch (error) {
