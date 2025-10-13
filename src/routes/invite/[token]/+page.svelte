@@ -108,7 +108,7 @@
       }
 
       // Create Firebase Auth account
-      await firekitAuth.registerWithEmail(clientData.email, formData.password, clientData.displayName);
+      await firekitAuth.registerWithEmail(clientData.email, formData.password, clientData.displayName || '');
 
       // Update client status to active
       // In real implementation, update the database

@@ -154,7 +154,7 @@
         title: `Invoice for ${invoiceData.clientName}`,
         description: `Invoice created on ${new Date().toLocaleDateString()}`,
         selectedProducts: invoiceData.items.map(item => item.productId),
-        status: isInvitedClient ? "pending" : "generated", // Delay for invited clients
+        status: isInvitedClient ? "draft" : "generated", // Delay for invited clients
         documents: [],
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
@@ -521,16 +521,7 @@
                   <p class="text-sm text-muted-foreground">
                     No additional documents are required for the selected products.
                   </p>
-                {/if}
-              {:else}
-                <p class="text-sm text-muted-foreground">
-                  Based on the products/services selected, additional documents may be required from the client.
-                  These will be automatically identified when the invoice is sent.
-                </p>
-              {/if}
-            </CardContent>
-          </Card>
-        {/if}
+                 {/if}
               {:else}
                 <p class="text-sm text-muted-foreground">
                   Based on the products/services selected, additional documents may be required from the client.

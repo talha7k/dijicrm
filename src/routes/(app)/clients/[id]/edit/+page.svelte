@@ -15,10 +15,10 @@
   // Require company access
   requireCompany();
 
-  const clientStore = useClientManagement();
-  const clientId = $page.params.id;
+  const clientStore = useClientManagement;
+  const clientId = $page.params.id as string;
 
-  let client = $state<UserProfile | null>(null);
+  let client = $state<UserProfile | undefined>(undefined);
   let loading = $state(true);
   let saving = $state(false);
 

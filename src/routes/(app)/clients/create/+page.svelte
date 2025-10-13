@@ -12,7 +12,7 @@
   // Require company access
   requireCompany();
 
-  const clientStore = useClientManagement();
+  const clientStore = useClientManagement;
 
   let formData = $state({
     firstName: '',

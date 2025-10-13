@@ -12,7 +12,7 @@
   // Require company access
   requireCompany();
 
-  const clientStore = useClientManagement();
+  const clientStore = useClientManagement;
   let clients = $state<UserProfile[]>([]);
   let loading = $state(false);
   let error = $state<string | null>(null);
