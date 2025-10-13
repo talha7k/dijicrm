@@ -9,7 +9,7 @@ Companies need the ability to record and track payments against invoices to main
 - **Payment History**: Complete audit trail of all payments with amounts, dates, and methods
 - **Outstanding Balance Tracking**: Real-time calculation of remaining balances on invoices
 - **Payment Method Tracking**: Record payment methods used for each transaction
-- **Client Payment Portal**: Clients can view payment history and make payments (future integration)
+- **Payment Proof Uploads**: Attach receipts, bank statements, check images, and other proof of payment documents
 
 ## Impact
 

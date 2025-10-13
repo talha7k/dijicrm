@@ -178,7 +178,7 @@
       for (const requirement of relevantRequirements) {
         const documentData = {
           ...invoiceData,
-          companyName: "DijiCRM", // TODO: Get from company settings
+          companyName: "TK-Crm", // TODO: Get from company settings
           amount: totalAmount(),
           date: new Date().toISOString().split('T')[0],
         };
@@ -212,7 +212,7 @@
         await deliveryStore.deliverCaseDocuments(
           generatedDocuments,
           invoiceData.clientEmail,
-          "DijiCRM", // TODO: Get from company settings
+          "TK-Crm", // TODO: Get from company settings
           invoiceData.clientName
         );
       }

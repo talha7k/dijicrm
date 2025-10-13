@@ -37,8 +37,8 @@ class EmailService {
 
   constructor() {
     this.apiKey = process.env.SENDGRID_API_KEY || "mock-api-key";
-    this.fromEmail = process.env.FROM_EMAIL || "noreply@dijicrm.com";
-    this.fromName = process.env.FROM_NAME || "DijiCRM";
+    this.fromEmail = process.env.FROM_EMAIL || "noreply@tk-crm.com";
+    this.fromName = process.env.FROM_NAME || "TK-Crm";
   }
 
   async sendEmail(options: EmailOptions): Promise<EmailResult> {
@@ -156,7 +156,7 @@ export class EmailTemplates {
             </div>
 
             <div class="footer">
-              <p>This email was sent by ${companyName} using DijiCRM.</p>
+              <p>This email was sent by ${companyName} using TK-Crm.</p>
               <p>If you have any questions, please contact your account representative.</p>
             </div>
           </div>
@@ -173,7 +173,7 @@ Documents: ${documentName}
 
 Please review ${documentCount === 1 ? "the document" : "these documents"} and complete any required actions. You can access your client portal to view and submit completed documents.
 
-This email was sent by ${companyName} using DijiCRM.
+This email was sent by ${companyName} using TK-Crm.
 If you have any questions, please contact your account representative.
     `;
 

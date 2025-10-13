@@ -1,19 +1,19 @@
 ---
-title: "Introducing Dijicrm: Streamline Your Invoice Management and CRM"
+title: "Introducing TK-Crm: Streamline Your Invoice Management and CRM"
 publishedAt: "2025-10-12"
 author: "Talha Khan"
 tags: ["crm", "invoice", "firebase", "sveltekit", "business-management"]
-excerpt: "Discover how Dijicrm revolutionizes client relationship management with powerful invoice tools, multi-dashboard systems, and seamless Firebase integration."
+excerpt: "Discover how TK-Crm revolutionizes client relationship management with powerful invoice tools, multi-dashboard systems, and seamless Firebase integration."
 categories: ["Product"]
 featuredImage:
   {
     url: "https://placehold.co/1200x630",
-    alt: "Dijicrm CRM Dashboard Overview",
+    alt: "TK-Crm CRM Dashboard Overview",
     caption: "A comprehensive CRM system for invoice management and client relationships",
   }
 seo:
   {
-    title: "Dijicrm - Modern CRM & Invoice Management System",
+    title: "TK-Crm - Modern CRM & Invoice Management System",
     description: "A powerful CRM system built with SvelteKit and Firebase, featuring multi-dashboard invoice management, client relationships, and business analytics.",
     keywords:
       [
@@ -30,13 +30,13 @@ seo:
 published: true
 ---
 
-# Introducing Dijicrm: Streamline Your Invoice Management and CRM
+# Introducing TK-Crm: Streamline Your Invoice Management and CRM
 
-Managing client relationships and invoices can be overwhelming for growing businesses. Dijicrm is a comprehensive CRM system that combines powerful invoice management with client relationship tools, built with SvelteKit and Firebase for reliability and performance.
+Managing client relationships and invoices can be overwhelming for growing businesses. TK-Crm is a comprehensive CRM system that combines powerful invoice management with client relationship tools, built with SvelteKit and Firebase for reliability and performance.
 
 ## Powerful Invoice Management System
 
-At the heart of Dijicrm is a robust invoice management system designed for modern businesses. The platform includes comprehensive tools for creating, tracking, and managing invoices with professional templates:
+At the heart of TK-Crm is a robust invoice management system designed for modern businesses. The platform includes comprehensive tools for creating, tracking, and managing invoices with professional templates:
 
 ```typescript
 interface Invoice {
@@ -62,7 +62,7 @@ Each invoice supports comprehensive customization with professional features:
 
 ### Multi-Dashboard System
 
-Dijicrm includes a sophisticated multi-dashboard system for different user roles:
+TK-Crm includes a sophisticated multi-dashboard system for different user roles:
 
 ```typescript
 interface DashboardState {
@@ -109,9 +109,9 @@ This structure ensures:
 - Custom fields for additional client data
 - Import/export capabilities for data migration
 
-## Getting Started with Dijicrm
+## Getting Started with TK-Crm
 
-Getting started with Dijicrm is simple and fast:
+Getting started with TK-Crm is simple and fast:
 
 1. Create your company account and configure settings
 2. Add your first clients to the system
@@ -127,11 +127,11 @@ Creating a professional invoice takes just minutes:
 3. Customize the invoice template with your branding
 4. Send directly to clients or download as PDF
 
-Dijicrm handles all the complex calculations, tax management, and payment tracking automatically.
+TK-Crm handles all the complex calculations, tax management, and payment tracking automatically.
 
 ## Future Roadmap
 
-Dijicrm is continuously evolving with planned features including:
+TK-Crm is continuously evolving with planned features including:
 
 - Advanced reporting and business analytics
 - Integration with popular accounting software
@@ -140,6 +140,6 @@ Dijicrm is continuously evolving with planned features including:
 
 ## Conclusion
 
-Dijicrm offers a modern, secure approach to managing client relationships and invoices. Whether you're a freelancer, small business, or growing enterprise, Dijicrm provides the tools you need to streamline your billing process and strengthen client relationships.
+TK-Crm offers a modern, secure approach to managing client relationships and invoices. Whether you're a freelancer, small business, or growing enterprise, TK-Crm provides the tools you need to streamline your billing process and strengthen client relationships.
 
-For businesses looking to modernize their invoicing and CRM processes, Dijicrm combines powerful functionality with an intuitive interface, built on reliable Firebase infrastructure.
+For businesses looking to modernize their invoicing and CRM processes, TK-Crm combines powerful functionality with an intuitive interface, built on reliable Firebase infrastructure.

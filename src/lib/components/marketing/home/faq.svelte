@@ -4,19 +4,19 @@
 
 	let { title = 'Frequently asked questions', faqs = [
 		{
-			question: 'How do I get started with Dijicrm?',
+			question: 'How do I get started with TK-Crm?',
 			answer:
 				"Getting started is easy! Sign up for an account, complete your company profile, and start adding clients. Our intuitive dashboard guides you through creating your first invoice in minutes."
 		},
 		{
 			question: 'How does the multi-dashboard system work?',
 			answer:
-				'Dijicrm provides separate dashboards for clients and company administrators. Clients can view their invoices and payment history, while admins have full access to client management, billing, and analytics.'
+				'TK-Crm provides separate dashboards for clients and company administrators. Clients can view their invoices and payment history, while admins have full access to client management, billing, and analytics.'
 		},
 		{
 			question: 'Can I customize my invoices?',
 			answer:
-				"Yes! Dijicrm allows you to customize invoice templates with your branding, add company logos, choose color schemes, and include custom fields. Professional invoices that reflect your business."
+				"Yes! TK-Crm allows you to customize invoice templates with your branding, add company logos, choose color schemes, and include custom fields. Professional invoices that reflect your business."
 		},
 		{
 			question: 'What payment methods are supported?',
@@ -24,14 +24,14 @@
 				'We support multiple payment methods including credit cards, bank transfers, PayPal, and Stripe integration. Clients can pay invoices directly through the platform with secure payment processing.'
 		},
 		{
-			question: 'How secure is Dijicrm?',
+			question: 'How secure is TK-Crm?',
 			answer:
-				'Dijicrm uses Firebase Authentication with role-based access control, encrypted data storage, and secure API endpoints. All data is protected with industry-standard security measures.'
+				'TK-Crm uses Firebase Authentication with role-based access control, encrypted data storage, and secure API endpoints. All data is protected with industry-standard security measures.'
 		},
 		{
-			question: 'Can I integrate Dijicrm with other tools?',
+			question: 'Can I integrate TK-Crm with other tools?',
 			answer:
-				'Yes! Dijicrm supports integrations with popular accounting software, CRM systems, and payment processors. We also provide APIs for custom integrations.'
+				'Yes! TK-Crm supports integrations with popular accounting software, CRM systems, and payment processors. We also provide APIs for custom integrations.'
 		},
 		{
 			question: 'What kind of support do you provide?',
@@ -41,7 +41,7 @@
 		{
 			question: 'How do I migrate from my current invoicing system?',
 			answer:
-				'We provide migration tools and support to help you import clients, invoices, and historical data. Our team assists with data mapping and ensures a smooth transition to Dijicrm.'
+				'We provide migration tools and support to help you import clients, invoices, and historical data. Our team assists with data mapping and ensures a smooth transition to TK-Crm.'
 		}
 	] } = $props();
 </script>

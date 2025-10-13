@@ -154,6 +154,7 @@
             <TableHead>Method</TableHead>
             <TableHead>Reference</TableHead>
             <TableHead>Notes</TableHead>
+            <TableHead>Proof</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -171,6 +172,24 @@
               </TableCell>
               <TableCell class="max-w-xs truncate" title={payment.notes}>
                 {payment.notes || "-"}
+              </TableCell>
+              <TableCell>
+                {#if payment.proofFiles && payment.proofFiles.length > 0}
+                  <div class="flex gap-1">
+                    {#each payment.proofFiles as file (file.id)}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onclick={() => window.open(file.fileUrl, '_blank')}
+                        title={file.fileName}
+                      >
+                        <Icon icon="lucide:file" class="h-3 w-3" />
+                      </Button>
+                    {/each}
+                  </div>
+                {:else}
+                  -
+                {/if}
               </TableCell>
             </TableRow>
           {/each}

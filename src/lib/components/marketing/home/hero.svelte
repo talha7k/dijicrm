@@ -18,7 +18,7 @@
 			<Button
 				size="lg"
 				variant="outline"
-				href="https://github.com/talha7k/dijicrm.git"
+				href="https://github.com/talha7k/tk-crm.git"
 			>
 				<svg
 					class="size-3.5 shrink-0"

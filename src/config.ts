@@ -1,7 +1,7 @@
 import type { NavItem, SidebarNav, SocialLink } from "$lib/types/nav";
 
 export const siteConfig = {
-  title: "Dijicrm",
+  title: "TK-Crm",
   description:
     "A multi-dashboard portal for clients and companies to manage invoices. Built with SvelteKit and Firebase, this CRM system provides separate dashboards for client access and company administration, featuring invoice management, billing, notifications, and account settings.",
   logo: "/logo.svg",
@@ -136,7 +136,7 @@ export const socialLinks: SocialLink[] = [
   },
   {
     title: "talha7k",
-    url: "https://github.com/talha7k/dijicrm.git",
+    url: "https://github.com/talha7k/tk-crm.git",
     icon: "github",
   },
 ];

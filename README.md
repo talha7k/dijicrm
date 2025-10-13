@@ -1,4 +1,4 @@
-# Dijicrm
+# TK-Crm
 
 A multi-dashboard portal for clients and companies to manage invoices. Built with SvelteKit and Firebase, this CRM system provides separate dashboards for client access and company administration, featuring invoice management, billing, notifications, and account settings.
 
@@ -18,7 +18,7 @@ A multi-dashboard portal for clients and companies to manage invoices. Built wit
 
 ## How It Works
 
-DijiCRM provides a comprehensive business management system with integrated workflows for invoices, payments, documents, and client relationships. Here's how the key business flows work:
+TK-Crm provides a comprehensive business management system with integrated workflows for invoices, payments, documents, and client relationships. Here's how the key business flows work:
 
 ### 📋 Invoice & Business Case Management
 
@@ -114,8 +114,8 @@ DijiCRM provides a comprehensive business management system with integrated work
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/talha7k/dijicrm.git
-   cd dijicrm
+   git clone https://github.com/talha7k/tk-crm.git
+   cd tk-crm
    ```
 
 2. Install dependencies:

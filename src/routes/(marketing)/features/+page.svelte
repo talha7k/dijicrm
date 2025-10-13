@@ -97,7 +97,7 @@
 			<!-- CTA Section -->
 			<div class="relative mt-8 rounded-2xl sm:col-span-2 xl:mt-0">
 				<p class="mb-9 text-center text-base leading-6 xl:text-left">
-					Start managing your invoices and client relationships with Dijicrm today
+					Start managing your invoices and client relationships with TK-Crm today
 				</p>
 				<div class="flex flex-col items-center justify-center gap-7 xl:flex-row xl:justify-start">
 					<Button size="lg">Get Started</Button>

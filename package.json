@@ -1,5 +1,5 @@
 {
-  "name": "dijicrm",
+  "name": "tk-crm",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -10,7 +10,9 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write .",
-    "lint": "prettier --check ."
+    "lint": "prettier --check .",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "devDependencies": {
     "@internationalized/date": "^3.8.1",
@@ -22,10 +24,13 @@
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.14",
     "@tanstack/table-core": "^8.20.5",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.2.8",
     "autoprefixer": "^10.4.21",
     "bits-ui": "^2.11.5",
     "clsx": "^2.1.1",
     "embla-carousel-svelte": "^8.6.0",
+    "jsdom": "^27.0.0",
     "layerchart": "2.0.0-next.27",
     "mdsvex": "^0.12.6",
     "mode-watcher": "^1.1.0",
@@ -43,6 +48,7 @@
     "tw-animate-css": "^1.4.0",
     "typescript": "^5.9.3",
     "vite": "^6.3.6",
+    "vitest": "^3.2.4",
     "zod": "^3.25.76"
   },
   "dependencies": {

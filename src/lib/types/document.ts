@@ -107,6 +107,7 @@ export interface Payment {
   paymentMethod: string; // e.g., "bank_transfer", "credit_card", "check", "cash"
   reference?: string; // Check number, transaction ID, etc.
   notes?: string;
+  proofFiles?: DocumentFile[]; // Payment proof documents (receipts, bank statements, etc.)
   recordedBy: string; // User ID who recorded the payment
   createdAt: Timestamp;
   updatedAt: Timestamp;

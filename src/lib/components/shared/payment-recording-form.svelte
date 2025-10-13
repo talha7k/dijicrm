@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "$
 import { Label } from "$lib/components/ui/label";
 import { Textarea } from "$lib/components/ui/textarea";
 import Icon from "@iconify/svelte";
-import type { Payment } from "$lib/types/document";
+import type { Payment, DocumentFile } from "$lib/types/document";
 import { Timestamp } from "firebase/firestore";
+import { uploadMultipleFiles } from "$lib/services/firebaseStorage";
 
   interface Props {
     invoiceId: string;
@@ -25,6 +26,8 @@ import { Timestamp } from "firebase/firestore";
     reference: "",
     notes: "",
   });
+
+  let fileInput = $state<FileList | undefined>(undefined);
 
   let errors = $state({
     amount: "",
@@ -78,9 +81,37 @@ import { Timestamp } from "firebase/firestore";
     return isValid;
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!validateForm()) {
       return;
+    }
+
+    let proofFilesData: DocumentFile[] | undefined;
+
+    // Upload proof files if any
+    if (fileInput && fileInput.length > 0) {
+      try {
+        const uploadResults = await uploadMultipleFiles(
+          Array.from(fileInput),
+          `payment-proof-${invoiceId}`,
+          { path: "payments/proof" }
+        );
+
+        proofFilesData = uploadResults
+          .filter(result => result.success)
+          .map((result, index) => ({
+            id: `proof-${Date.now()}-${index}`,
+            fileName: fileInput![index].name,
+            fileUrl: result.url!,
+            fileType: fileInput![index].type,
+            fileSize: fileInput![index].size,
+            uploadedAt: Timestamp.now(),
+            uploadedBy: "user-1", // TODO: Get from auth context
+          }));
+      } catch (error) {
+        console.error("Failed to upload proof files:", error);
+        // Continue without proof files, or show error
+      }
     }
 
     const payment: Omit<Payment, "id" | "createdAt" | "updatedAt"> = {
@@ -92,6 +123,7 @@ import { Timestamp } from "firebase/firestore";
       paymentMethod: formData.paymentMethod,
       reference: formData.reference || undefined,
       notes: formData.notes || undefined,
+      proofFiles: proofFilesData,
       recordedBy: "user-1", // TODO: Get from auth context
     };
 
@@ -174,6 +206,30 @@ import { Timestamp } from "firebase/firestore";
       placeholder="Additional payment details or notes"
       rows={3}
     />
+  </div>
+
+  <div class="space-y-2">
+    <Label for="proof-files">Payment Proof (Optional)</Label>
+    <Input
+      id="proof-files"
+      type="file"
+      multiple
+      accept="image/*,application/pdf"
+      bind:files={fileInput}
+    />
+    <p class="text-sm text-muted-foreground">
+      Upload receipts, bank statements, or other proof of payment (PDF, JPG, PNG)
+    </p>
+    {#if fileInput && fileInput.length > 0}
+      <div class="mt-2">
+        <p class="text-sm font-medium">Selected files:</p>
+        <ul class="text-sm text-muted-foreground">
+          {#each Array.from(fileInput) as file (file.name)}
+            <li>{file.name} ({(file.size / 1024).toFixed(1)} KB)</li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
   </div>
 
   <div class="flex justify-end gap-2">

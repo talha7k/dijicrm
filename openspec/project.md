@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Dijicrm is a multi-dashboard portal for clients and companies to manage invoices. This CRM system provides separate dashboards for client access and company administration, featuring invoice management, billing, notifications, and account settings. The goal is to streamline client relationship management and financial operations for businesses of all sizes.
+TK-Crm is a multi-dashboard portal for clients and companies to manage invoices. This CRM system provides separate dashboards for client access and company administration, featuring invoice management, billing, notifications, and account settings. The goal is to streamline client relationship management and financial operations for businesses of all sizes.
 
 ## Tech Stack
 
@@ -61,7 +61,7 @@ Dijicrm is a multi-dashboard portal for clients and companies to manage invoices
 This is a CRM (Customer Relationship Management) system focused on invoice and billing management. Key concepts:
 
 - **Clients**: Business customers who receive invoices
-- **Companies**: The businesses using Dijicrm to manage their operations
+- **Companies**: The businesses using TK-Crm to manage their operations
 - **Invoices**: Financial documents with line items, taxes, due dates, and payment status
 - **Dashboards**: Separate interfaces for clients (view invoices) and admins (full management)
 - **Notifications**: Automated alerts for overdue payments, new invoices, etc.

@@ -10,7 +10,7 @@
 			<h2
 				class="mb-6 max-w-max text-center text-4xl font-bold leading-[3.25rem] lg:mx-auto lg:max-w-2xl"
 			>
-				Streamline Your Invoice Management with Dijicrm
+				Streamline Your Invoice Management with TK-Crm
 			</h2>
 			<p class="mb-8 text-base font-normal lg:mx-auto lg:max-w-xl">
 				A comprehensive CRM system built with SvelteKit and Firebase for managing client relationships and invoices
