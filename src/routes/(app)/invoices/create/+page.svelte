@@ -15,6 +15,7 @@
    import { useDocumentRequirements } from "$lib/hooks/useDocumentRequirements";
    import { useDocumentGeneration } from "$lib/hooks/useDocumentGeneration";
    import { useDocumentDelivery } from "$lib/hooks/useDocumentDelivery";
+   import { useClientManagement } from "$lib/hooks/useClientManagement";
    import { Timestamp } from "firebase/firestore";
    import type { BusinessCase, GeneratedDocument } from "$lib/types/document";
    import { goto } from "$app/navigation";
@@ -32,6 +33,7 @@
    let requirementsStore = useDocumentRequirements();
    let generationStore = useDocumentGeneration;
    let deliveryStore = useDocumentDelivery;
+   let clientStore = useClientManagement;
 
   // Load data on mount
   $effect(() => {
@@ -39,10 +41,12 @@
       const companyId = "company-1"; // TODO: Get from auth context
       productsStore.loadProducts(companyId);
       requirementsStore.loadRequirements(companyId);
+      clientStore.loadClients(companyId);
     }
   });
 
   let invoiceData = $state({
+    clientId: "",
     clientName: "",
     clientEmail: "",
     dueDate: "",
@@ -52,6 +56,11 @@
 
   let selectedProductId = $state("");
   let itemQuantity = $state(1);
+  let selectedClientId = $state("");
+
+  let selectedClient = $derived(
+    selectedClientId ? $clientStore.clients.find(c => c.uid === selectedClientId) : null
+  );
 
   interface InvoiceItem {
     id: string;
@@ -132,16 +141,20 @@
       return;
     }
 
+    // Check if selected client is invited
+    const selectedClient = selectedClientId ? $clientStore.clients.find(c => c.uid === selectedClientId) : null;
+    const isInvitedClient = selectedClient && selectedClient.metadata?.accountStatus === 'invited';
+
     try {
       // Create business case
       const businessCase: BusinessCase = {
         id: `case-${Date.now()}`,
         companyId: "company-1", // TODO: Get from auth
-        clientId: "client-1", // TODO: Get from client lookup
+        clientId: selectedClientId || "client-1", // Use selected client or default
         title: `Invoice for ${invoiceData.clientName}`,
         description: `Invoice created on ${new Date().toLocaleDateString()}`,
         selectedProducts: invoiceData.items.map(item => item.productId),
-        status: "generated",
+        status: isInvitedClient ? "pending" : "generated", // Delay for invited clients
         documents: [],
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
@@ -160,10 +173,10 @@
 
       for (const requirement of relevantRequirements) {
         const documentData = {
+          ...invoiceData,
           companyName: "DijiCRM", // TODO: Get from company settings
           amount: totalAmount(),
           date: new Date().toISOString().split('T')[0],
-          ...invoiceData,
         };
 
         // Generate document
@@ -190,8 +203,8 @@
         }
       }
 
-      // Send documents to client
-      if (generatedDocuments.length > 0) {
+      // Send documents to client (skip for invited clients)
+      if (generatedDocuments.length > 0 && !isInvitedClient) {
         await deliveryStore.deliverCaseDocuments(
           generatedDocuments,
           invoiceData.clientEmail,
@@ -200,17 +213,36 @@
         );
       }
 
-      console.log("Invoice and documents sent:", {
+      console.log("Invoice and documents processed:", {
         invoice: invoiceData,
         businessCase,
-        documents: generatedDocuments
+        documents: generatedDocuments,
+        isInvitedClient
       });
 
-      alert(`Invoice sent successfully! ${generatedDocuments.length} document(s) were also sent to the client.`);
+      if (isInvitedClient) {
+        alert(`Invoice created successfully! Documents will be sent automatically when the client activates their account.`);
+      } else {
+        alert(`Invoice sent successfully! ${generatedDocuments.length} document(s) were also sent to the client.`);
+      }
       goto("/invoices");
     } catch (error) {
       console.error("Failed to send invoice:", error);
       alert("Failed to send invoice. Please try again.");
+    }
+  }
+
+  function handleClientSelection(clientId: string) {
+    selectedClientId = clientId;
+    if (clientId) {
+      const client = $clientStore.clients.find(c => c.uid === clientId);
+      if (client) {
+        invoiceData.clientId = client.uid;
+        invoiceData.clientName = client.displayName || `${client.firstName} ${client.lastName}`;
+        invoiceData.clientEmail = client.email;
+      }
+    } else {
+      invoiceData.clientId = "";
     }
   }
 
@@ -231,9 +263,29 @@
         <Card>
           <CardHeader>
             <CardTitle>Client Information</CardTitle>
-            <CardDescription>Enter the client details for this invoice</CardDescription>
+            <CardDescription>Select an existing client or enter details manually</CardDescription>
           </CardHeader>
           <CardContent class="space-y-4">
+            <div>
+              <Label for="client-select">Select Client (Optional)</Label>
+              <Select type="single" bind:value={selectedClientId} onValueChange={handleClientSelection}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose from existing clients or enter manually" />
+                </SelectTrigger>
+                <SelectContent>
+                  {#each $clientStore.clients as client (client.uid)}
+                    <SelectItem value={client.uid}>
+                      <div class="flex items-center justify-between w-full">
+                        <span>{client.displayName || `${client.firstName} ${client.lastName}`}</span>
+                        <Badge variant={client.metadata?.accountStatus === 'active' ? 'default' : 'secondary'}>
+                          {client.metadata?.accountStatus === 'active' ? 'Active' : 'Invited'}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  {/each}
+                </SelectContent>
+              </Select>
+            </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <Label for="client-name">Client Name</Label>
@@ -405,11 +457,38 @@
               class="w-full"
               disabled={!invoiceData.clientName || !invoiceData.clientEmail || invoiceData.items.length === 0}
             >
-              <Icon icon="lucide:send" class="h-4 w-4 mr-2" />
-              Send Invoice
+              <Icon icon={selectedClient?.metadata?.accountStatus === 'invited' ? 'lucide:clock' : 'lucide:send'} class="h-4 w-4 mr-2" />
+              {selectedClient?.metadata?.accountStatus === 'invited' ? 'Queue Invoice' : 'Send Invoice'}
             </Button>
           </CardContent>
         </Card>
+
+        <!-- Client Status Notice -->
+        {#if selectedClient}
+          <Card>
+            <CardHeader>
+              <CardTitle class="text-sm">Client Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {#if selectedClient.metadata?.accountStatus === 'invited'}
+                <div class="flex items-center gap-2 text-amber-600">
+                  <Icon icon="lucide:clock" class="h-4 w-4" />
+                  <span class="text-sm">
+                    This client has been invited but hasn't activated their account yet.
+                    Documents will be sent automatically when they complete registration.
+                  </span>
+                </div>
+              {:else}
+                <div class="flex items-center gap-2 text-green-600">
+                  <Icon icon="lucide:check-circle" class="h-4 w-4" />
+                  <span class="text-sm">
+                    This client has an active account. Documents will be sent immediately.
+                  </span>
+                </div>
+              {/if}
+            </CardContent>
+          </Card>
+        {/if}
 
         <!-- Document Requirements Notice -->
         {#if invoiceData.items.length > 0}
@@ -443,6 +522,15 @@
                     No additional documents are required for the selected products.
                   </p>
                 {/if}
+              {:else}
+                <p class="text-sm text-muted-foreground">
+                  Based on the products/services selected, additional documents may be required from the client.
+                  These will be automatically identified when the invoice is sent.
+                </p>
+              {/if}
+            </CardContent>
+          </Card>
+        {/if}
               {:else}
                 <p class="text-sm text-muted-foreground">
                   Based on the products/services selected, additional documents may be required from the client.

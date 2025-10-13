@@ -292,6 +292,102 @@ If you have any questions, please contact your account representative.
 
     return { subject, htmlBody };
   }
+
+  static clientInvitation(
+    clientName: string,
+    companyName: string,
+    invitationUrl: string,
+  ): EmailTemplate {
+    const subject = `Welcome to ${companyName} - Complete Your Account Setup`;
+
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Client Invitation</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #e3f2fd; border: 1px solid #bbdefb; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+            .welcome { color: #1976d2; font-weight: bold; }
+            .content { margin-bottom: 20px; }
+            .invitation-box { background: #f8f9fa; border: 2px solid #007bff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
+            .footer { font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; }
+            .button { display: inline-block; background: #007bff; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 10px 0; font-weight: bold; font-size: 16px; }
+            .note { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px; margin: 15px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 class="welcome">Welcome to ${companyName}!</h1>
+              <p>Hello ${clientName},</p>
+            </div>
+
+            <div class="content">
+              <p>${companyName} has invited you to join their client portal. This secure platform allows you to:</p>
+              <ul>
+                <li>View and download your invoices</li>
+                <li>Access important business documents</li>
+                <li>Submit completed forms and paperwork</li>
+                <li>Track your account status and communications</li>
+              </ul>
+
+              <div class="invitation-box">
+                <h3>Complete Your Account Setup</h3>
+                <p>Click the button below to set your password and activate your account.</p>
+                <a href="${invitationUrl}" class="button">Activate My Account</a>
+                <p style="margin-top: 15px; font-size: 14px; color: #666;">
+                  This invitation link will expire in 7 days for security reasons.
+                </p>
+              </div>
+
+              <div class="note">
+                <strong>Security Note:</strong> This invitation is specifically for you. If you did not expect this invitation, please contact ${companyName} directly.
+              </div>
+
+              <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+              <p style="word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px;">
+                ${invitationUrl}
+              </p>
+            </div>
+
+            <div class="footer">
+              <p>This invitation was sent by ${companyName} using DijiCRM.</p>
+              <p>If you have any questions about setting up your account, please contact your account representative at ${companyName}.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const textBody = `
+Welcome to ${companyName}!
+
+Hello ${clientName},
+
+${companyName} has invited you to join their client portal. This secure platform allows you to:
+- View and download your invoices
+- Access important business documents
+- Submit completed forms and paperwork
+- Track your account status and communications
+
+To complete your account setup, please visit:
+${invitationUrl}
+
+This invitation link will expire in 7 days for security reasons.
+
+Security Note: This invitation is specifically for you. If you did not expect this invitation, please contact ${companyName} directly.
+
+If you have any questions about setting up your account, please contact your account representative at ${companyName}.
+
+This invitation was sent by ${companyName} using DijiCRM.
+    `;
+
+    return { subject, htmlBody, textBody };
+  }
 }
 
 // Export singleton instance

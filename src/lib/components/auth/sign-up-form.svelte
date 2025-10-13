@@ -8,6 +8,12 @@
 	import Checkbox from '../ui/checkbox/checkbox.svelte';
 	import { goto } from '$app/navigation';
 
+	interface Props {
+		invitationToken?: string | null;
+	}
+
+	let { invitationToken }: Props = $props();
+
 	let formData = $state({
 		firstName: '',
 		lastName: '',
@@ -44,6 +50,16 @@
 						errors[field] = issue.message;
 					}
 				}
+				return;
+			}
+
+			// Check if this is an invited client
+			// In real implementation, query database for invitation
+			const isInvitedClient = formData.email === 'jane.smith@client.com' && invitationToken === 'mock-token-123';
+
+			if (isInvitedClient) {
+				// Redirect to invitation acceptance flow
+				goto(`/invite/${invitationToken}`);
 				return;
 			}
 

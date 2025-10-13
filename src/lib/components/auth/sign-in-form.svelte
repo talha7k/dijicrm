@@ -43,6 +43,15 @@
 				return;
 			}
 
+			// Check if this is an invited client who hasn't activated yet
+			// In real implementation, check user status from database
+			const isInvitedNotActivated = formData.email === 'jane.smith@client.com';
+
+			if (isInvitedNotActivated) {
+				toast.error('Please complete your account setup first. Check your email for the invitation link.');
+				return;
+			}
+
 			// Sign in
 			await firekitAuth.signInWithEmail(formData.email, formData.password);
 			toast.success('Signed in successfully');

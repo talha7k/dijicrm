@@ -44,6 +44,8 @@
       case 'invoice_created': return 'lucide:file-text';
       case 'payment_received': return 'lucide:credit-card';
       case 'client_added': return 'lucide:user-plus';
+      case 'client_invited': return 'lucide:mail';
+      case 'client_activated': return 'lucide:user-check';
       default: return 'lucide:activity';
     }
   }
@@ -52,7 +54,7 @@
 {#if mounted}
   <DashboardLayout title="Company Dashboard" description="Manage your business operations and client relationships">
     <!-- Metrics Cards -->
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
       <MetricCard
         title="Total Invoices"
         value={$metrics.data?.totalInvoices || 0}
@@ -64,9 +66,14 @@
         icon="lucide:dollar-sign"
       />
       <MetricCard
-        title="Total Clients"
-        value={$metrics.data?.totalClients || 0}
+        title="Active Clients"
+        value={$metrics.data?.activeClients || 0}
         icon="lucide:users"
+      />
+      <MetricCard
+        title="Invited Clients"
+        value={$metrics.data?.invitedClients || 0}
+        icon="lucide:mail"
       />
       <MetricCard
         title="Overdue Invoices"
@@ -124,8 +131,8 @@
             Create Invoice
           </Button>
           <Button onclick={() => goto('/clients')} variant="outline" class="h-20 flex-col">
-            <Icon icon="lucide:user-plus" class="h-6 w-6 mb-2" />
-            Add Client
+            <Icon icon="lucide:users" class="h-6 w-6 mb-2" />
+            Manage Clients
           </Button>
           <Button onclick={() => goto('/invoices')} variant="outline" class="h-20 flex-col">
             <Icon icon="lucide:file-text" class="h-6 w-6 mb-2" />

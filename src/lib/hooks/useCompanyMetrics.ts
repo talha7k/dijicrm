@@ -5,10 +5,17 @@ export interface CompanyMetrics {
   totalInvoices: number;
   outstandingAmount: number;
   totalClients: number;
+  activeClients: number;
+  invitedClients: number;
   overdueInvoices: number;
   recentActivity: {
     id: string;
-    type: "invoice_created" | "payment_received" | "client_added";
+    type:
+      | "invoice_created"
+      | "payment_received"
+      | "client_added"
+      | "client_invited"
+      | "client_activated";
     description: string;
     timestamp: Date;
     amount: number | null;
@@ -20,6 +27,8 @@ const mockCompanyMetrics: CompanyMetrics = {
   totalInvoices: 45,
   outstandingAmount: 12500.5,
   totalClients: 12,
+  activeClients: 8,
+  invitedClients: 4,
   overdueInvoices: 3,
   recentActivity: [
     {
@@ -41,6 +50,20 @@ const mockCompanyMetrics: CompanyMetrics = {
       type: "client_added",
       description: "New client Global Solutions added",
       timestamp: new Date("2024-01-18T09:00:00"),
+      amount: null,
+    },
+    {
+      id: "act-004",
+      type: "client_invited",
+      description: "Invitation sent to john.doe@example.com",
+      timestamp: new Date("2024-01-17T11:45:00"),
+      amount: null,
+    },
+    {
+      id: "act-005",
+      type: "client_activated",
+      description: "Client Jane Smith activated their account",
+      timestamp: new Date("2024-01-16T16:20:00"),
       amount: null,
     },
   ],

@@ -45,6 +45,12 @@ export interface UserProfile {
       platform: string;
     };
     lastIPAddress?: string;
-    accountStatus: "active" | "suspended" | "deactivated";
+    accountStatus: "active" | "suspended" | "deactivated" | "invited";
   };
+
+  // Invitation system for pre-registered clients
+  invitationToken?: string;
+  invitationExpiresAt?: Timestamp;
+  invitedBy?: string; // UID of company user who created the invitation
+  invitationStatus?: "pending" | "accepted" | "expired";
 }
