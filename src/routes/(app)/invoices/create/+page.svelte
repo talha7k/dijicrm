@@ -10,9 +10,14 @@
   import { Badge } from "$lib/components/ui/badge";
 
   import Icon from "@iconify/svelte";
-  import { requireCompany } from "$lib/utils/auth";
-  import { useProducts } from "$lib/hooks/useProducts";
-  import { goto } from "$app/navigation";
+   import { requireCompany } from "$lib/utils/auth";
+   import { useProducts } from "$lib/hooks/useProducts";
+   import { useDocumentRequirements } from "$lib/hooks/useDocumentRequirements";
+   import { useDocumentGeneration } from "$lib/hooks/useDocumentGeneration";
+   import { useDocumentDelivery } from "$lib/hooks/useDocumentDelivery";
+   import { Timestamp } from "firebase/firestore";
+   import type { BusinessCase, GeneratedDocument } from "$lib/types/document";
+   import { goto } from "$app/navigation";
 
   let mounted = $state(false);
 
@@ -23,13 +28,17 @@
     }
   });
 
-  let productsStore = useProducts();
+   let productsStore = useProducts();
+   let requirementsStore = useDocumentRequirements();
+   let generationStore = useDocumentGeneration;
+   let deliveryStore = useDocumentDelivery;
 
   // Load data on mount
   $effect(() => {
     if (mounted) {
       const companyId = "company-1"; // TODO: Get from auth context
       productsStore.loadProducts(companyId);
+      requirementsStore.loadRequirements(companyId);
     }
   });
 
@@ -117,16 +126,92 @@
     alert("Invoice saved as draft");
   }
 
-  function handleSendInvoice() {
+  async function handleSendInvoice() {
     if (!invoiceData.clientName || !invoiceData.clientEmail || invoiceData.items.length === 0) {
       alert("Please fill in all required fields and add at least one item");
       return;
     }
 
-    // TODO: Generate invoice and send
-    console.log("Sending invoice:", invoiceData);
-    alert("Invoice sent successfully!");
-    goto("/invoices");
+    try {
+      // Create business case
+      const businessCase: BusinessCase = {
+        id: `case-${Date.now()}`,
+        companyId: "company-1", // TODO: Get from auth
+        clientId: "client-1", // TODO: Get from client lookup
+        title: `Invoice for ${invoiceData.clientName}`,
+        description: `Invoice created on ${new Date().toLocaleDateString()}`,
+        selectedProducts: invoiceData.items.map(item => item.productId),
+        status: "generated",
+        documents: [],
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        createdBy: "user-1", // TODO: Get from auth
+      };
+
+      // Get document requirements for selected products
+      const productIds = invoiceData.items.map(item => item.productId);
+      const allRequirements = $requirementsStore.data || [];
+      const relevantRequirements = allRequirements.filter(req =>
+        productIds.includes(req.productId) && req.isMandatory
+      );
+
+      // Generate required documents
+      const generatedDocuments: GeneratedDocument[] = [];
+
+      for (const requirement of relevantRequirements) {
+        const documentData = {
+          companyName: "DijiCRM", // TODO: Get from company settings
+          amount: totalAmount(),
+          date: new Date().toISOString().split('T')[0],
+          ...invoiceData,
+        };
+
+        // Generate document
+        await generationStore.generateDocument(requirement.templateId, documentData, "pdf");
+
+        if ($generationStore.result) {
+          const generatedDoc: GeneratedDocument = {
+            id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            caseId: businessCase.id,
+            clientId: businessCase.clientId,
+            templateId: requirement.templateId,
+            templateVersion: 1,
+            htmlContent: $generationStore.result.content,
+            pdfUrl: $generationStore.result.content, // TODO: This should be the actual PDF URL
+            status: "generated",
+            data: documentData,
+            generatedAt: Timestamp.now(),
+            version: 1,
+            metadata: {},
+          };
+
+          generatedDocuments.push(generatedDoc);
+          businessCase.documents.push(generatedDoc.id);
+        }
+      }
+
+      // Send documents to client
+      if (generatedDocuments.length > 0) {
+        await deliveryStore.deliverCaseDocuments(
+          generatedDocuments,
+          invoiceData.clientEmail,
+          "DijiCRM", // TODO: Get from company settings
+          invoiceData.clientName
+        );
+      }
+
+      console.log("Invoice and documents sent:", {
+        invoice: invoiceData,
+        businessCase,
+        documents: generatedDocuments
+      });
+
+      alert(`Invoice sent successfully! ${generatedDocuments.length} document(s) were also sent to the client.`);
+      goto("/invoices");
+    } catch (error) {
+      console.error("Failed to send invoice:", error);
+      alert("Failed to send invoice. Please try again.");
+    }
   }
 
   function formatCurrency(amount: number): string {
@@ -333,10 +418,37 @@
               <CardTitle class="text-sm">Document Requirements</CardTitle>
             </CardHeader>
             <CardContent>
-              <p class="text-sm text-muted-foreground">
-                Based on the products/services selected, additional documents may be required from the client.
-                These will be automatically identified when the invoice is sent.
-              </p>
+              {#if $requirementsStore.data}
+                {@const productIds = invoiceData.items.map(item => item.productId)}
+                {@const relevantRequirements = $requirementsStore.data.filter(req =>
+                  productIds.includes(req.productId) && req.isMandatory
+                )}
+                {#if relevantRequirements.length > 0}
+                  <div class="space-y-2">
+                    <p class="text-sm text-muted-foreground">
+                      The following documents will be automatically generated and sent to the client:
+                    </p>
+                    <ul class="text-sm space-y-1">
+                      {#each relevantRequirements as req}
+                        {@const product = $productsStore.data?.find(p => p.id === req.productId)}
+                        <li class="flex items-center gap-2">
+                          <Icon icon="lucide:file-text" class="h-3 w-3" />
+                          <span>{product?.name || 'Unknown Product'} - Document Required</span>
+                        </li>
+                      {/each}
+                    </ul>
+                  </div>
+                {:else}
+                  <p class="text-sm text-muted-foreground">
+                    No additional documents are required for the selected products.
+                  </p>
+                {/if}
+              {:else}
+                <p class="text-sm text-muted-foreground">
+                  Based on the products/services selected, additional documents may be required from the client.
+                  These will be automatically identified when the invoice is sent.
+                </p>
+              {/if}
             </CardContent>
           </Card>
         {/if}

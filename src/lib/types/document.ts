@@ -94,6 +94,7 @@ export interface DocumentDelivery {
   retryCount: number;
   maxRetries: number;
   emailServiceId?: string; // ID from email service provider
+  lastRetryAt?: Timestamp; // Timestamp of last retry attempt
 }
 
 export interface BusinessCase {
