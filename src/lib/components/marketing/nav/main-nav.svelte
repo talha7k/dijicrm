@@ -5,7 +5,6 @@
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import DarkModeToggle from "$lib/components/shared/dark-mode-toggle.svelte";
   import { marketingNavItems, siteConfig } from "../../../../config";
-  import SocialMediaIcons from "$lib/components/shared/social-media-icons.svelte";
   import { firekitUser } from "svelte-firekit";
   import { page } from "$app/state";
   let path = $derived(page.url.pathname);
@@ -132,7 +131,6 @@
                 style={indicatorStyle}
               ></div>
             {/if}
-            <SocialMediaIcons />
             <div class="hidden md:block">
               <DarkModeToggle />
             </div>
