@@ -60,7 +60,7 @@ export interface RequiredDocument {
 }
 
 export interface CaseRequirements {
-  caseId: string;
+  orderId: string;
   clientId: string;
   companyId: string;
 

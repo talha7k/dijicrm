@@ -6,7 +6,7 @@ import type { DocumentDelivery } from "$lib/types/document";
 export const POST = async ({ request }: RequestEvent) => {
   try {
     const body = await request.json();
-    const { documentIds, recipientEmail, companyName, clientName, caseId } =
+    const { documentIds, recipientEmail, companyName, clientName, orderId } =
       body;
 
     if (
@@ -27,7 +27,7 @@ export const POST = async ({ request }: RequestEvent) => {
     // Mock documents - in real implementation, fetch from database
     const mockDocuments = documentIds.map((id) => ({
       id,
-      caseId: caseId || "case-1",
+      orderId: orderId || "order-1",
       clientId: "client-1",
       templateId: "template-1",
       templateVersion: 1,
@@ -62,7 +62,7 @@ export const POST = async ({ request }: RequestEvent) => {
       textBody: template.textBody,
       attachments: attachments.length > 0 ? attachments : undefined,
       metadata: {
-        caseId: caseId || "case-1",
+        orderId: orderId || "order-1",
         clientId: "client-1", // TODO: Get from auth/session
         documentCount: documentIds.length,
       },

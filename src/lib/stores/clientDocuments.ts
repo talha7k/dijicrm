@@ -31,7 +31,7 @@ function createClientDocumentsStore() {
         const mockDocuments: GeneratedDocument[] = [
           {
             id: "doc-1",
-            caseId: "case-1",
+            orderId: "order-1",
             clientId,
             templateId: "template-1",
             templateVersion: 1,
@@ -46,7 +46,7 @@ function createClientDocumentsStore() {
           },
           {
             id: "doc-2",
-            caseId: "case-1",
+            orderId: "order-1",
             clientId,
             templateId: "template-2",
             templateVersion: 1,

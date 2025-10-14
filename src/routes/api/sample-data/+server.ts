@@ -11,11 +11,7 @@ import { getAuth } from "firebase-admin/auth";
 import { PUBLIC_FIREBASE_PROJECT_ID } from "$env/static/public";
 import type { UserProfile } from "$lib/types/user";
 import type { Product } from "$lib/stores/products";
-import type {
-  BusinessCase,
-  DocumentTemplate,
-  Payment,
-} from "$lib/types/document";
+import type { Order, DocumentTemplate, Payment } from "$lib/types/document";
 import type { StoredCompanyBranding } from "$lib/types/branding";
 
 // Define types that match Firestore admin SDK
@@ -380,16 +376,16 @@ async function generateInvoiceData(
   products: Product[],
   templates: DocumentTemplate[],
   companyUser: UserProfile,
-): Promise<BusinessCase[]> {
-  const invoices: BusinessCase[] = [];
+): Promise<Order[]> {
+  const orders: Order[] = [];
 
   for (let i = 0; i < clients.length; i++) {
     const client = clients[i];
     const product = products[i % products.length];
     const template = templates[0]; // Use first template
 
-    const invoice: BusinessCase = {
-      id: `invoice-${Date.now()}-${i}`,
+    const order: Order = {
+      id: `order-${Date.now()}-${i}`,
       companyId,
       clientId: client.uid,
       title: `Invoice for ${product.name}`,
@@ -406,31 +402,31 @@ async function generateInvoiceData(
       createdBy: companyUser.uid,
     };
 
-    await db.collection("businessCases").doc(invoice.id).set(invoice);
-    invoices.push(invoice);
+    await db.collection("orders").doc(order.id).set(order);
+    orders.push(order);
   }
 
-  return invoices;
+  return orders;
 }
 
 async function generatePaymentData(
   companyId: string,
-  invoices: BusinessCase[],
+  orders: Order[],
   clients: UserProfile[],
   companyUser: UserProfile,
 ): Promise<Payment[]> {
   const payments: Payment[] = [];
 
-  for (const invoice of invoices) {
-    if (invoice.status === "paid") {
-      const client = clients.find((c) => c.uid === invoice.clientId);
+  for (const order of orders) {
+    if (order.status === "paid") {
+      const client = clients.find((c) => c.uid === order.clientId);
       if (client) {
         const payment: Payment = {
           id: `payment-${Date.now()}-${payments.length}`,
-          invoiceId: invoice.id,
+          invoiceId: order.id,
           companyId,
           clientId: client.uid,
-          amount: invoice.totalAmount,
+          amount: order.totalAmount,
           paymentDate: Timestamp.now() as any,
           paymentMethod: "bank_transfer",
           reference: `TXN-${Date.now()}`,
@@ -443,10 +439,10 @@ async function generatePaymentData(
         await db.collection("payments").doc(payment.id).set(payment);
         payments.push(payment);
 
-        // Update invoice payments array
+        // Update order payments array
         await db
-          .collection("businessCases")
-          .doc(invoice.id)
+          .collection("orders")
+          .doc(order.id)
           .update({
             payments: [payment.id],
           });

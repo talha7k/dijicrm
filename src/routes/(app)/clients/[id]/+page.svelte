@@ -3,10 +3,11 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { requireCompany } from '$lib/utils/auth';
-  import { clientManagementStore } from '$lib/stores/clientManagement';
-  import { productsStore } from '$lib/stores/products';
-  import { clientInvoicesStore } from '$lib/stores/clientInvoices';
-  import { documentDeliveryStore } from '$lib/stores/documentDelivery';
+   import { clientManagementStore } from '$lib/stores/clientManagement';
+   import { productsStore } from '$lib/stores/products';
+   import { clientInvoicesStore } from '$lib/stores/clientInvoices';
+   import { ordersStore } from '$lib/stores/orders';
+   import { documentDeliveryStore } from '$lib/stores/documentDelivery';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
@@ -16,17 +17,20 @@
   import * as Select from '$lib/components/ui/select/index.js';
 
   import { toast } from 'svelte-sonner';
-  import OrderCreationModal from '$lib/components/app/client/OrderCreationModal.svelte';
-  import DocumentSendModal from '$lib/components/app/client/DocumentSendModal.svelte';
-  import PDFUploadModal from '$lib/components/app/client/PDFUploadModal.svelte';
-  import PaymentModal from '$lib/components/app/client/PaymentModal.svelte';
-   import EmailHistory from '$lib/components/app/client/EmailHistory.svelte';
-   import DocumentHistory from '$lib/components/app/client/DocumentHistory.svelte';
-   import { emailHistoryStore } from '$lib/stores/emailHistory';
-    import type { UserProfile } from '$lib/types/user';
-    import type { Product } from '$lib/stores/products';
-    import type { ClientInvoice } from '$lib/stores/clientInvoices';
-    import type { EmailRecord } from '$lib/stores/emailHistory';
+   import OrderCreationModal from '$lib/components/app/client/OrderCreationModal.svelte';
+   import DocumentSendModal from '$lib/components/app/client/DocumentSendModal.svelte';
+   import PDFUploadModal from '$lib/components/app/client/PDFUploadModal.svelte';
+   import EmailComposeModal from '$lib/components/app/client/EmailComposeModal.svelte';
+   import PaymentModal from '$lib/components/app/client/PaymentModal.svelte';
+    import EmailHistory from '$lib/components/app/client/EmailHistory.svelte';
+    import DocumentHistory from '$lib/components/app/client/DocumentHistory.svelte';
+    import OrderDetailModal from '$lib/components/app/client/OrderDetailModal.svelte';
+    import { emailHistoryStore } from '$lib/stores/emailHistory';
+     import type { UserProfile } from '$lib/types/user';
+     import type { Product } from '$lib/stores/products';
+     import type { ClientInvoice } from '$lib/stores/clientInvoices';
+     import type { Order } from '$lib/types/document';
+     import type { EmailRecord } from '$lib/stores/emailHistory';
 
     interface DocumentRecord {
       id: string;
@@ -41,10 +45,11 @@
 
   // Company access is checked at layout level
 
-  const clientStore = clientManagementStore;
-  const productStore = productsStore;
-  const invoiceStore = clientInvoicesStore;
-  const deliveryStore = documentDeliveryStore;
+   const clientStore = clientManagementStore;
+   const productStore = productsStore;
+   const invoiceStore = clientInvoicesStore;
+   const orderStore = ordersStore;
+   const deliveryStore = documentDeliveryStore;
   const clientId = $page.params.id as string;
 
   let client = $state<UserProfile | undefined>(undefined);
@@ -54,26 +59,7 @@
   let activeTab = $state('overview');
 
   // Mock client orders and products for now
-  let clientOrders = $state([
-    {
-      id: 'order-1',
-      productId: 'prod-1',
-      productName: 'Web Development Service',
-      quantity: 1,
-      amount: 5000,
-      status: 'completed',
-      createdAt: new Date('2024-01-15'),
-    },
-    {
-      id: 'order-2',
-      productId: 'prod-2',
-      productName: 'SEO Package',
-      quantity: 1,
-      amount: 1500,
-      status: 'in_progress',
-      createdAt: new Date('2024-02-01'),
-    },
-  ]);
+   let clientOrders = $state<Order[]>([]);
 
    let clientDocuments = $state<DocumentRecord[]>([]);
 
@@ -112,11 +98,14 @@
      return unsubscribe;
    });
 
-  let showOrderModal = $state(false);
-  let showDocumentModal = $state(false);
-  let showPDFUploadModal = $state(false);
-  let showPaymentModal = $state(false);
-  let selectedInvoice = $state<ClientInvoice | null>(null);
+    let showOrderModal = $state(false);
+    let showDocumentModal = $state(false);
+    let showPDFUploadModal = $state(false);
+    let showEmailComposeModal = $state(false);
+    let showPaymentModal = $state(false);
+    let showOrderDetailModal = $state(false);
+   let selectedInvoice = $state<ClientInvoice | null>(null);
+   let selectedOrder = $state<Order | null>(null);
 
   onMount(async () => {
     try {
@@ -134,9 +123,15 @@
         products = state.data || [];
       });
 
-      invoiceStore.subscribe((state) => {
-        invoices = state.data || [];
-      });
+       invoiceStore.subscribe((state) => {
+         invoices = state.data || [];
+       });
+
+       // Load orders for this client
+       await orderStore.loadClientOrders(clientId);
+       orderStore.subscribe((state) => {
+         clientOrders = state.data || [];
+       });
 
       // Load email history for this client
       if (client.email) {
@@ -185,15 +180,38 @@
     }).format(date);
   }
 
-  function handleCreateOrder(order: any) {
-    // Add the new order to the client orders
-    clientOrders = [...clientOrders, order];
-    showOrderModal = false;
-  }
+   async function handleCreateOrder(order: any) {
+     try {
+       await orderStore.createOrder({
+         companyId: "company-1", // TODO: Get from auth
+         clientId,
+         title: order.title,
+         description: order.description,
+         selectedProducts: order.selectedProducts,
+         status: "draft",
+         documents: [],
+         totalAmount: order.totalAmount,
+         paidAmount: 0,
+         outstandingAmount: order.totalAmount,
+         payments: [],
+         createdBy: "user-1", // TODO: Get from auth
+       });
+       showOrderModal = false;
+       toast.success('Order created successfully');
+     } catch (error) {
+       console.error('Error creating order:', error);
+       toast.error('Failed to create order');
+     }
+   }
 
-  function handleNewOrder() {
-    showOrderModal = true;
-  }
+   function handleNewOrder() {
+     showOrderModal = true;
+   }
+
+   function handleOrderClick(order: Order) {
+     selectedOrder = order;
+     showOrderDetailModal = true;
+   }
 
   function handleSendDocument() {
     showDocumentModal = true;
@@ -238,14 +256,15 @@
     }
   }
 
-  function handleOrderStatusChange(orderId: string, newStatus: string) {
-    clientOrders = clientOrders.map(order =>
-      order.id === orderId
-        ? { ...order, status: newStatus }
-        : order
-    );
-    toast.success('Order status updated');
-  }
+   async function handleOrderStatusChange(orderId: string, newStatus: string) {
+     try {
+       await orderStore.updateOrder(orderId, { status: newStatus as any });
+       toast.success('Order status updated');
+     } catch (error) {
+       console.error('Error updating order status:', error);
+       toast.error('Failed to update order status');
+     }
+   }
 </script>
 
 <svelte:head>
@@ -271,13 +290,19 @@
         <h1 class="text-3xl font-bold">{client.displayName}</h1>
         <p class="text-muted-foreground">{client.email}</p>
       </div>
-       <div class="flex space-x-2">
-         <Button variant="outline" onclick={handleSendDocument}>
-           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-           </svg>
-           Send Document
-         </Button>
+        <div class="flex space-x-2">
+          <Button variant="outline" onclick={() => showEmailComposeModal = true}>
+            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            Compose Email
+          </Button>
+          <Button variant="outline" onclick={handleSendDocument}>
+            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+            </svg>
+            Send Document
+          </Button>
          {#if client.metadata?.accountStatus === 'added'}
            <Button variant="outline" onclick={handleInviteClient}>
              <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -374,10 +399,9 @@
 
     <!-- Tabs -->
     <Tabs.Root bind:value={activeTab}>
-      <Tabs.List class="grid w-full grid-cols-5">
+      <Tabs.List class="grid w-full grid-cols-4">
         <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
-        <Tabs.Trigger value="invoices">Invoices</Tabs.Trigger>
-        <Tabs.Trigger value="payments">Payments</Tabs.Trigger>
+        <Tabs.Trigger value="orders">Orders</Tabs.Trigger>
         <Tabs.Trigger value="emails">Emails</Tabs.Trigger>
         <Tabs.Trigger value="documents">Documents</Tabs.Trigger>
       </Tabs.List>
@@ -391,20 +415,20 @@
             </Card.Header>
             <Card.Content>
               <div class="space-y-3">
-                {#each clientOrders.slice(0, 3) as order}
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <p class="text-sm font-medium">{order.productName}</p>
-                      <p class="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
-                    </div>
-                    <div class="text-right">
-                      <p class="text-sm font-medium">{formatCurrency(order.amount)}</p>
-                      <Badge variant={getStatusBadge(order.status)} class="text-xs">
-                        {order.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  </div>
-                {/each}
+                 {#each clientOrders.slice(0, 3) as order}
+                   <div class="flex items-center justify-between">
+                     <div>
+                       <p class="text-sm font-medium">{order.title}</p>
+                       <p class="text-xs text-muted-foreground">{formatDate(order.createdAt.toDate())}</p>
+                     </div>
+                     <div class="text-right">
+                       <p class="text-sm font-medium">{formatCurrency(order.totalAmount)}</p>
+                       <Badge variant={getStatusBadge(order.status)} class="text-xs">
+                         {order.status.replace('_', ' ')}
+                       </Badge>
+                     </div>
+                   </div>
+                 {/each}
               </div>
             </Card.Content>
           </Card.Root>
@@ -433,11 +457,11 @@
         </div>
       </Tabs.Content>
 
-      <Tabs.Content value="products" class="space-y-6">
+      <Tabs.Content value="orders" class="space-y-6">
         <Card.Root>
           <Card.Header>
             <div class="flex items-center justify-between">
-              <Card.Title>Products & Orders</Card.Title>
+              <Card.Title>Orders</Card.Title>
               <Button size="sm" onclick={handleNewOrder}>
                 <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -448,144 +472,47 @@
           </Card.Header>
           <Card.Content>
             <div class="space-y-4">
-              {#each clientOrders as order}
-                <div class="flex items-center justify-between p-4 border rounded-lg">
-                  <div class="flex-1">
-                    <h4 class="font-medium">{order.productName}</h4>
-                    <p class="text-sm text-muted-foreground">
-                      Order #{order.id} • {formatDate(order.createdAt)}
-                    </p>
-                  </div>
-                  <div class="flex items-center space-x-4">
-                    <div class="text-right">
-                      <p class="font-medium">{formatCurrency(order.amount)}</p>
-                      <Select.Root
-                        type="single"
-                        value={order.status}
-                        onValueChange={(value) => handleOrderStatusChange(order.id, value)}
-                      >
-                        <Select.Trigger class="w-32">
-                          <Badge variant={getStatusBadge(order.status)} class="w-full justify-center">
-                            {order.status.replace('_', ' ')}
-                          </Badge>
-                        </Select.Trigger>
-                        <Select.Content>
-                          <Select.Item value="pending">Pending</Select.Item>
-                          <Select.Item value="in_progress">In Progress</Select.Item>
-                          <Select.Item value="completed">Completed</Select.Item>
-                          <Select.Item value="cancelled">Cancelled</Select.Item>
-                        </Select.Content>
-                      </Select.Root>
-                    </div>
-                  </div>
-                </div>
-              {/each}
-            </div>
+               {#each clientOrders as order}
+                 <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors" onclick={() => handleOrderClick(order)}>
+                   <div class="flex-1">
+                     <h4 class="font-medium">{order.title}</h4>
+                     <p class="text-sm text-muted-foreground">
+                       Order #{order.id} • {formatDate(order.createdAt.toDate())}
+                     </p>
+                   </div>
+                   <div class="flex items-center space-x-4">
+                     <div class="text-right">
+                       <p class="font-medium">{formatCurrency(order.totalAmount)}</p>
+                       <Select.Root
+                         type="single"
+                         value={order.status}
+                         onValueChange={(value) => handleOrderStatusChange(order.id, value)}
+                       >
+                         <Select.Trigger class="w-32">
+                           <Badge variant={getStatusBadge(order.status)} class="w-full justify-center">
+                             {order.status.replace('_', ' ')}
+                           </Badge>
+                         </Select.Trigger>
+                         <Select.Content>
+                           <Select.Item value="draft">Draft</Select.Item>
+                           <Select.Item value="quote">Quote</Select.Item>
+                           <Select.Item value="generated">Generated</Select.Item>
+                           <Select.Item value="sent">Sent</Select.Item>
+                           <Select.Item value="partially_paid">Partially Paid</Select.Item>
+                           <Select.Item value="paid">Paid</Select.Item>
+                           <Select.Item value="overdue">Overdue</Select.Item>
+                         </Select.Content>
+                       </Select.Root>
+                     </div>
+                   </div>
+                 </div>
+               {/each}
+             </div>
           </Card.Content>
         </Card.Root>
       </Tabs.Content>
 
-      <Tabs.Content value="invoices" class="space-y-6">
-        <Card.Root>
-          <Card.Header>
-            <Card.Title>Invoices</Card.Title>
-            <Card.Description>
-              All invoices for this client
-            </Card.Description>
-          </Card.Header>
-          <Card.Content>
-            <div class="space-y-4">
-              {#each invoices as invoice}
-                <div
-                  class="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                  onclick={() => goto(`/clients/${clientId}/invoices/${invoice.id}`)}
-                  onkeydown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      goto(`/clients/${clientId}/invoices/${invoice.id}`);
-                    }
-                  }}
-                  role="button"
-                  tabindex="0"
-                  aria-label="View invoice {invoice.number} details"
-                >
-                  <div class="flex-1">
-                    <h4 class="font-medium">{invoice.number}</h4>
-                    <p class="text-sm text-muted-foreground">
-                      {invoice.description} • Due {formatDate(invoice.dueDate)}
-                    </p>
-                    <div class="flex items-center space-x-2 mt-1">
-                      <Badge variant={getStatusBadge(invoice.status)}>
-                        {invoice.status}
-                      </Badge>
-                      {#if invoice.status === 'overdue'}
-                        <span class="text-xs text-red-600 font-medium">
-                          {Math.ceil((new Date(invoice.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days overdue
-                        </span>
-                      {/if}
-                    </div>
-                  </div>
-                  <div class="text-right">
-                    <p class="font-medium">{formatCurrency(invoice.amount)}</p>
-                    <svg class="h-4 w-4 text-muted-foreground ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                    </svg>
-                  </div>
-                </div>
-              {/each}
-              {#if invoices.length === 0}
-                <div class="text-center py-8 text-muted-foreground">
-                  <p>No invoices found for this client.</p>
-                </div>
-              {/if}
-            </div>
-          </Card.Content>
-        </Card.Root>
-      </Tabs.Content>
 
-      <Tabs.Content value="payments" class="space-y-6">
-        <Card.Root>
-          <Card.Header>
-            <Card.Title>Payment History</Card.Title>
-            <Card.Description>
-              All payments received from this client
-            </Card.Description>
-          </Card.Header>
-          <Card.Content>
-            <div class="space-y-4">
-              <!-- Mock payment data for now -->
-              <div class="flex items-center justify-between p-4 border rounded-lg">
-                <div class="flex-1">
-                  <h4 class="font-medium">Payment for INV-2024-001</h4>
-                  <p class="text-sm text-muted-foreground">
-                    Credit Card • Dec 15, 2024
-                  </p>
-                </div>
-                <div class="text-right">
-                  <p class="font-medium text-green-600">+{formatCurrency(1250.00)}</p>
-                  <Badge variant="default" class="text-xs">Completed</Badge>
-                </div>
-              </div>
-              <div class="flex items-center justify-between p-4 border rounded-lg">
-                <div class="flex-1">
-                  <h4 class="font-medium">Partial payment for INV-2024-002</h4>
-                  <p class="text-sm text-muted-foreground">
-                    Bank Transfer • Jan 10, 2025
-                  </p>
-                </div>
-                <div class="text-right">
-                  <p class="font-medium text-green-600">+{formatCurrency(445.75)}</p>
-                  <Badge variant="secondary" class="text-xs">Partial</Badge>
-                </div>
-              </div>
-              <div class="text-center py-4 text-muted-foreground">
-                <p>Showing all payment records for this client.</p>
-                <p class="text-sm">Total paid: {formatCurrency(1695.75)}</p>
-              </div>
-            </div>
-          </Card.Content>
-        </Card.Root>
-      </Tabs.Content>
 
       <Tabs.Content value="emails" class="space-y-6">
         <EmailHistory
@@ -657,14 +584,33 @@
       onSendComplete={handleDocumentSendComplete}
     />
 
-    <!-- PDF Upload Modal -->
-    <PDFUploadModal
+    <!-- Email Compose Modal -->
+    <EmailComposeModal
       {clientId}
-      open={showPDFUploadModal}
-      onUploadComplete={handlePDFUploadComplete}
+      clientEmail={client.email}
+      clientName={client.displayName || `${client.firstName} ${client.lastName}`}
+      open={showEmailComposeModal}
+      onSendComplete={() => {
+        toast.success('Email sent successfully');
+        showEmailComposeModal = false;
+      }}
     />
 
-    <!-- Payment Modal -->
+     <!-- PDF Upload Modal -->
+     <PDFUploadModal
+       {clientId}
+       open={showPDFUploadModal}
+       onUploadComplete={handlePDFUploadComplete}
+     />
+
+     <!-- Order Detail Modal -->
+     <OrderDetailModal
+       order={selectedOrder}
+       open={showOrderDetailModal}
+       onClose={() => showOrderDetailModal = false}
+     />
+
+     <!-- Payment Modal -->
     <PaymentModal
       invoice={selectedInvoice}
       open={showPaymentModal}

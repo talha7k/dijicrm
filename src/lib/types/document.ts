@@ -32,26 +32,9 @@ export interface TemplatePlaceholder {
   };
 }
 
-export interface DocumentRequirement {
-  id: string;
-  companyId: string;
-  productId: string; // Reference to product/service
-  templateId: string; // Reference to required template
-  isMandatory: boolean;
-  conditions?: RequirementCondition[]; // Conditional requirements
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
-
-export interface RequirementCondition {
-  field: string; // Field to check
-  operator: "equals" | "contains" | "greater_than" | "less_than";
-  value: string | number | boolean;
-}
-
 export interface GeneratedDocument {
   id: string;
-  caseId: string; // Reference to the business case
+  orderId: string; // Reference to the order
   clientId: string;
   templateId: string;
   templateVersion: number;
@@ -100,7 +83,7 @@ export interface DocumentDelivery {
 
 export interface Payment {
   id: string;
-  invoiceId: string; // Reference to BusinessCase/invoice
+  invoiceId: string; // Reference to Order/invoice
   companyId: string;
   clientId: string;
   amount: number;
@@ -114,7 +97,7 @@ export interface Payment {
   updatedAt: Timestamp;
 }
 
-export interface BusinessCase {
+export interface Order {
   id: string;
   companyId: string;
   clientId: string;

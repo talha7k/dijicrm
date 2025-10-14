@@ -12,7 +12,6 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
-import type { DocumentRequirement } from "$lib/types/document";
 
 export interface Product {
   id: string;
@@ -24,7 +23,6 @@ export interface Product {
   isActive: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  documentRequirements?: DocumentRequirement[]; // Related document requirements
 }
 
 function createProductsStore() {
@@ -68,36 +66,6 @@ function createProductsStore() {
 
         // If no products in Firebase, use mock data as fallback
         if (products.length === 0) {
-          // Mock document requirements data
-          const mockRequirements: DocumentRequirement[] = [
-            {
-              id: "req-1",
-              companyId,
-              productId: "prod-1",
-              templateId: "template-1",
-              isMandatory: true,
-              conditions: [],
-              createdAt: Timestamp.fromDate(new Date("2024-01-01")),
-              updatedAt: Timestamp.fromDate(new Date("2024-01-01")),
-            },
-            {
-              id: "req-2",
-              companyId,
-              productId: "prod-2",
-              templateId: "template-2",
-              isMandatory: false,
-              conditions: [
-                {
-                  field: "amount",
-                  operator: "greater_than",
-                  value: 1000,
-                },
-              ],
-              createdAt: Timestamp.fromDate(new Date("2024-01-02")),
-              updatedAt: Timestamp.fromDate(new Date("2024-01-02")),
-            },
-          ];
-
           // Mock data
           const mockProducts: Product[] = [
             {
@@ -110,9 +78,6 @@ function createProductsStore() {
               isActive: true,
               createdAt: Timestamp.fromDate(new Date("2024-01-01")),
               updatedAt: Timestamp.fromDate(new Date("2024-01-01")),
-              documentRequirements: mockRequirements.filter(
-                (req) => req.productId === "prod-1",
-              ),
             },
             {
               id: "prod-2",
@@ -124,9 +89,6 @@ function createProductsStore() {
               isActive: true,
               createdAt: Timestamp.fromDate(new Date("2024-01-02")),
               updatedAt: Timestamp.fromDate(new Date("2024-01-02")),
-              documentRequirements: mockRequirements.filter(
-                (req) => req.productId === "prod-2",
-              ),
             },
             {
               id: "prod-3",
@@ -138,7 +100,6 @@ function createProductsStore() {
               isActive: true,
               createdAt: Timestamp.fromDate(new Date("2024-01-03")),
               updatedAt: Timestamp.fromDate(new Date("2024-01-03")),
-              documentRequirements: [],
             },
           ];
 
@@ -172,7 +133,6 @@ function createProductsStore() {
           id: `prod-${Date.now()}`,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
-          documentRequirements: product.documentRequirements || [],
         };
 
         // Save to Firebase

@@ -16,7 +16,7 @@
     import { documentTemplatesStore } from "$lib/stores/documentTemplates";
     import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
    import ProductForm from "$lib/components/shared/product-form.svelte";
-   import DocumentRequirementsSummary from "$lib/components/shared/document-requirements-summary.svelte";
+
     import type { Product } from "$lib/stores/products";
    import type { DocumentTemplate } from "$lib/types/document";
 
@@ -152,7 +152,6 @@
             </DialogDescription>
           </DialogHeader>
           <ProductForm
-            templates={$templatesStore.data}
             on:save={(e) => handleProductSave(e.detail)}
             on:cancel={() => showCreateDialog = false}
           />
@@ -207,7 +206,7 @@
                    <Icon icon="lucide:dollar-sign" class="h-4 w-4 mr-2" />
                    {formatPrice(product.price)}
                  </div>
-                 <DocumentRequirementsSummary requirements={product.documentRequirements || []} />
+
                </div>
 
               <div class="flex gap-2 mt-4">

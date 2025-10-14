@@ -16,6 +16,7 @@ export interface EmailRecord {
     filename: string;
     size: number;
     type: string;
+    documentType?: string; // e.g., "Invoice", "Contract", "Report"
   }>;
 }
 
@@ -136,6 +137,99 @@ function createEmailHistoryStore() {
               : "Failed to load email history",
           loading: false,
         }));
+      }
+    },
+
+    async sendEmail(emailData: {
+      subject: string;
+      message: string;
+      recipient: string;
+      attachments: Array<{
+        file: File;
+        documentType: string;
+        filename: string;
+      }>;
+    }) {
+      try {
+        // Convert files to base64 for email service
+        const emailAttachments: Array<{
+          filename: string;
+          content: string;
+          type: string;
+          documentType: string;
+          size: number;
+        }> = [];
+
+        for (const attachment of emailData.attachments) {
+          // Convert file to base64
+          const base64Content = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result as string;
+              // Remove the data URL prefix (e.g., "data:application/pdf;base64,")
+              const base64 = result.split(",")[1];
+              resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(attachment.file);
+          });
+
+          emailAttachments.push({
+            filename: attachment.filename,
+            content: base64Content,
+            type: attachment.file.type,
+            documentType: attachment.documentType,
+            size: attachment.file.size,
+          });
+        }
+
+        // Send email via email service
+        const emailResult = await emailService.sendEmail({
+          to: emailData.recipient,
+          subject: emailData.subject,
+          htmlBody: emailData.message,
+          attachments: emailAttachments.map((att) => ({
+            filename: att.filename,
+            content: att.content,
+            type: att.type,
+          })),
+        });
+
+        if (!emailResult.success) {
+          throw new Error(emailResult.error || "Failed to send email");
+        }
+
+        // Create email record
+        const emailRecord: EmailRecord = {
+          id: `email-${Date.now()}`,
+          subject: emailData.subject,
+          sentDate: new Date(),
+          status: "sent",
+          recipient: emailData.recipient,
+          opened: false,
+          preview: emailData.message.substring(0, 100) + "...",
+          messageId: emailResult.messageId,
+          attachments: emailAttachments.map((att) => ({
+            filename: att.filename,
+            size: att.size,
+            type: att.type,
+            documentType: att.documentType,
+          })),
+        };
+
+        // Add to local store
+        store.update((state) => ({
+          ...state,
+          data: [emailRecord, ...state.data],
+        }));
+
+        return { success: true, emailId: emailRecord.id };
+      } catch (error) {
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "Failed to send email",
+        };
       }
     },
 

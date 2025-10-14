@@ -6,22 +6,16 @@
   import { Label } from "$lib/components/ui/label";
   import { Textarea } from "$lib/components/ui/textarea";
   import { Checkbox } from "$lib/components/ui/checkbox";
-  import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "$lib/components/ui/collapsible";
-
   import Icon from "@iconify/svelte";
   import type { Product } from "$lib/stores/products";
-  import type { DocumentRequirement, DocumentTemplate } from "$lib/types/document";
-  import DocumentRequirementsSummary from "./document-requirements-summary.svelte";
-  import DocumentRequirementEditor from "./document-requirement-editor.svelte";
+
   import AlertDialog from "./alert-dialog.svelte";
-  import ConfirmDialog from "./confirm-dialog.svelte";
 
   interface Props {
     product?: Partial<Product>;
-    templates?: DocumentTemplate[];
   }
 
-  let { product, templates = [] }: Props = $props();
+  let { product }: Props = $props();
 
   const dispatch = createEventDispatcher();
 
@@ -31,20 +25,12 @@
     category: product?.category || "service",
     price: product?.price || undefined,
     isActive: product?.isActive ?? true,
-    documentRequirements: product?.documentRequirements || [],
   });
-
-  let showRequirementsEditor = $state(false);
-  let editingRequirement = $state<Partial<DocumentRequirement> | null>(null);
 
   // Dialog state
   let showAlertDialog = $state(false);
-  let showConfirmDialog = $state(false);
   let alertTitle = $state('');
   let alertMessage = $state('');
-  let confirmTitle = $state('');
-  let confirmMessage = $state('');
-  let requirementToDelete = $state<string | null>(null);
 
   function handleSave() {
     if (!formData.name.trim()) {
@@ -69,50 +55,7 @@
     dispatch("save", productData);
   }
 
-  function handleAddRequirement() {
-    editingRequirement = {};
-    showRequirementsEditor = true;
-  }
 
-  function handleEditRequirement(requirement: DocumentRequirement) {
-    editingRequirement = { ...requirement };
-    showRequirementsEditor = true;
-  }
-
-  function handleSaveRequirement(requirementData: Partial<DocumentRequirement>) {
-    if (editingRequirement && editingRequirement.id) {
-      // Update existing
-      formData.documentRequirements = formData.documentRequirements.map(req =>
-        req.id === editingRequirement!.id ? { ...req, ...requirementData } : req
-      );
-    } else {
-      // Add new
-      const newRequirement: DocumentRequirement = {
-        id: `req-${Date.now()}`,
-        companyId: "company-1", // TODO: Get from auth context
-        productId: product?.id || "",
-        ...requirementData,
-      } as DocumentRequirement;
-      formData.documentRequirements = [...formData.documentRequirements, newRequirement];
-    }
-
-    showRequirementsEditor = false;
-    editingRequirement = null;
-  }
-
-  function handleDeleteRequirement(requirementId: string) {
-    requirementToDelete = requirementId;
-    confirmTitle = "Delete Requirement";
-    confirmMessage = "Are you sure you want to remove this document requirement?";
-    showConfirmDialog = true;
-  }
-
-  function handleConfirmDelete() {
-    if (requirementToDelete) {
-      formData.documentRequirements = formData.documentRequirements.filter(req => req.id !== requirementToDelete);
-      requirementToDelete = null;
-    }
-  }
 </script>
 
 <div class="space-y-6">
@@ -169,60 +112,7 @@
     <Label for="active">This product/service is active and available</Label>
   </div>
 
-  <!-- Document Requirements Section -->
-  <Collapsible>
-    <CollapsibleTrigger class="flex items-center justify-between w-full p-4 border rounded-lg hover:bg-muted/50">
-      <div class="flex items-center gap-2">
-        <Icon icon="lucide:file-text" class="h-5 w-5" />
-        <span class="font-medium">Document Requirements</span>
-        <DocumentRequirementsSummary requirements={formData.documentRequirements} compact />
-      </div>
-      <Icon icon="lucide:chevron-down" class="h-4 w-4" />
-    </CollapsibleTrigger>
-    <CollapsibleContent class="space-y-4 mt-4">
-      {#if formData.documentRequirements.length > 0}
-        <div class="space-y-2">
-          {#each formData.documentRequirements as requirement (requirement.id)}
-            <div class="flex items-center justify-between p-3 border rounded">
-              <div class="flex items-center gap-2">
-                <Icon icon="lucide:file-text" class="h-4 w-4 text-blue-600" />
-                <span class="text-sm">
-                  Template: {requirement.templateId}
-                  {#if requirement.isMandatory}
-                    <span class="text-red-600 font-medium">(Required)</span>
-                  {:else}
-                    <span class="text-muted-foreground">(Optional)</span>
-                  {/if}
-                </span>
-              </div>
-              <div class="flex gap-2">
-                <Button variant="ghost" size="sm" onclick={() => handleEditRequirement(requirement)}>
-                  <Icon icon="lucide:edit" class="h-3 w-3" />
-                </Button>
-                <Button variant="ghost" size="sm" onclick={() => handleDeleteRequirement(requirement.id)}>
-                  <Icon icon="lucide:trash" class="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          {/each}
-        </div>
-      {/if}
 
-      {#if showRequirementsEditor}
-        <DocumentRequirementEditor
-          requirement={editingRequirement || {}}
-          templates={templates}
-          onSave={handleSaveRequirement}
-          onCancel={() => { showRequirementsEditor = false; editingRequirement = null; }}
-        />
-      {:else}
-        <Button variant="outline" onclick={handleAddRequirement}>
-          <Icon icon="lucide:plus" class="h-4 w-4 mr-2" />
-          Add Document Requirement
-        </Button>
-      {/if}
-    </CollapsibleContent>
-  </Collapsible>
 
   <div class="flex justify-end gap-2">
     <Button variant="outline" onclick={() => dispatch("cancel")}>
@@ -242,12 +132,5 @@
     type="error"
   />
 
-  <!-- Confirm Dialog -->
-  <ConfirmDialog
-    bind:open={showConfirmDialog}
-    title={confirmTitle}
-    message={confirmMessage}
-    type="warning"
-    onconfirm={handleConfirmDelete}
-  />
+
 </div>

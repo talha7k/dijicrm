@@ -81,11 +81,7 @@ export const companyNavItems: SidebarNav[] = [
         url: "/templates",
         icon: "lucide:file-text",
       },
-      {
-        title: "Document Requirements",
-        url: "/document-requirements",
-        icon: "lucide:clipboard-list",
-      },
+
       {
         title: "Invoices",
         url: "/invoices",

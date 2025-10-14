@@ -12,12 +12,12 @@
   import Icon from "@iconify/svelte";
    import { requireCompany } from "$lib/utils/auth";
     import { productsStore } from "$lib/stores/products";
-    import { documentRequirementsStore } from "$lib/stores/documentRequirements";
+
     import { documentGenerationStore } from "$lib/stores/documentGeneration";
     import { documentDeliveryStore } from "$lib/stores/documentDelivery";
     import { clientManagementStore } from "$lib/stores/clientManagement";
    import { Timestamp } from "firebase/firestore";
-   import type { BusinessCase, GeneratedDocument } from "$lib/types/document";
+    import type { Order, GeneratedDocument } from "$lib/types/document";
    import { goto } from "$app/navigation";
    import AlertDialog from "$lib/components/shared/alert-dialog.svelte";
 
@@ -35,20 +35,19 @@
    });
 
 
-     let requirementsStore = documentRequirementsStore;
+
       let generationStore = documentGenerationStore;
       let deliveryStore = documentDeliveryStore;
      let clientStore = clientManagementStore;
 
-  // Load data on mount
-  $effect(() => {
-    if (mounted) {
-      const companyId = "company-1"; // TODO: Get from auth context
-      productsStore.loadProducts(companyId);
-      requirementsStore.loadRequirements(companyId);
-      clientStore.loadClients(companyId);
-    }
-  });
+   // Load data on mount
+   $effect(() => {
+     if (mounted) {
+       const companyId = "company-1"; // TODO: Get from auth context
+       productsStore.loadProducts(companyId);
+       clientStore.loadClients(companyId);
+     }
+   });
 
   let invoiceData = $state({
     clientId: "",
@@ -150,110 +149,51 @@
      showAlertDialog = true;
    }
 
-   async function handleSendInvoice() {
-     if (!invoiceData.clientName || !invoiceData.clientEmail || invoiceData.items.length === 0) {
-       alertTitle = "Validation Error";
-       alertMessage = "Please fill in all required fields and add at least one item";
-       alertType = "error";
+    async function handleSendInvoice() {
+      if (!invoiceData.clientName || !invoiceData.clientEmail || invoiceData.items.length === 0) {
+        alertTitle = "Validation Error";
+        alertMessage = "Please fill in all required fields and add at least one item";
+        alertType = "error";
+        showAlertDialog = true;
+        return;
+      }
+
+     // Check if selected client is invited
+     const selectedClient = selectedClientId ? $clientStore.clients.find(c => c.uid === selectedClientId) : null;
+     const isInvitedClient = selectedClient && selectedClient.metadata?.accountStatus === 'invited';
+
+     try {
+       // Create order
+       const order: Order = {
+         id: `order-${Date.now()}`,
+         companyId: "company-1", // TODO: Get from auth
+         clientId: selectedClientId || "client-1", // Use selected client or default
+         title: `Invoice for ${invoiceData.clientName}`,
+         description: `Invoice created on ${new Date().toLocaleDateString()}`,
+         selectedProducts: invoiceData.items.map(item => item.productId),
+         status: invoiceData.status as any,
+         documents: [],
+         totalAmount: totalAmount(),
+         paidAmount: 0,
+         outstandingAmount: totalAmount(),
+         payments: [],
+         createdAt: Timestamp.now(),
+         updatedAt: Timestamp.now(),
+         createdBy: "user-1", // TODO: Get from auth
+       };
+
+       console.log("Order created:", {
+         invoice: invoiceData,
+         order,
+         isInvitedClient
+       });
+
+       alertTitle = "Success";
+       alertMessage = "Order created successfully!";
+       alertType = "success";
        showAlertDialog = true;
-       return;
-     }
 
-    // Check if selected client is invited
-    const selectedClient = selectedClientId ? $clientStore.clients.find(c => c.uid === selectedClientId) : null;
-    const isInvitedClient = selectedClient && selectedClient.metadata?.accountStatus === 'invited';
-
-    try {
-      // Create business case
-      const businessCase: BusinessCase = {
-        id: `case-${Date.now()}`,
-        companyId: "company-1", // TODO: Get from auth
-        clientId: selectedClientId || "client-1", // Use selected client or default
-        title: `Invoice for ${invoiceData.clientName}`,
-        description: `Invoice created on ${new Date().toLocaleDateString()}`,
-        selectedProducts: invoiceData.items.map(item => item.productId),
-        status: invoiceData.status as any,
-        documents: [],
-        totalAmount: totalAmount(),
-        paidAmount: 0,
-        outstandingAmount: totalAmount(),
-        payments: [],
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-        createdBy: "user-1", // TODO: Get from auth
-      };
-
-      // Get document requirements for selected products
-      const productIds = invoiceData.items.map(item => item.productId);
-      const allRequirements = $requirementsStore.data || [];
-      const relevantRequirements = allRequirements.filter(req =>
-        productIds.includes(req.productId) && req.isMandatory
-      );
-
-      // Generate required documents
-      const generatedDocuments: GeneratedDocument[] = [];
-
-      for (const requirement of relevantRequirements) {
-        const documentData = {
-          ...invoiceData,
-          companyName: "TK-Crm", // TODO: Get from company settings
-          amount: totalAmount(),
-          date: new Date().toISOString().split('T')[0],
-        };
-
-        // Generate document
-        const companyId = "company-1"; // TODO: Get from auth context
-        await generationStore.generateDocument(requirement.templateId, documentData, "pdf", companyId);
-
-        if ($generationStore.result) {
-          const generatedDoc: GeneratedDocument = {
-            id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            caseId: businessCase.id,
-            clientId: businessCase.clientId,
-            templateId: requirement.templateId,
-            templateVersion: 1,
-            htmlContent: $generationStore.result.content,
-            pdfUrl: $generationStore.result.content, // TODO: This should be the actual PDF URL
-            status: "generated",
-            data: documentData,
-            generatedAt: Timestamp.now(),
-            version: 1,
-            metadata: {},
-          };
-
-          generatedDocuments.push(generatedDoc);
-          businessCase.documents.push(generatedDoc.id);
-        }
-      }
-
-      // Send documents to client (skip for invited clients)
-      if (generatedDocuments.length > 0 && !isInvitedClient) {
-        await deliveryStore.deliverCaseDocuments(
-          generatedDocuments,
-          invoiceData.clientEmail,
-          "TK-Crm", // TODO: Get from company settings
-          invoiceData.clientName
-        );
-      }
-
-      console.log("Invoice and documents processed:", {
-        invoice: invoiceData,
-        businessCase,
-        documents: generatedDocuments,
-        isInvitedClient
-      });
-
-       if (isInvitedClient) {
-         alertTitle = "Success";
-         alertMessage = "Invoice created successfully! Documents will be sent automatically when the client activates their account.";
-         alertType = "success";
-         showAlertDialog = true;
-       } else {
-         alertTitle = "Success";
-         alertMessage = `Invoice sent successfully! ${generatedDocuments.length} document(s) were also sent to the client.`;
-         alertType = "success";
-         showAlertDialog = true;
-       }
+       // Navigate to invoices page
        goto("/invoices");
      } catch (error) {
        console.error("Failed to send invoice:", error);
@@ -262,7 +202,7 @@
        alertType = "error";
        showAlertDialog = true;
      }
-  }
+   }
 
   function handleClientSelection(clientId: string) {
     selectedClientId = clientId;
@@ -536,47 +476,7 @@
           </Card>
         {/if}
 
-        <!-- Document Requirements Notice -->
-        {#if invoiceData.items.length > 0}
-          <Card>
-            <CardHeader>
-              <CardTitle class="text-sm">Document Requirements</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {#if $requirementsStore.data}
-                {@const productIds = invoiceData.items.map(item => item.productId)}
-                {@const relevantRequirements = $requirementsStore.data.filter(req =>
-                  productIds.includes(req.productId) && req.isMandatory
-                )}
-                {#if relevantRequirements.length > 0}
-                  <div class="space-y-2">
-                    <p class="text-sm text-muted-foreground">
-                      The following documents will be automatically generated and sent to the client:
-                    </p>
-                    <ul class="text-sm space-y-1">
-                      {#each relevantRequirements as req}
-                        {@const product = $productsStore.data?.find(p => p.id === req.productId)}
-                        <li class="flex items-center gap-2">
-                          <Icon icon="lucide:file-text" class="h-3 w-3" />
-                          <span>{product?.name || 'Unknown Product'} - Document Required</span>
-                        </li>
-                      {/each}
-                    </ul>
-                  </div>
-                {:else}
-                  <p class="text-sm text-muted-foreground">
-                    No additional documents are required for the selected products.
-                  </p>
-                 {/if}
-              {:else}
-                <p class="text-sm text-muted-foreground">
-                  Based on the products/services selected, additional documents may be required from the client.
-                  These will be automatically identified when the invoice is sent.
-                </p>
-              {/if}
-            </CardContent>
-          </Card>
-        {/if}
+
       </div>
 
       <!-- Alert Dialog -->

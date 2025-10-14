@@ -60,7 +60,7 @@ function createDocumentDeliveryStore() {
             : undefined,
           metadata: {
             documentId: document.id,
-            caseId: document.caseId,
+            orderId: document.orderId,
             clientId: document.clientId,
           },
         };
@@ -144,7 +144,7 @@ function createDocumentDeliveryStore() {
           textBody: template.textBody,
           attachments: attachments.length > 0 ? attachments : undefined,
           metadata: {
-            caseId: documents[0]?.caseId,
+            orderId: documents[0]?.orderId,
             clientId: documents[0]?.clientId,
             documentCount: documents.length,
           },

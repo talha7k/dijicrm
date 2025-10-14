@@ -54,17 +54,13 @@
         throw new Error('Selected product not found');
       }
 
-      const order = {
-        id: `order-${Date.now()}`,
-        clientId,
-        productId: selectedProductId,
-        productName: selectedProduct.name,
-        quantity,
-        amount: (selectedProduct.price || 0) * quantity,
-        notes: notes.trim() || undefined,
-        status: 'pending',
-        createdAt: new Date(),
-      };
+       const order = {
+         title: `${selectedProduct.name} Order`,
+         description: notes.trim() || undefined,
+         selectedProducts: [selectedProductId],
+         totalAmount: (selectedProduct.price || 0) * quantity,
+         // Other fields will be set by the parent component
+       };
 
       onCreateOrder?.(order);
       toast.success('Order created successfully');

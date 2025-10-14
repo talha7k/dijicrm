@@ -1,26 +1,60 @@
 <script lang="ts">
-  import { Badge } from '$lib/components/ui/badge';
-  import * as Card from '$lib/components/ui/card';
-  import Button from '$lib/components/ui/button/button.svelte';
+    import { Badge } from '$lib/components/ui/badge';
+    import * as Card from '$lib/components/ui/card';
+    import * as Select from '$lib/components/ui/select';
+    import Button from '$lib/components/ui/button/button.svelte';
+    import { documentTypesStore } from '$lib/stores/documentTypes';
+    import type { DocumentType } from '$lib/stores/documentTypes';
 
-  interface EmailRecord {
-    id: string;
-    subject: string;
-    sentDate: Date;
-    status: 'sent' | 'delivered' | 'opened' | 'bounced';
-    recipient: string;
-    opened?: boolean;
-    preview?: string;
-  }
+    interface EmailRecord {
+      id: string;
+      subject: string;
+      sentDate: Date;
+      status: 'sent' | 'delivered' | 'opened' | 'bounced';
+      recipient: string;
+      opened?: boolean;
+      preview?: string;
+      attachments?: Array<{
+        filename: string;
+        size: number;
+        type: string;
+        documentType?: string;
+      }>;
+    }
 
-  interface Props {
-    emails: EmailRecord[];
-    loading?: boolean;
-    onResend?: (emailId: string) => void;
-    onViewDetails?: (email: EmailRecord) => void;
-  }
+   interface Props {
+     emails: EmailRecord[];
+     loading?: boolean;
+     onResend?: (emailId: string) => void;
+     onViewDetails?: (email: EmailRecord) => void;
+   }
 
-  let { emails, loading = false, onResend, onViewDetails }: Props = $props();
+   let { emails, loading = false, onResend, onViewDetails }: Props = $props();
+
+   let documentTypes = $state<DocumentType[]>([]);
+   let selectedDocumentTypeFilter = $state<string>('all');
+   let filteredEmails = $state<EmailRecord[]>([]);
+
+   // Load document types for filtering and filter emails
+   $effect(() => {
+     const unsubscribe = documentTypesStore.subscribe((state) => {
+       documentTypes = state.data || [];
+     });
+     documentTypesStore.loadDocumentTypes('company-1'); // Mock company ID
+     return unsubscribe;
+   });
+
+   // Filter emails based on selected document type
+   $effect(() => {
+     if (selectedDocumentTypeFilter === 'all') {
+       filteredEmails = emails;
+     } else {
+       filteredEmails = emails.filter(email => {
+         if (!email.attachments) return false;
+         return email.attachments.some(att => att.documentType === selectedDocumentTypeFilter);
+       });
+     }
+   });
 
   function getStatusBadge(status: string) {
     const variants = {
@@ -61,10 +95,32 @@
 
 <Card.Root>
   <Card.Header>
-    <Card.Title>Email History</Card.Title>
-    <Card.Description>
-      All emails sent to this client
-    </Card.Description>
+    <div class="flex items-center justify-between">
+      <div>
+        <Card.Title>Email History</Card.Title>
+        <Card.Description>
+          All emails sent to this client
+        </Card.Description>
+      </div>
+      {#if emails.length > 0}
+        <div class="flex items-center space-x-2">
+          <span class="text-sm text-muted-foreground">Filter by type:</span>
+          <Select.Root type="single" bind:value={selectedDocumentTypeFilter}>
+            <Select.Trigger class="w-32">
+              {selectedDocumentTypeFilter === 'all' ? 'All Types' : selectedDocumentTypeFilter}
+            </Select.Trigger>
+            <Select.Content>
+              <Select.Item value="all">All Types</Select.Item>
+              {#each documentTypes.filter(dt => dt.isActive) as docType}
+                <Select.Item value={docType.name}>
+                  {docType.name}
+                </Select.Item>
+              {/each}
+            </Select.Content>
+          </Select.Root>
+        </div>
+      {/if}
+    </div>
   </Card.Header>
   <Card.Content>
     {#if loading}
@@ -82,7 +138,7 @@
       </div>
     {:else}
       <div class="space-y-4">
-        {#each emails as email}
+        {#each filteredEmails as email}
           <div class="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
             <div class="flex items-start space-x-3 flex-1 min-w-0">
               <div class="flex-shrink-0 mt-1">
@@ -98,11 +154,20 @@
                     <span class="ml-2 text-green-600">• Opened</span>
                   {/if}
                 </p>
-                {#if email.preview}
-                  <p class="text-sm text-muted-foreground mt-1 overflow-hidden" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-                    {email.preview}
-                  </p>
-                {/if}
+                 {#if email.attachments && email.attachments.length > 0}
+                   <div class="flex flex-wrap gap-1 mt-2">
+                     {#each email.attachments as attachment}
+                       <Badge variant="outline" class="text-xs">
+                         {attachment.documentType || 'Other'}: {attachment.filename}
+                       </Badge>
+                     {/each}
+                   </div>
+                 {/if}
+                 {#if email.preview}
+                   <p class="text-sm text-muted-foreground mt-1 overflow-hidden" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                     {email.preview}
+                   </p>
+                 {/if}
               </div>
             </div>
             <div class="flex items-center space-x-2 flex-shrink-0">

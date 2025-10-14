@@ -20,8 +20,8 @@ function createDocumentHistoryStore() {
     set,
     update,
 
-    // Load document history for a case
-    async loadDocumentHistory(caseId: string) {
+    // Load document history for an order
+    async loadDocumentHistory(orderId: string) {
       update((state) => ({ ...state, loading: true, error: null }));
 
       try {
@@ -29,7 +29,7 @@ function createDocumentHistoryStore() {
         const mockDocuments: GeneratedDocument[] = [
           {
             id: "doc-1",
-            caseId,
+            orderId,
             clientId: "client-1",
             templateId: "template-1",
             templateVersion: 1,
@@ -51,7 +51,7 @@ function createDocumentHistoryStore() {
           },
           {
             id: "doc-2",
-            caseId,
+            orderId,
             clientId: "client-1",
             templateId: "template-1",
             templateVersion: 2,
