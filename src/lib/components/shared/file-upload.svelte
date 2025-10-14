@@ -134,6 +134,15 @@
     ondragleave={handleDragLeave}
     ondrop={handleDrop}
     onclick={() => !disabled && !isUploading && fileInput?.click()}
+    onkeydown={(e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && !disabled && !isUploading) {
+        e.preventDefault();
+        fileInput?.click();
+      }
+    }}
+    role="button"
+    tabindex={disabled || isUploading ? -1 : 0}
+    aria-label="File upload area. {dragText}"
   >
     <Icon
       icon={isUploading ? "lucide:loader-2" : "lucide:upload"}

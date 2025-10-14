@@ -1,10 +1,4 @@
-# email-service Specification
-
-## Purpose
-
-The email service provides SMTP-based email delivery capabilities for the application, with persistent configuration storage and secure credential management.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: SMTP Configuration Persistence
 
@@ -60,6 +54,8 @@ SMTP configuration SHALL be stored securely with appropriate access controls and
 - **THEN** access is granted only if they belong to the same company
 - **AND** unauthorized access attempts are logged and denied
 
+## ADDED Requirements
+
 ### Requirement: Client Email History Tracking
 
 Company users SHALL be able to view complete email communication history for each client, including delivery status and content.
@@ -112,8 +108,4 @@ Company users SHALL be able to resend emails that failed delivery or need to be 
 - **WHEN** resending an email
 - **THEN** user can add additional recipients
 - **AND** system validates email addresses before sending
-- **AND** each recipient's delivery status is tracked individually</content>
-  </xai:function_call">
-
-<xai:function_call name="bash">
-<parameter name="command">openspec validate --strict
+- **AND** each recipient's delivery status is tracked individually

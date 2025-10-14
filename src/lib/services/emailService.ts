@@ -1,4 +1,15 @@
 import type { GeneratedDocument, DocumentDelivery } from "$lib/types/document";
+import { db } from "$lib/firebase";
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
 
 export interface EmailTemplate {
   subject: string;
@@ -60,6 +71,8 @@ class EmailService {
 
   async sendEmail(options: EmailOptions): Promise<EmailResult> {
     try {
+      let result: EmailResult;
+
       if (this.smtpConfig) {
         // Use SMTP via API endpoint
         const response = await fetch("/api/email/send", {
@@ -78,11 +91,11 @@ class EmailService {
           throw new Error(errorData.error || "Failed to send email via SMTP");
         }
 
-        const result = await response.json();
-        return {
+        const responseData = await response.json();
+        result = {
           success: true,
-          messageId: result.messageId,
-          deliveryId: result.deliveryId,
+          messageId: responseData.messageId,
+          deliveryId: responseData.deliveryId,
         };
       } else {
         // Mock implementation for development
@@ -96,12 +109,19 @@ class EmailService {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // Mock success response
-        return {
+        result = {
           success: true,
           messageId: `mock-${Date.now()}`,
           deliveryId: `delivery-${Date.now()}`,
         };
       }
+
+      // Store email record in Firebase if successful
+      if (result.success) {
+        await this.storeEmailRecord(options, result);
+      }
+
+      return result;
     } catch (error) {
       console.error("Email send error:", error);
       return {
@@ -137,6 +157,86 @@ class EmailService {
       chunks.push(array.slice(i, i + chunkSize));
     }
     return chunks;
+  }
+
+  // Store email record in Firebase
+  private async storeEmailRecord(
+    options: EmailOptions,
+    result: EmailResult,
+  ): Promise<void> {
+    try {
+      const emailRecord = {
+        subject: options.subject,
+        recipient: options.to,
+        sentDate: new Date(),
+        status: "sent" as const,
+        messageId: result.messageId,
+        deliveryId: result.deliveryId,
+        preview:
+          options.textBody?.substring(0, 200) ||
+          options.htmlBody?.replace(/<[^>]*>/g, "").substring(0, 200) ||
+          "",
+        attachments:
+          options.attachments?.map((att) => ({
+            filename: att.filename,
+            size: att.content.length * 0.75, // Approximate size from base64
+            type: att.type,
+          })) || [],
+        metadata: options.metadata || {},
+      };
+
+      await addDoc(collection(db, "emailHistory"), emailRecord);
+    } catch (error) {
+      console.error("Failed to store email record:", error);
+      // Don't throw - email was sent successfully, just logging failed
+    }
+  }
+
+  // Get email history for a client
+  async getEmailHistoryForClient(clientEmail: string): Promise<any[]> {
+    try {
+      const q = query(
+        collection(db, "emailHistory"),
+        where("recipient", "==", clientEmail),
+        orderBy("sentDate", "desc"),
+      );
+
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        sentDate: doc.data().sentDate?.toDate() || new Date(),
+      }));
+    } catch (error) {
+      console.error("Failed to get email history:", error);
+      return [];
+    }
+  }
+
+  // Update email status (for delivery tracking)
+  async updateEmailStatus(
+    messageId: string,
+    status: "sent" | "delivered" | "opened" | "bounced",
+    opened?: boolean,
+  ): Promise<void> {
+    try {
+      // Find email by messageId
+      const q = query(
+        collection(db, "emailHistory"),
+        where("messageId", "==", messageId),
+      );
+
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const emailDoc = querySnapshot.docs[0];
+        await updateDoc(doc(db, "emailHistory", emailDoc.id), {
+          status,
+          opened: opened || emailDoc.data().opened,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update email status:", error);
+    }
   }
 }
 

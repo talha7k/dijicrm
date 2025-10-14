@@ -1,10 +1,4 @@
-# client-dashboard Specification
-
-## Purpose
-
-TBD - created by archiving change add-client-company-dashboards. Update Purpose after archive.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Client Dashboard Access
 
@@ -60,6 +54,8 @@ Clients SHALL be able to view and update their account information including con
 
 - **WHEN** client modifies notification settings
 - **THEN** changes are saved and applied to future communications
+
+## ADDED Requirements
 
 ### Requirement: Client Card Interface
 

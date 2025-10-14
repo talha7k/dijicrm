@@ -1,3 +1,5 @@
+## MODIFIED Requirements
+
 ### Requirement: Email Document Delivery
 
 Generated documents SHALL be delivered to clients via email with proper formatting and attachments.
@@ -61,6 +63,8 @@ The system SHALL support sending multiple documents to multiple recipients effic
 - **WHEN** company user needs to delay delivery
 - **THEN** system allows scheduling document delivery
 - **AND** sends at specified time
+
+## ADDED Requirements
 
 ### Requirement: Client Document History Tracking
 

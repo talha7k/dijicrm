@@ -414,11 +414,12 @@
             </DialogContent>
           </Dialog>
 
-          <Button onclick={() => goto('/templates/create')}>
-            <Icon icon="lucide:plus" class="h-4 w-4 mr-2" />
-            Create Template
-          </Button>
-    </div>
+           <Button onclick={() => goto('/templates/create')}>
+             <Icon icon="lucide:plus" class="h-4 w-4 mr-2" />
+             Create Template
+           </Button>
+         </div>
+       </div>
 
     <!-- Templates Grid -->
     {#if $templates.loading}

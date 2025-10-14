@@ -1,10 +1,4 @@
-# invoice-payment-management Specification
-
-## Purpose
-
-TBD - created by archiving change add-invoice-payment-management. Update Purpose after archive.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Record Invoice Payments
 
@@ -107,6 +101,8 @@ The system SHALL validate payment data before recording.
 - **AND** payment method is required
 - **AND** invoice must exist and be outstanding
 
+## ADDED Requirements
+
 ### Requirement: Invoice Detail Page
 
 Company users SHALL be able to access comprehensive invoice details through a dedicated invoice detail page.
@@ -142,8 +138,4 @@ Client detail pages SHALL provide dedicated invoice management interface integra
 - **WHEN** viewing client invoices tab
 - **THEN** summary cards show total invoiced, paid, and outstanding amounts
 - **AND** overdue invoices are highlighted with visual alerts
-- **AND** quick filters allow viewing by status (all, paid, outstanding, overdue)</content>
-  </xai:function_call">Now let me create the tasks.md file with concrete, verifiable work items.
-
-<xai:function_call name="write">
-<parameter name="filePath">openspec/changes/add-invoice-payment-management/tasks.md
+- **AND** quick filters allow viewing by status (all, paid, outstanding, overdue)

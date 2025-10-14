@@ -679,7 +679,7 @@
               <h4 class="text-sm font-medium">Document Stamp Image</h4>
               <div class="flex items-center space-x-4 p-4 border rounded-lg min-h-[100px]">
                 {#if stampPreview}
-                  <img src={stampPreview} alt="Stamp Image" class="h-16 w-16 object-contain" />
+                  <img src={stampPreview} alt="Current document stamp preview" class="h-16 w-16 object-contain" />
                   <div class="flex-1">
                     <p class="text-sm text-muted-foreground">{selectedStampFile ? "New stamp preview" : "Current stamp"}</p>
                   </div>

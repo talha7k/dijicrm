@@ -36,7 +36,7 @@ export interface ClientInvoice {
   id: string;
   number: string;
   amount: number;
-  status: "paid" | "pending" | "overdue";
+  status: "paid" | "pending" | "overdue" | "partially_paid";
   dueDate: Date;
   createdAt: Date;
   description: string;

@@ -14,14 +14,30 @@
   import * as Tabs from '$lib/components/ui/tabs/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import * as Select from '$lib/components/ui/select/index.js';
+  import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
   import { toast } from 'svelte-sonner';
   import OrderCreationModal from '$lib/components/app/client/OrderCreationModal.svelte';
   import DocumentSendModal from '$lib/components/app/client/DocumentSendModal.svelte';
   import PDFUploadModal from '$lib/components/app/client/PDFUploadModal.svelte';
   import PaymentModal from '$lib/components/app/client/PaymentModal.svelte';
-  import type { UserProfile } from '$lib/types/user';
-  import type { Product } from '$lib/stores/products';
-  import type { ClientInvoice } from '$lib/stores/clientInvoices';
+   import EmailHistory from '$lib/components/app/client/EmailHistory.svelte';
+   import DocumentHistory from '$lib/components/app/client/DocumentHistory.svelte';
+   import { emailHistoryStore } from '$lib/stores/emailHistory';
+    import type { UserProfile } from '$lib/types/user';
+    import type { Product } from '$lib/stores/products';
+    import type { ClientInvoice } from '$lib/stores/clientInvoices';
+    import type { EmailRecord } from '$lib/stores/emailHistory';
+
+    interface DocumentRecord {
+      id: string;
+      name: string;
+      type: 'template' | 'generated' | 'uploaded';
+      sentDate: Date;
+      status: 'sent' | 'delivered' | 'opened' | 'failed';
+      fileSize?: number;
+      downloadUrl?: string;
+      previewUrl?: string;
+    }
 
   // Company access is checked at layout level
 
@@ -59,22 +75,42 @@
     },
   ]);
 
-  let clientDocuments = $state([
-    {
-      id: 'doc-1',
-      name: 'Service Agreement.pdf',
-      type: 'template',
-      uploadedAt: new Date('2024-01-15'),
-      status: 'sent',
-    },
-    {
-      id: 'doc-2',
-      name: 'Invoice-001.pdf',
-      type: 'generated',
-      uploadedAt: new Date('2024-01-20'),
-      status: 'delivered',
-    },
-  ]);
+   let clientDocuments = $state<DocumentRecord[]>([]);
+
+   // Subscribe to document delivery store
+   $effect(() => {
+     const unsubscribe = deliveryStore.subscribe((state) => {
+       // Transform deliveries to match DocumentHistory interface
+       if (client?.email) {
+         const deliveries = deliveryStore.getClientDeliveries(client.email);
+         clientDocuments = deliveries.map(delivery => ({
+           id: delivery.id,
+           name: `Document-${delivery.documentId}.pdf`, // TODO: Get actual document name
+           type: 'generated' as const, // TODO: Determine actual type
+           sentDate: delivery.sentAt?.toDate() || new Date(),
+           status: delivery.status === 'delivered' ? 'delivered' :
+                   delivery.status === 'sent' ? 'sent' :
+                   delivery.status === 'bounced' ? 'failed' : 'sent',
+           fileSize: undefined, // TODO: Get actual file size
+           downloadUrl: '#', // TODO: Implement download URL
+           previewUrl: delivery.status === 'delivered' ? '#' : undefined,
+         }));
+       }
+     });
+
+     return unsubscribe;
+   });
+
+   let emailHistory = $state<{ data: EmailRecord[]; loading: boolean; error: string | null }>({ data: [], loading: false, error: null });
+
+   // Subscribe to email history store
+   $effect(() => {
+     const unsubscribe = emailHistoryStore.subscribe((state) => {
+       emailHistory = state;
+     });
+
+     return unsubscribe;
+   });
 
   let showOrderModal = $state(false);
   let showDocumentModal = $state(false);
@@ -101,6 +137,11 @@
       invoiceStore.subscribe((state) => {
         invoices = state.data || [];
       });
+
+      // Load email history for this client
+      if (client.email) {
+        await emailHistoryStore.loadEmailsForClient(client.email);
+      }
 
     } catch (error) {
       console.error('Error loading client data:', error);
@@ -210,6 +251,19 @@
   </div>
 {:else}
   <div class="space-y-6">
+    <!-- Breadcrumbs -->
+    <Breadcrumb.Root>
+      <Breadcrumb.List>
+        <Breadcrumb.Item>
+          <Breadcrumb.Link href="/clients">Clients</Breadcrumb.Link>
+        </Breadcrumb.Item>
+        <Breadcrumb.Separator />
+        <Breadcrumb.Item>
+          <Breadcrumb.Page>{client?.displayName || 'Client'}</Breadcrumb.Page>
+        </Breadcrumb.Item>
+      </Breadcrumb.List>
+    </Breadcrumb.Root>
+
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center space-x-4">
@@ -319,10 +373,11 @@
 
     <!-- Tabs -->
     <Tabs.Root bind:value={activeTab}>
-      <Tabs.List class="grid w-full grid-cols-4">
+      <Tabs.List class="grid w-full grid-cols-5">
         <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
-        <Tabs.Trigger value="products">Products & Orders</Tabs.Trigger>
-        <Tabs.Trigger value="invoices">Invoices & Payments</Tabs.Trigger>
+        <Tabs.Trigger value="invoices">Invoices</Tabs.Trigger>
+        <Tabs.Trigger value="payments">Payments</Tabs.Trigger>
+        <Tabs.Trigger value="emails">Emails</Tabs.Trigger>
         <Tabs.Trigger value="documents">Documents</Tabs.Trigger>
       </Tabs.List>
 
@@ -364,7 +419,7 @@
                   <div class="flex items-center justify-between">
                     <div>
                       <p class="text-sm font-medium">{doc.name}</p>
-                      <p class="text-xs text-muted-foreground">{formatDate(doc.uploadedAt)}</p>
+                      <p class="text-xs text-muted-foreground">{formatDate(doc.sentDate)}</p>
                     </div>
                     <Badge variant={getStatusBadge(doc.status)} class="text-xs">
                       {doc.status}
@@ -432,17 +487,27 @@
       <Tabs.Content value="invoices" class="space-y-6">
         <Card.Root>
           <Card.Header>
-            <div class="flex items-center justify-between">
-              <Card.Title>Invoices & Payments</Card.Title>
-              <Button size="sm" variant="outline">
-                Record Payment
-              </Button>
-            </div>
+            <Card.Title>Invoices</Card.Title>
+            <Card.Description>
+              All invoices for this client
+            </Card.Description>
           </Card.Header>
           <Card.Content>
             <div class="space-y-4">
               {#each invoices as invoice}
-                <div class="flex items-center justify-between p-4 border rounded-lg">
+                <div
+                  class="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                  onclick={() => goto(`/clients/${clientId}/invoices/${invoice.id}`)}
+                  onkeydown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      goto(`/clients/${clientId}/invoices/${invoice.id}`);
+                    }
+                  }}
+                  role="button"
+                  tabindex="0"
+                  aria-label="View invoice {invoice.number} details"
+                >
                   <div class="flex-1">
                     <h4 class="font-medium">{invoice.number}</h4>
                     <p class="text-sm text-muted-foreground">
@@ -461,60 +526,117 @@
                   </div>
                   <div class="text-right">
                     <p class="font-medium">{formatCurrency(invoice.amount)}</p>
-                    <Button size="sm" variant="outline" class="mt-2" onclick={() => handleRecordPayment(invoice)}>
-                      Record Payment
-                    </Button>
+                    <svg class="h-4 w-4 text-muted-foreground ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
                   </div>
                 </div>
               {/each}
+              {#if invoices.length === 0}
+                <div class="text-center py-8 text-muted-foreground">
+                  <p>No invoices found for this client.</p>
+                </div>
+              {/if}
             </div>
           </Card.Content>
         </Card.Root>
       </Tabs.Content>
 
-      <Tabs.Content value="documents" class="space-y-6">
+      <Tabs.Content value="payments" class="space-y-6">
         <Card.Root>
           <Card.Header>
-            <div class="flex items-center justify-between">
-              <Card.Title>Documents</Card.Title>
-              <Button size="sm" onclick={handleUploadDocument}>
-                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                </svg>
-                Upload Document
-              </Button>
-            </div>
+            <Card.Title>Payment History</Card.Title>
+            <Card.Description>
+              All payments received from this client
+            </Card.Description>
           </Card.Header>
           <Card.Content>
             <div class="space-y-4">
-              {#each clientDocuments as doc}
-                <div class="flex items-center justify-between p-4 border rounded-lg">
-                  <div class="flex items-center space-x-3">
-                    <svg class="h-8 w-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    <div>
-                      <h4 class="font-medium">{doc.name}</h4>
-                      <p class="text-sm text-muted-foreground">
-                        {doc.type} • {formatDate(doc.uploadedAt)}
-                      </p>
-                    </div>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <Badge variant={getStatusBadge(doc.status)}>
-                      {doc.status}
-                    </Badge>
-                    <Button size="sm" variant="ghost">
-                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
-                      </svg>
-                    </Button>
-                  </div>
+              <!-- Mock payment data for now -->
+              <div class="flex items-center justify-between p-4 border rounded-lg">
+                <div class="flex-1">
+                  <h4 class="font-medium">Payment for INV-2024-001</h4>
+                  <p class="text-sm text-muted-foreground">
+                    Credit Card • Dec 15, 2024
+                  </p>
                 </div>
-              {/each}
+                <div class="text-right">
+                  <p class="font-medium text-green-600">+{formatCurrency(1250.00)}</p>
+                  <Badge variant="default" class="text-xs">Completed</Badge>
+                </div>
+              </div>
+              <div class="flex items-center justify-between p-4 border rounded-lg">
+                <div class="flex-1">
+                  <h4 class="font-medium">Partial payment for INV-2024-002</h4>
+                  <p class="text-sm text-muted-foreground">
+                    Bank Transfer • Jan 10, 2025
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="font-medium text-green-600">+{formatCurrency(445.75)}</p>
+                  <Badge variant="secondary" class="text-xs">Partial</Badge>
+                </div>
+              </div>
+              <div class="text-center py-4 text-muted-foreground">
+                <p>Showing all payment records for this client.</p>
+                <p class="text-sm">Total paid: {formatCurrency(1695.75)}</p>
+              </div>
             </div>
           </Card.Content>
         </Card.Root>
+      </Tabs.Content>
+
+      <Tabs.Content value="emails" class="space-y-6">
+        <EmailHistory
+          emails={emailHistory.data}
+          loading={emailHistory.loading}
+          onViewDetails={(email) => {
+            // TODO: Open email detail modal
+            console.log('View email details:', email);
+          }}
+          onResend={async (emailId) => {
+            const result = await emailHistoryStore.resendEmail(emailId);
+            if (result.success) {
+              toast.success('Email resent successfully');
+            } else {
+              toast.error(result.error || 'Failed to resend email');
+            }
+          }}
+        />
+      </Tabs.Content>
+
+      <Tabs.Content value="documents" class="space-y-6">
+        <div class="flex justify-end space-x-2 mb-4">
+          <Button size="sm" variant="outline" onclick={handleSendDocument}>
+            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+            </svg>
+            Send Document
+          </Button>
+          <Button size="sm" onclick={handleUploadDocument}>
+            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            Upload
+          </Button>
+        </div>
+        <DocumentHistory
+          documents={clientDocuments}
+          onDownload={(document) => {
+            // TODO: Implement download functionality
+            console.log('Download document:', document);
+            toast.success('Download started');
+          }}
+          onPreview={(document) => {
+            // TODO: Implement preview functionality
+            console.log('Preview document:', document);
+          }}
+          onResend={(documentId) => {
+            // TODO: Implement resend functionality
+            console.log('Resend document:', documentId);
+            toast.success('Document resent successfully');
+          }}
+        />
       </Tabs.Content>
     </Tabs.Root>
 

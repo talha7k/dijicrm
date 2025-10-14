@@ -324,9 +324,20 @@ function createDocumentDeliveryStore() {
 
     // Get deliveries for a document
     getDocumentDeliveries(documentId: string): DocumentDelivery[] {
-      // This would need to be implemented with proper state management
-      // For now, return empty array
-      return [];
+      let currentState: DocumentDeliveryState;
+      subscribe((state) => (currentState = state))();
+      return currentState!.deliveries.filter(
+        (d) => d.documentId === documentId,
+      );
+    },
+
+    // Get deliveries for a client
+    getClientDeliveries(clientEmail: string): DocumentDelivery[] {
+      let currentState: DocumentDeliveryState;
+      subscribe((state) => (currentState = state))();
+      return currentState!.deliveries.filter(
+        (d) => d.recipientEmail === clientEmail,
+      );
     },
 
     // Update delivery status (called by webhooks or polling)
