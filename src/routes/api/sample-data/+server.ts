@@ -69,7 +69,7 @@ async function generateCompanyData(): Promise<{
   companyUser: UserProfile;
 }> {
   const companyId = `company-${Date.now()}`;
-  const email = `admin@samplecompany.com`;
+  const email = `admin-${Date.now()}@samplecompany.com`;
   const password = `SamplePass123!`;
 
   // Create Firebase Auth user
@@ -150,13 +150,13 @@ async function generateClientData(companyId: string): Promise<UserProfile[]> {
     {
       firstName: "Alice",
       lastName: "Johnson",
-      email: "alice@sampleclient.com",
+      email: `alice-${Date.now()}@sampleclient.com`,
     },
-    { firstName: "Bob", lastName: "Smith", email: "bob@sampleclient.com" },
+    { firstName: "Bob", lastName: "Smith", email: `bob-${Date.now()}@sampleclient.com` },
     {
       firstName: "Carol",
       lastName: "Williams",
-      email: "carol@sampleclient.com",
+      email: `carol-${Date.now()}@sampleclient.com`,
     },
   ];
 
