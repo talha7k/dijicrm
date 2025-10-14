@@ -5,10 +5,10 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
-import { getApp } from "firebase/app";
+import app from "$lib/firebase";
 
 // Initialize Firebase Storage
-const storage = getStorage(getApp());
+const storage = getStorage(app);
 
 export interface UploadResult {
   success: boolean;

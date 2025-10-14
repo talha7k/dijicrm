@@ -16,7 +16,7 @@ export const POST: RequestHandler = async ({ request }) => {
     }
 
     // Create transporter with SMTP config
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: smtpConfig.host,
       port: smtpConfig.port,
       secure: smtpConfig.secure, // true for 465, false for other ports

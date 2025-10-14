@@ -30,19 +30,65 @@
 
 
      // Mock invoice data - will be replaced with Firebase integration
-     let invoice = $derived<InvoiceData>({
-       id: invoiceId || "",
-       clientName: "Acme Corp",
-       clientEmail: "billing@acme.com",
-       amount: 2500,
-       paidAmount: 1250,
-       outstandingAmount: 1250,
-       status: "partially_paid",
-       createdAt: new Date("2024-01-15"),
-       dueDate: new Date("2024-02-15"),
-       items: [
-         { productName: "Web Development Service", quantity: 1, price: 2500, total: 2500 }
-       ]
+     let invoice = $state<InvoiceData>({
+       id: "",
+       clientName: "",
+       clientEmail: "",
+       amount: 0,
+       paidAmount: 0,
+       outstandingAmount: 0,
+       status: "draft",
+       createdAt: new Date(),
+       dueDate: new Date(),
+       items: []
+     });
+
+     $effect(() => {
+       const mockInvoices: Record<string, InvoiceData> = {
+         "INV-001": {
+           id: "INV-001",
+           clientName: "Acme Corp",
+           clientEmail: "billing@acme.com",
+           amount: 2500,
+           paidAmount: 1250,
+           outstandingAmount: 1250,
+           status: "partially_paid",
+           createdAt: new Date("2024-01-15"),
+           dueDate: new Date("2024-02-15"),
+           items: [
+             { productName: "Web Development Service", quantity: 1, price: 2500, total: 2500 }
+           ]
+         },
+         "INV-002": {
+           id: "INV-002",
+           clientName: "TechStart Inc",
+           clientEmail: "accounts@techstart.com",
+           amount: 1500,
+           paidAmount: 1500,
+           outstandingAmount: 0,
+           status: "paid",
+           createdAt: new Date("2024-01-10"),
+           dueDate: new Date("2024-02-10"),
+           items: [
+             { productName: "SEO Package", quantity: 1, price: 1500, total: 1500 }
+           ]
+         }
+       };
+
+       const inv = (invoiceId && mockInvoices[invoiceId]) || {
+         id: invoiceId || "",
+         clientName: "Unknown Client",
+         clientEmail: "unknown@example.com",
+         amount: 0,
+         paidAmount: 0,
+         outstandingAmount: 0,
+         status: "draft",
+         createdAt: new Date(),
+         dueDate: new Date(),
+         items: []
+       };
+
+       invoice = { ...inv };
      });
 
   // Load payments for this invoice
@@ -69,6 +115,7 @@
       case "sent": return "bg-blue-100 text-blue-800";
       case "overdue": return "bg-red-100 text-red-800";
       case "draft": return "bg-gray-100 text-gray-800";
+      case "quote": return "bg-purple-100 text-purple-800";
       default: return "bg-gray-100 text-gray-800";
     }
   }

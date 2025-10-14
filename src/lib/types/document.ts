@@ -123,6 +123,7 @@ export interface BusinessCase {
   selectedProducts: string[]; // Product IDs
   status:
     | "draft"
+    | "quote"
     | "generated"
     | "sent"
     | "partially_paid"

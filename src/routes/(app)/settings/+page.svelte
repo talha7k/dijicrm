@@ -523,7 +523,7 @@
                  id="vat-number"
                  bind:value={branding.vatNumber}
                  placeholder="15-digit Saudi VAT number"
-                 maxlength="15"
+                  maxlength={15}
                  pattern="[0-9]{15}"
                  required
                />

@@ -49,6 +49,7 @@
     clientEmail: "",
     dueDate: "",
     notes: "",
+    status: "draft",
     items: [] as InvoiceItem[],
   });
 
@@ -152,7 +153,7 @@
         title: `Invoice for ${invoiceData.clientName}`,
         description: `Invoice created on ${new Date().toLocaleDateString()}`,
         selectedProducts: invoiceData.items.map(item => item.productId),
-        status: isInvitedClient ? "draft" : "sent", // Delay for invited clients
+        status: invoiceData.status as any,
         documents: [],
         totalAmount: totalAmount(),
         paidAmount: 0,
@@ -321,15 +322,29 @@
                 />
               </div>
             </div>
-            <div>
-              <Label for="notes">Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                bind:value={invoiceData.notes}
-                placeholder="Additional notes for the client"
-                rows={3}
-              />
-            </div>
+             <div>
+               <Label for="notes">Notes (Optional)</Label>
+               <Textarea
+                 id="notes"
+                 bind:value={invoiceData.notes}
+                 placeholder="Additional notes for the client"
+                 rows={3}
+               />
+             </div>
+             <div>
+               <Label for="status">Invoice Status</Label>
+               <Select type="single" bind:value={invoiceData.status}>
+                 <SelectTrigger>
+                   <SelectValue placeholder="Select invoice status" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="draft">Draft</SelectItem>
+                   <SelectItem value="quote">Quote</SelectItem>
+                   <SelectItem value="sent">Sent</SelectItem>
+                   <SelectItem value="paid">Paid</SelectItem>
+                 </SelectContent>
+               </Select>
+             </div>
           </CardContent>
         </Card>
 

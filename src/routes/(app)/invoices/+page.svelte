@@ -117,6 +117,7 @@
       case "sent": return "bg-blue-100 text-blue-800";
       case "overdue": return "bg-red-100 text-red-800";
       case "draft": return "bg-gray-100 text-gray-800";
+      case "quote": return "bg-purple-100 text-purple-800";
       default: return "bg-gray-100 text-gray-800";
     }
   }
@@ -143,14 +144,15 @@
           <SelectTrigger class="w-40">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
-           <SelectContent>
-             <SelectItem value="all">All Status</SelectItem>
-             <SelectItem value="draft">Draft</SelectItem>
-             <SelectItem value="sent">Sent</SelectItem>
-             <SelectItem value="partially_paid">Partially Paid</SelectItem>
-             <SelectItem value="paid">Paid</SelectItem>
-             <SelectItem value="overdue">Overdue</SelectItem>
-           </SelectContent>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="quote">Quote</SelectItem>
+              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="partially_paid">Partially Paid</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="overdue">Overdue</SelectItem>
+            </SelectContent>
         </Select>
       </div>
 

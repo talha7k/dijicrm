@@ -11,7 +11,13 @@
 
   const dispatch = createEventDispatcher();
 
-  let template: any = {
+  interface Props {
+    template?: any;
+  }
+
+  let { template: initialTemplate }: Props = $props();
+
+  let template = $state(initialTemplate || {
     id: '',
     companyId: '',
     name: '',
@@ -25,9 +31,9 @@
     createdAt: null,
     updatedAt: null,
     tags: []
-  };
+  });
 
-  let htmlEditor = $state('');
+  let htmlEditor = $state(template.htmlContent || '');
   let previewMode = $state(false);
 
   function handleSave() {
