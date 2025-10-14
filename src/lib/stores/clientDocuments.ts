@@ -1,5 +1,15 @@
 import { writable } from "svelte/store";
-import { Timestamp } from "firebase/firestore";
+import {
+  Timestamp,
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+  onSnapshot,
+} from "firebase/firestore";
+import { db } from "$lib/firebase";
 import type { GeneratedDocument, DocumentDelivery } from "$lib/types/document";
 
 interface ClientDocumentsState {
@@ -27,71 +37,55 @@ function createClientDocumentsStore() {
       update((state) => ({ ...state, loading: true, error: null }));
 
       try {
-        // Mock data - in real implementation, fetch from database
-        const mockDocuments: GeneratedDocument[] = [
-          {
-            id: "doc-1",
-            orderId: "order-1",
-            clientId,
-            templateId: "template-1",
-            templateVersion: 1,
-            htmlContent: "<div>Service Agreement Document</div>",
-            pdfUrl: "https://example.com/docs/doc-1.pdf",
-            status: "sent",
-            data: { clientName: "John Doe", companyName: "ABC Corp" },
-            generatedAt: Timestamp.now(),
-            sentAt: Timestamp.now(),
-            version: 1,
-            metadata: {},
-          },
-          {
-            id: "doc-2",
-            orderId: "order-1",
-            clientId,
-            templateId: "template-2",
-            templateVersion: 1,
-            htmlContent: "<div>Invoice Document</div>",
-            pdfUrl: "https://example.com/docs/doc-2.pdf",
-            status: "viewed",
-            data: { clientName: "John Doe", companyName: "ABC Corp" },
-            generatedAt: Timestamp.now(),
-            sentAt: Timestamp.now(),
-            viewedAt: Timestamp.now(),
-            version: 1,
-            metadata: {},
-          },
-        ];
+        // Query Firebase for documents
+        const documentsQuery = query(
+          collection(db, "generatedDocuments"),
+          where("clientId", "==", clientId),
+        );
 
-        const mockDeliveries: DocumentDelivery[] = [
-          {
-            id: "delivery-doc-1",
-            documentId: "doc-1",
-            recipientEmail: "john@example.com",
-            status: "delivered",
-            sentAt: Timestamp.now(),
-            deliveredAt: Timestamp.now(),
-            retryCount: 0,
-            maxRetries: 3,
-          },
-          {
-            id: "delivery-doc-2",
-            documentId: "doc-2",
-            recipientEmail: "john@example.com",
-            status: "delivered",
-            sentAt: Timestamp.now(),
-            deliveredAt: Timestamp.now(),
-            retryCount: 0,
-            maxRetries: 3,
-          },
-        ];
+        const documentsSnapshot = await getDocs(documentsQuery);
+        const documents: GeneratedDocument[] = [];
+
+        documentsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          documents.push({
+            id: doc.id,
+            ...data,
+            generatedAt: data.generatedAt,
+            sentAt: data.sentAt,
+            viewedAt: data.viewedAt,
+            completedAt: data.completedAt,
+          } as GeneratedDocument);
+        });
+
+        // Query Firebase for deliveries
+        const deliveriesQuery = query(
+          collection(db, "documentDeliveries"),
+          where("recipientEmail", "==", "placeholder"), // This would need to be based on client email
+        );
+
+        const deliveriesSnapshot = await getDocs(deliveriesQuery);
+        const deliveries: DocumentDelivery[] = [];
+
+        deliveriesSnapshot.forEach((doc) => {
+          const data = doc.data();
+          deliveries.push({
+            id: doc.id,
+            ...data,
+            sentAt: data.sentAt,
+            deliveredAt: data.deliveredAt,
+            lastRetryAt: data.lastRetryAt,
+          } as DocumentDelivery);
+        });
 
         update((state) => ({
           ...state,
-          documents: mockDocuments,
-          deliveries: mockDeliveries,
+          documents,
+          deliveries,
           loading: false,
         }));
       } catch (error) {
+        console.error("Error loading client documents:", error);
         update((state) => ({
           ...state,
           loading: false,
@@ -102,15 +96,25 @@ function createClientDocumentsStore() {
     },
 
     // Mark document as viewed
-    markAsViewed(documentId: string): void {
-      update((state) => ({
-        ...state,
-        documents: state.documents.map((doc: GeneratedDocument) =>
-          doc.id === documentId
-            ? { ...doc, status: "viewed", viewedAt: Timestamp.now() }
-            : doc,
-        ),
-      }));
+    async markAsViewed(documentId: string): Promise<void> {
+      try {
+        await updateDoc(doc(db, "generatedDocuments", documentId), {
+          status: "viewed",
+          viewedAt: Timestamp.now(),
+        });
+
+        // Update local state
+        update((state) => ({
+          ...state,
+          documents: state.documents.map((doc: GeneratedDocument) =>
+            doc.id === documentId
+              ? { ...doc, status: "viewed", viewedAt: Timestamp.now() }
+              : doc,
+          ),
+        }));
+      } catch (error) {
+        console.error("Error marking document as viewed:", error);
+      }
     },
 
     // Get documents by status

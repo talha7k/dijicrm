@@ -1,36 +1,8 @@
-import { derived } from "svelte/store";
+import { writable } from "svelte/store";
 import { userProfile } from "$lib/stores/user";
-
-// Mock data for client invoices - replace with actual Firebase queries
-const mockClientInvoices: ClientInvoice[] = [
-  {
-    id: "inv-001",
-    number: "INV-2024-001",
-    amount: 1250.0,
-    status: "paid",
-    dueDate: new Date("2024-01-15"),
-    createdAt: new Date("2024-01-01"),
-    description: "Consulting services for Q1",
-  },
-  {
-    id: "inv-002",
-    number: "INV-2024-002",
-    amount: 890.5,
-    status: "pending",
-    dueDate: new Date("2024-02-01"),
-    createdAt: new Date("2024-01-15"),
-    description: "Software development",
-  },
-  {
-    id: "inv-003",
-    number: "INV-2024-003",
-    amount: 2100.0,
-    status: "overdue",
-    dueDate: new Date("2024-01-20"),
-    createdAt: new Date("2024-01-10"),
-    description: "Project management services",
-  },
-];
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "$lib/firebase";
+import type { Order } from "$lib/types/document";
 
 export interface ClientInvoice {
   id: string;
@@ -42,13 +14,106 @@ export interface ClientInvoice {
   description: string;
 }
 
-export const clientInvoicesStore = derived(userProfile, ($userProfile) => {
-  if (!$userProfile.data) return { data: [], loading: true, error: null };
+interface ClientInvoicesState {
+  data: ClientInvoice[];
+  loading: boolean;
+  error: string | null;
+}
 
-  // Simulate loading
+// Convert Order to ClientInvoice
+function orderToClientInvoice(order: Order): ClientInvoice {
   return {
-    data: mockClientInvoices,
+    id: order.id,
+    number: `INV-${order.id.slice(-6).toUpperCase()}`, // Generate invoice number from order ID
+    amount: order.totalAmount,
+    status:
+      order.status === "paid"
+        ? "paid"
+        : order.status === "partially_paid"
+          ? "partially_paid"
+          : order.outstandingAmount > 0 && new Date() > new Date("2024-01-01")
+            ? "overdue"
+            : "pending", // Simplified overdue logic
+    dueDate: new Date("2024-01-15"), // This should come from order data
+    createdAt: order.createdAt.toDate(),
+    description: order.title || order.description || "Service order",
+  };
+}
+
+function createClientInvoicesStore() {
+  const store = writable<ClientInvoicesState>({
+    data: [],
     loading: false,
     error: null,
+  });
+
+  let unsubscribe: (() => void) | null = null;
+
+  // Subscribe to user profile changes
+  const unsubscribeUser = userProfile.subscribe(($userProfile) => {
+    if ($userProfile.data) {
+      loadInvoices($userProfile.data.uid);
+    } else {
+      store.set({ data: [], loading: false, error: null });
+    }
+  });
+
+  function loadInvoices(clientId: string) {
+    store.update((state) => ({ ...state, loading: true, error: null }));
+
+    try {
+      // Clean up previous listener
+      if (unsubscribe) {
+        unsubscribe();
+      }
+
+      // Query orders for this client
+      const ordersQuery = query(
+        collection(db, "orders"),
+        where("clientId", "==", clientId),
+      );
+
+      // Set up real-time listener
+      unsubscribe = onSnapshot(
+        ordersQuery,
+        (querySnapshot) => {
+          const invoices: ClientInvoice[] = [];
+
+          querySnapshot.forEach((doc) => {
+            const order = { id: doc.id, ...doc.data() } as Order;
+            invoices.push(orderToClientInvoice(order));
+          });
+
+          store.update((state) => ({
+            ...state,
+            data: invoices,
+            loading: false,
+            error: null,
+          }));
+        },
+        (error) => {
+          console.error("Error loading client invoices:", error);
+          store.update((state) => ({
+            ...state,
+            error: error.message,
+            loading: false,
+          }));
+        },
+      );
+    } catch (error) {
+      console.error("Error setting up invoice listener:", error);
+      store.update((state) => ({
+        ...state,
+        error:
+          error instanceof Error ? error.message : "Failed to load invoices",
+        loading: false,
+      }));
+    }
+  }
+
+  return {
+    subscribe: store.subscribe,
   };
-});
+}
+
+export const clientInvoicesStore = createClientInvoicesStore();

@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isCompanyMember(companyId) {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyAssociations.hasAny(function(ca) {
+               return ca.companyId == companyId;
+             });
+    }
+
+    function isCompanyAdmin(companyId) {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyAssociations.hasAny(function(ca) {
+               return ca.companyId == companyId && (ca.role == 'admin' || ca.role == 'owner');
+             });
+    }
+
+    function isClientOfCompany(companyId) {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'client' &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyAssociations.hasAny(function(ca) {
+               return ca.companyId == companyId;
+             });
+    }
+
+    // Users collection - authentication and profile data
+    match /users/{userId} {
+      // Users can read and write their own profile
+      allow read, write: if isOwner(userId);
+
+      // Company members can read client profiles in their company
+      allow read: if isCompanyMember(resource.data.companyAssociations[0].companyId);
+
+      // Company admins can update client profiles
+      allow update: if isCompanyAdmin(resource.data.companyAssociations[0].companyId);
+    }
+
+    // Orders collection - invoices and orders
+    match /orders/{orderId} {
+      // Company members can read/write orders for their company
+      allow read, write: if isCompanyMember(resource.data.companyId);
+
+      // Clients can read orders where they are the client
+      allow read: if isClientOfCompany(resource.data.companyId) &&
+                     resource.data.clientId == request.auth.uid;
+    }
+
+    // Payments collection
+    match /payments/{paymentId} {
+      // Company members can read/write payments for their company
+      allow read, write: if isCompanyMember(resource.data.companyId);
+
+      // Clients can read payments for their invoices
+      allow read: if isClientOfCompany(resource.data.companyId) &&
+                     resource.data.clientId == request.auth.uid;
+    }
+
+    // Products collection
+    match /products/{productId} {
+      // Company members can read/write products for their company
+      allow read, write: if isCompanyMember(resource.data.companyId);
+    }
+
+    // Document Templates collection
+    match /documentTemplates/{templateId} {
+      // Company members can read/write templates for their company
+      allow read, write: if isCompanyMember(resource.data.companyId);
+    }
+
+    // Generated Documents collection
+    match /generatedDocuments/{documentId} {
+      // Company members can read/write documents for their company
+      allow read, write: if isCompanyMember(resource.data.companyId);
+
+      // Clients can read documents sent to them
+      allow read: if isClientOfCompany(resource.data.companyId) &&
+                     resource.data.clientId == request.auth.uid;
+    }
+
+    // Document Deliveries collection
+    match /documentDeliveries/{deliveryId} {
+      // Company members can read/write deliveries for their company
+      allow read, write: if isCompanyMember(resource.data.companyId);
+    }
+
+    // Companies collection
+    match /companies/{companyId} {
+      // Company members can read company data
+      allow read: if isCompanyMember(companyId);
+
+      // Company admins can update company data
+      allow update: if isCompanyAdmin(companyId);
+
+      // Allow company creation (for signup)
+      allow create: if isAuthenticated();
+    }
+
+    // SMTP Config collection
+    match /smtpConfig/{configId} {
+      // Company admins can read/write SMTP config for their company
+      allow read, write: if isCompanyAdmin(resource.data.companyId);
+    }
+
+    // Branding collection
+    match /branding/{brandingId} {
+      // Company members can read branding for their company
+      allow read: if isCompanyMember(resource.data.companyId);
+
+      // Company admins can update branding
+      allow update: if isCompanyAdmin(resource.data.companyId);
+    }
+  }
+}

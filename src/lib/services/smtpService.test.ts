@@ -1,18 +1,17 @@
+// Mock Firestore functions at the top
+const mockDoc = vi.fn();
+const mockGetDoc = vi.fn();
+const mockSetDoc = vi.fn();
+const mockUpdateDoc = vi.fn();
+const mockTimestampNow = vi.fn(() => ({ seconds: 1234567890, nanoseconds: 0 }));
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { smtpService } from "./smtpService";
 import type { SMTPConfig } from "$lib/types/smtp";
 
 // Mock Firebase
 vi.mock("$lib/firebase", () => ({
   db: {},
 }));
-
-// Mock Firestore functions
-const mockDoc = vi.fn();
-const mockGetDoc = vi.fn();
-const mockSetDoc = vi.fn();
-const mockUpdateDoc = vi.fn();
-const mockTimestampNow = vi.fn(() => ({ seconds: 1234567890, nanoseconds: 0 }));
 
 vi.mock("firebase/firestore", () => ({
   doc: mockDoc,
@@ -23,6 +22,9 @@ vi.mock("firebase/firestore", () => ({
     now: mockTimestampNow,
   },
 }));
+
+// Import after mocks
+import { smtpService } from "./smtpService";
 
 describe("SMTPService", () => {
   beforeEach(() => {

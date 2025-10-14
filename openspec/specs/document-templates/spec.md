@@ -1,12 +1,19 @@
 ### Requirement: Document Template Creation
 
-Company users SHALL be able to create and manage HTML-based document templates with placeholder values for dynamic content insertion via a dedicated creation page.
+Company users SHALL be able to create and manage HTML-based document templates with placeholder values for dynamic content insertion via a dedicated creation page, stored in Firebase.
 
 #### Scenario: Create invoice template
 
 - **WHEN** company user navigates to template creation page
 - **THEN** they can define HTML structure with placeholders like {{clientName}}, {{amount}}, {{dueDate}}
 - **AND** template is saved and validated for proper HTML structure
+
+#### Scenario: Create template in Firebase
+
+- **WHEN** company user saves a template
+- **THEN** template document is created in Firebase templates collection
+- **AND** associated with companyId
+- **AND** version history is maintained
 
 #### Scenario: Template preview
 
@@ -32,7 +39,7 @@ Company users SHALL be able to view and use sample templates when creating new t
 
 ### Requirement: Template Management
 
-Company users SHALL be able to organize, edit, and version their document templates.
+Company users SHALL be able to organize, edit, and version their document templates stored in Firebase.
 
 #### Scenario: Edit existing template
 
@@ -45,6 +52,13 @@ Company users SHALL be able to organize, edit, and version their document templa
 - **WHEN** company user organizes templates
 - **THEN** they can categorize by type (invoice, legal, business)
 - **AND** filter and search templates by category
+
+#### Scenario: Load templates from Firebase
+
+- **WHEN** company user accesses template management
+- **THEN** templates are loaded from Firebase templates collection
+- **AND** filtered by companyId
+- **AND** real-time updates via listeners
 
 ### Requirement: Placeholder System
 

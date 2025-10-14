@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { brandingService } from "./brandingService";
 import type { CompanyBranding } from "$lib/types/branding";
 
 // Mock Firebase
@@ -13,22 +12,13 @@ vi.mock("$lib/services/firebaseStorage", () => ({
   deleteFile: vi.fn(),
 }));
 
-// Mock Firestore functions
-const mockDoc = vi.fn();
-const mockGetDoc = vi.fn();
-const mockSetDoc = vi.fn();
-const mockUpdateDoc = vi.fn();
-const mockTimestampNow = vi.fn(() => ({ seconds: 1234567890, nanoseconds: 0 }));
+// Get mock functions from the mocked module
+const { doc, getDoc, setDoc, updateDoc, Timestamp } = await import(
+  "firebase/firestore"
+);
 
-vi.mock("firebase/firestore", () => ({
-  doc: mockDoc,
-  getDoc: mockGetDoc,
-  setDoc: mockSetDoc,
-  updateDoc: mockUpdateDoc,
-  Timestamp: {
-    now: mockTimestampNow,
-  },
-}));
+// Import after mocks
+import { brandingService } from "./brandingService";
 
 describe("BrandingService", () => {
   beforeEach(() => {

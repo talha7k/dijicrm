@@ -1,4 +1,14 @@
 import { writable } from "svelte/store";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  limit,
+  onSnapshot,
+} from "firebase/firestore";
+import { db } from "$lib/firebase";
 
 export interface CompanyMetrics {
   totalInvoices: number;
@@ -21,55 +31,146 @@ export interface CompanyMetrics {
   }[];
 }
 
-// Mock data for company metrics - replace with actual Firebase queries
-const mockCompanyMetrics: CompanyMetrics = {
-  totalInvoices: 45,
-  outstandingAmount: 12500.5,
-  totalClients: 12,
-  activeClients: 8,
-  invitedClients: 4,
-  overdueInvoices: 3,
-  recentActivity: [
-    {
-      id: "act-001",
-      type: "invoice_created",
-      description: "Invoice INV-2024-045 created for Acme Corp",
-      timestamp: new Date("2024-01-20T10:30:00"),
-      amount: 2500.0,
-    },
-    {
-      id: "act-002",
-      type: "payment_received",
-      description: "Payment received from TechStart Inc",
-      timestamp: new Date("2024-01-19T14:15:00"),
-      amount: 1800.0,
-    },
-    {
-      id: "act-003",
-      type: "client_added",
-      description: "New client Global Solutions added",
-      timestamp: new Date("2024-01-18T09:00:00"),
-      amount: null,
-    },
-    {
-      id: "act-004",
-      type: "client_invited",
-      description: "Invitation sent to john.doe@example.com",
-      timestamp: new Date("2024-01-17T11:45:00"),
-      amount: null,
-    },
-    {
-      id: "act-005",
-      type: "client_activated",
-      description: "Client Jane Smith activated their account",
-      timestamp: new Date("2024-01-16T16:20:00"),
-      amount: null,
-    },
-  ],
-};
+interface CompanyMetricsState {
+  data: CompanyMetrics | null;
+  loading: boolean;
+  error: string | null;
+}
 
-export const companyMetricsStore = writable({
-  data: mockCompanyMetrics,
-  loading: false,
-  error: null,
-});
+function createCompanyMetricsStore() {
+  const store = writable<CompanyMetricsState>({
+    data: null,
+    loading: false,
+    error: null,
+  });
+
+  let clientsUnsubscribe: (() => void) | undefined;
+  let ordersUnsubscribe: (() => void) | undefined;
+  let paymentsUnsubscribe: (() => void) | undefined;
+
+  return {
+    subscribe: store.subscribe,
+
+    loadMetrics: async (companyId: string) => {
+      store.update((state) => ({ ...state, loading: true, error: null }));
+
+      try {
+        // Clean up previous listeners
+        clientsUnsubscribe?.();
+        ordersUnsubscribe?.();
+        paymentsUnsubscribe?.();
+
+        // Calculate metrics from Firebase data
+        await calculateMetrics(companyId);
+
+        // Set up listeners for real-time updates
+        setupRealtimeListeners(companyId);
+      } catch (error) {
+        console.error("Error loading metrics:", error);
+        store.update((state) => ({
+          ...state,
+          error:
+            error instanceof Error ? error.message : "Failed to load metrics",
+          loading: false,
+        }));
+      }
+    },
+  };
+
+  async function calculateMetrics(companyId: string) {
+    try {
+      // Get clients
+      const clientsQuery = query(
+        collection(db, "users"),
+        where("role", "==", "client"),
+      );
+      const clientsSnapshot = await getDocs(clientsQuery);
+      const clients = clientsSnapshot.docs.filter((doc) => {
+        const data = doc.data();
+        return data.companyAssociations?.some(
+          (assoc: any) => assoc.companyId === companyId,
+        );
+      });
+
+      const totalClients = clients.length;
+      const activeClients = clients.filter((doc) => doc.data().isActive).length;
+      const invitedClients = clients.filter(
+        (doc) => !doc.data().isActive,
+      ).length;
+
+      // Get orders/invoices
+      const ordersQuery = query(
+        collection(db, "orders"),
+        where("companyId", "==", companyId),
+      );
+      const ordersSnapshot = await getDocs(ordersQuery);
+      const orders = ordersSnapshot.docs.map(
+        (doc) =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          }) as any,
+      );
+
+      const totalInvoices = orders.length;
+      const outstandingAmount = orders.reduce(
+        (sum, order) => sum + (order.outstandingAmount || 0),
+        0,
+      );
+      const overdueInvoices = orders.filter((order) => {
+        // Simplified overdue check - should be based on due date
+        return order.outstandingAmount > 0;
+      }).length;
+
+      // Get recent activity (simplified - would need more complex aggregation)
+      const recentActivity: CompanyMetrics["recentActivity"] = [
+        // This would be populated from recent orders, payments, and client changes
+        // For now, using placeholder data
+      ];
+
+      const metrics: CompanyMetrics = {
+        totalInvoices,
+        outstandingAmount,
+        totalClients,
+        activeClients,
+        invitedClients,
+        overdueInvoices,
+        recentActivity,
+      };
+
+      store.update((state) => ({
+        ...state,
+        data: metrics,
+        loading: false,
+        error: null,
+      }));
+    } catch (error) {
+      console.error("Error calculating metrics:", error);
+      throw error;
+    }
+  }
+
+  function setupRealtimeListeners(companyId: string) {
+    // Set up listeners for real-time updates
+    // This would listen to changes in orders, payments, and users collections
+    // and recalculate metrics when data changes
+
+    // For now, simplified implementation
+    const ordersQuery = query(
+      collection(db, "orders"),
+      where("companyId", "==", companyId),
+    );
+
+    ordersUnsubscribe = onSnapshot(
+      ordersQuery,
+      () => {
+        calculateMetrics(companyId);
+      },
+      (error) => {
+        console.error("Error listening to orders:", error);
+      },
+    );
+  }
+}
+
+export const companyMetricsStore = createCompanyMetricsStore();

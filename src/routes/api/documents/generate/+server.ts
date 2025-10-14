@@ -7,7 +7,50 @@ import {
 import type { DocumentTemplate } from "$lib/types/document";
 import { brandingService } from "$lib/services/brandingService";
 import type { CompanyBranding } from "$lib/types/branding";
-import { Timestamp } from "firebase/firestore";
+import {
+  initializeApp,
+  getApps,
+  cert,
+  applicationDefault,
+} from "firebase-admin/app";
+import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { PUBLIC_FIREBASE_PROJECT_ID } from "$env/static/public";
+
+// Initialize Firebase Admin
+let adminApp: any;
+let db: any;
+
+function initializeFirebaseAdmin() {
+  if (getApps().length === 0) {
+    const isProduction = process.env.NODE_ENV === "production";
+    let credential;
+
+    if (isProduction) {
+      const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+      if (!serviceAccountKey) {
+        throw new Error(
+          "FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set",
+        );
+      }
+      const serviceAccount = JSON.parse(serviceAccountKey);
+      credential = cert({
+        clientEmail: serviceAccount.client_email,
+        privateKey: serviceAccount.private_key,
+        projectId: serviceAccount.project_id,
+      });
+    } else {
+      credential = applicationDefault();
+    }
+
+    adminApp = initializeApp({
+      credential,
+      projectId: PUBLIC_FIREBASE_PROJECT_ID,
+    });
+    db = getFirestore(adminApp);
+  } else {
+    db = getFirestore();
+  }
+}
 
 // Mock function - replace with actual PDF generation
 async function generatePdfFromHtml(
@@ -29,6 +72,9 @@ async function generatePdfFromHtml(
 
 export const POST = async ({ request }: RequestEvent) => {
   try {
+    // Initialize Firebase Admin
+    initializeFirebaseAdmin();
+
     const body = await request.json();
     const { templateId, data, format = "pdf", companyId } = body;
 
@@ -53,42 +99,24 @@ export const POST = async ({ request }: RequestEvent) => {
       }
     }
 
-    // In a real implementation, fetch template from database
-    // For now, use mock template
-    const mockTemplate: DocumentTemplate = {
-      id: templateId,
-      companyId: "company-1",
-      name: "Mock Template",
-      description: "Mock template for testing",
-      type: "invoice",
-      htmlContent: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1>{{title}}</h1>
-          <p>Generated on: {{date}}</p>
-          <p>Client: {{clientName}}</p>
-          <p>Amount: {{amount}}</p>
-        </div>
-      `,
-      placeholders: [
-        { key: "title", label: "Title", type: "text", required: true },
-        { key: "date", label: "Date", type: "date", required: true },
-        {
-          key: "clientName",
-          label: "Client Name",
-          type: "text",
-          required: true,
-        },
-        { key: "amount", label: "Amount", type: "currency", required: false },
-      ],
-      isActive: true,
-      version: 1,
-      createdBy: "user-1",
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-    };
+    // Fetch template from Firestore
+    const templateDoc = await db
+      .collection("documentTemplates")
+      .doc(templateId)
+      .get();
+    if (!templateDoc.exists) {
+      throw error(404, "Template not found");
+    }
+    const templateData = templateDoc.data();
+    const template: DocumentTemplate = {
+      id: templateDoc.id,
+      ...templateData,
+      createdAt: templateData.createdAt,
+      updatedAt: templateData.updatedAt,
+    } as DocumentTemplate;
 
     // Validate template data
-    const validation = validateTemplateData(mockTemplate, data);
+    const validation = validateTemplateData(template, data);
     if (!validation.isValid) {
       throw error(
         400,
@@ -97,7 +125,7 @@ export const POST = async ({ request }: RequestEvent) => {
     }
 
     // Render template
-    let renderedHtml = renderTemplate(mockTemplate, data);
+    let renderedHtml = renderTemplate(template, data);
 
     // Inject branding if available
     if (branding) {

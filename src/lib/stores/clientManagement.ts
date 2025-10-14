@@ -1,7 +1,19 @@
 // Store for company-side client management
 import { writable } from "svelte/store";
 import type { UserProfile } from "$lib/types/user";
-import { Timestamp } from "firebase/firestore";
+import {
+  Timestamp,
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  setDoc,
+  updateDoc,
+  doc,
+  onSnapshot,
+} from "firebase/firestore";
+import { db } from "$lib/firebase";
 import { toast } from "svelte-sonner";
 
 interface ClientManagementState {
@@ -17,6 +29,8 @@ function createClientManagementStore() {
     error: null,
   });
 
+  let unsubscribe: (() => void) | null = null;
+
   return {
     subscribe: store.subscribe,
 
@@ -25,67 +39,57 @@ function createClientManagementStore() {
       store.update((state) => ({ ...state, loading: true, error: null }));
 
       try {
-        // Mock data for now - will be replaced with Firebase integration
-        const mockClients: UserProfile[] = [
-          {
-            uid: "client-1",
-            email: "john.doe@client.com",
-            displayName: "John Doe",
-            photoURL: null,
-            isActive: true,
-            lastLoginAt: Timestamp.fromDate(new Date("2024-01-15")),
-            createdAt: Timestamp.fromDate(new Date("2024-01-01")),
-            updatedAt: Timestamp.fromDate(new Date("2024-01-15")),
-            firstName: "John",
-            lastName: "Doe",
-            phoneNumber: "+1-555-0123",
-            emailNotifications: true,
-            pushNotifications: true,
-            theme: "light",
-            language: "en",
-            role: "client",
-            permissions: [],
-            metadata: {
-              accountStatus: "active",
-            },
-          },
-          {
-            uid: "client-2",
-            email: "jane.smith@client.com",
-            displayName: "Jane Smith",
-            photoURL: null,
-            isActive: false,
-            lastLoginAt: Timestamp.fromDate(new Date("2024-01-10")),
-            createdAt: Timestamp.fromDate(new Date("2024-01-05")),
-            updatedAt: Timestamp.fromDate(new Date("2024-01-10")),
-            firstName: "Jane",
-            lastName: "Smith",
-            phoneNumber: "+1-555-0456",
-            emailNotifications: true,
-            pushNotifications: false,
-            theme: "dark",
-            language: "en",
-            role: "client",
-            permissions: [],
-            metadata: {
-              accountStatus: "invited",
-            },
-            invitationToken: "mock-token-123",
-            invitationExpiresAt: Timestamp.fromDate(
-              new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            ),
-            invitedBy: "company-user-1",
-            invitationStatus: "pending",
-          },
-        ];
+        // Clean up previous listener
+        if (unsubscribe) {
+          unsubscribe();
+        }
 
-        store.update((state) => ({
-          ...state,
-          clients: mockClients,
-          loading: false,
-        }));
+        // Query Firebase for all clients, then filter by company association
+        // Note: Firestore doesn't support complex array-contains queries easily
+        const clientsQuery = query(
+          collection(db, "users"),
+          where("role", "==", "client"),
+        );
+
+        // Set up real-time listener
+        unsubscribe = onSnapshot(
+          clientsQuery,
+          (querySnapshot) => {
+            const clients: UserProfile[] = [];
+
+            querySnapshot.forEach((doc) => {
+              const data = doc.data() as UserProfile;
+              // Filter clients that are associated with this company
+              const isAssociated = data.companyAssociations?.some(
+                (assoc) => assoc.companyId === companyId,
+              );
+
+              if (isAssociated) {
+                clients.push({
+                  ...data,
+                  uid: doc.id, // Override with document ID
+                });
+              }
+            });
+
+            store.update((state) => ({
+              ...state,
+              clients,
+              loading: false,
+              error: null,
+            }));
+          },
+          (error) => {
+            console.error("Error listening to clients:", error);
+            store.update((state) => ({
+              ...state,
+              error: error.message,
+              loading: false,
+            }));
+          },
+        );
       } catch (error) {
-        console.error("Error loading clients:", error);
+        console.error("Error setting up client listener:", error);
         store.update((state) => ({
           ...state,
           error:
@@ -114,8 +118,7 @@ function createClientManagementStore() {
           new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         ); // 7 days
 
-        const newClient: UserProfile = {
-          uid: `client-${Date.now()}`,
+        const newClientData = {
           email: clientData.email,
           displayName: `${clientData.firstName} ${clientData.lastName}`,
           photoURL: null,
@@ -128,24 +131,38 @@ function createClientManagementStore() {
           phoneNumber: clientData.phoneNumber,
           emailNotifications: true,
           pushNotifications: true,
-          theme: "system",
+          theme: "system" as const,
           language: "en",
-          role: "client",
+          role: "client" as const,
           permissions: [],
           address: clientData.address,
+          companyAssociations: [
+            {
+              companyId,
+              role: "member" as const,
+              joinedAt: Timestamp.now(),
+            },
+          ],
           metadata: {
-            accountStatus: "invited",
+            accountStatus: "invited" as const,
           },
           invitationToken,
           invitationExpiresAt,
           invitedBy,
-          invitationStatus: "pending",
+          invitationStatus: "pending" as const,
         };
 
-        // Mock: Add to local state (will be replaced with Firebase)
+        // Save to Firebase
+        const docRef = await addDoc(collection(db, "users"), newClientData);
+        const savedClient: UserProfile = {
+          ...newClientData,
+          uid: docRef.id,
+        };
+
+        // Update local state
         store.update((state) => ({
           ...state,
-          clients: [...state.clients, newClient],
+          clients: [...state.clients, savedClient],
         }));
 
         // Send invitation email
@@ -180,7 +197,7 @@ function createClientManagementStore() {
 
         toast.success("Client invitation sent successfully");
 
-        return newClient.uid;
+        return savedClient.uid;
       } catch (error) {
         console.error("Error creating client:", error);
         toast.error("Failed to create client invitation");
@@ -200,8 +217,7 @@ function createClientManagementStore() {
       companyId: string,
     ) {
       try {
-        const newClient: UserProfile = {
-          uid: `client-${Date.now()}`,
+        const newClientData = {
           email: clientData.email,
           displayName: `${clientData.firstName} ${clientData.lastName}`,
           photoURL: null,
@@ -214,26 +230,40 @@ function createClientManagementStore() {
           phoneNumber: clientData.phoneNumber,
           emailNotifications: true,
           pushNotifications: true,
-          theme: "system",
+          theme: "system" as const,
           language: "en",
-          role: "client",
+          role: "client" as const,
           permissions: [],
           address: clientData.address,
+          companyAssociations: [
+            {
+              companyId,
+              role: "member" as const,
+              joinedAt: Timestamp.now(),
+            },
+          ],
           metadata: {
-            accountStatus: "added", // Distinguish from invited clients
+            accountStatus: "added" as const, // Distinguish from invited clients
           },
           // No invitation fields for added clients
         };
 
-        // Mock: Add to local state (will be replaced with Firebase)
+        // Save to Firebase
+        const docRef = await addDoc(collection(db, "users"), newClientData);
+        const savedClient: UserProfile = {
+          ...newClientData,
+          uid: docRef.id,
+        };
+
+        // Update local state
         store.update((state) => ({
           ...state,
-          clients: [...state.clients, newClient],
+          clients: [...state.clients, savedClient],
         }));
 
         toast.success("Client added successfully");
 
-        return newClient.uid;
+        return savedClient.uid;
       } catch (error) {
         console.error("Error adding client:", error);
         toast.error("Failed to add client");
@@ -269,7 +299,17 @@ function createClientManagementStore() {
           updatedAt: Timestamp.now(),
         };
 
-        // Mock: Update in local state (will be replaced with Firebase)
+        // Update in Firebase
+        await updateDoc(doc(db, "users", clientId), {
+          invitationToken,
+          invitationExpiresAt,
+          invitedBy,
+          invitationStatus: "pending",
+          "metadata.accountStatus": "invited",
+          updatedAt: Timestamp.now(),
+        });
+
+        // Update local state
         store.update((state) => ({
           ...state,
           clients: state.clients.map((c) =>
@@ -320,7 +360,14 @@ function createClientManagementStore() {
     // Update client information
     async updateClient(clientId: string, updates: Partial<UserProfile>) {
       try {
-        // Mock update in local state
+        // Update in Firebase
+        const updateData = {
+          ...updates,
+          updatedAt: Timestamp.now(),
+        };
+        await updateDoc(doc(db, "users", clientId), updateData);
+
+        // Update local state
         store.update((state) => ({
           ...state,
           clients: state.clients.map((client) =>

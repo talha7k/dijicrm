@@ -1,5 +1,17 @@
 import { writable } from "svelte/store";
-import { Timestamp } from "firebase/firestore";
+import {
+  Timestamp,
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+} from "firebase/firestore";
+import { db } from "$lib/firebase";
 import type { Payment } from "$lib/types/document";
 
 function createPaymentsStore() {
@@ -18,56 +30,33 @@ function createPaymentsStore() {
     set,
     update,
 
-    // Mock data for now - will be replaced with Firebase integration
     loadPayments: async (companyId: string) => {
       update((store) => ({ ...store, loading: true, error: null }));
 
       try {
-        // Mock data
-        const mockPayments: Payment[] = [
-          {
-            id: "payment-1",
-            invoiceId: "case-1",
-            companyId,
-            clientId: "client-1",
-            amount: 1250.0,
-            paymentDate: Timestamp.fromDate(new Date("2024-01-15")),
-            paymentMethod: "bank_transfer",
-            reference: "BT-2024-001",
-            notes: "Full payment for consulting services",
-            proofFiles: [
-              {
-                id: "proof-1",
-                fileName: "receipt.pdf",
-                fileUrl: "https://example.com/receipt.pdf",
-                fileType: "application/pdf",
-                fileSize: 102400,
-                uploadedAt: Timestamp.fromDate(new Date("2024-01-15")),
-                uploadedBy: "user-1",
-              },
-            ],
-            recordedBy: "user-1",
-            createdAt: Timestamp.fromDate(new Date("2024-01-15")),
-            updatedAt: Timestamp.fromDate(new Date("2024-01-15")),
-          },
-          {
-            id: "payment-2",
-            invoiceId: "case-2",
-            companyId,
-            clientId: "client-2",
-            amount: 500.0,
-            paymentDate: Timestamp.fromDate(new Date("2024-01-20")),
-            paymentMethod: "credit_card",
-            reference: "CC-2024-002",
-            notes: "Partial payment for web development",
-            recordedBy: "user-1",
-            createdAt: Timestamp.fromDate(new Date("2024-01-20")),
-            updatedAt: Timestamp.fromDate(new Date("2024-01-20")),
-          },
-        ];
+        // Query Firebase for payments
+        const paymentsQuery = query(
+          collection(db, "payments"),
+          where("companyId", "==", companyId),
+        );
 
-        set({ data: mockPayments, loading: false, error: null });
+        const querySnapshot = await getDocs(paymentsQuery);
+        const payments: Payment[] = [];
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          payments.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+            paymentDate: data.paymentDate,
+          } as Payment);
+        });
+
+        set({ data: payments, loading: false, error: null });
       } catch (error) {
+        console.error("Error loading payments:", error);
         set({
           data: null,
           loading: false,
@@ -80,41 +69,33 @@ function createPaymentsStore() {
       update((store) => ({ ...store, loading: true, error: null }));
 
       try {
-        // Mock filtering by invoice
-        const mockPayments: Payment[] = [
-          {
-            id: "payment-1",
-            invoiceId,
-            companyId: "company-1",
-            clientId: "client-1",
-            amount: 1250.0,
-            paymentDate: Timestamp.fromDate(new Date("2024-01-15")),
-            paymentMethod: "bank_transfer",
-            reference: "BT-2024-001",
-            notes: "Full payment for consulting services",
-            proofFiles: [
-              {
-                id: "proof-1",
-                fileName: "receipt.pdf",
-                fileUrl: "https://example.com/receipt.pdf",
-                fileType: "application/pdf",
-                fileSize: 102400,
-                uploadedAt: Timestamp.fromDate(new Date("2024-01-15")),
-                uploadedBy: "user-1",
-              },
-            ],
-            recordedBy: "user-1",
-            createdAt: Timestamp.fromDate(new Date("2024-01-15")),
-            updatedAt: Timestamp.fromDate(new Date("2024-01-15")),
-          },
-        ];
+        // Query Firebase for payments by invoice
+        const paymentsQuery = query(
+          collection(db, "payments"),
+          where("invoiceId", "==", invoiceId),
+        );
+
+        const querySnapshot = await getDocs(paymentsQuery);
+        const payments: Payment[] = [];
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          payments.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+            paymentDate: data.paymentDate,
+          } as Payment);
+        });
 
         set({
-          data: mockPayments.filter((p) => p.invoiceId === invoiceId),
+          data: payments,
           loading: false,
           error: null,
         });
       } catch (error) {
+        console.error("Error loading payments for invoice:", error);
         set({
           data: null,
           loading: false,
@@ -129,21 +110,29 @@ function createPaymentsStore() {
       update((store) => ({ ...store, loading: true }));
 
       try {
-        const newPayment: Payment = {
+        const newPaymentData = {
           ...payment,
-          id: `payment-${Date.now()}`,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
         };
 
+        // Save to Firebase
+        const docRef = await addDoc(collection(db, "payments"), newPaymentData);
+        const savedPayment: Payment = {
+          ...newPaymentData,
+          id: docRef.id,
+        };
+
+        // Update local state
         update((store) => ({
           ...store,
-          data: store.data ? [...store.data, newPayment] : [newPayment],
+          data: store.data ? [...store.data, savedPayment] : [savedPayment],
           loading: false,
         }));
 
-        return newPayment;
+        return savedPayment;
       } catch (error) {
+        console.error("Error recording payment:", error);
         update((store) => ({
           ...store,
           loading: false,
@@ -157,6 +146,14 @@ function createPaymentsStore() {
       update((store) => ({ ...store, loading: true }));
 
       try {
+        // Update in Firebase
+        const updateData = {
+          ...updates,
+          updatedAt: Timestamp.now(),
+        };
+        await updateDoc(doc(db, "payments", id), updateData);
+
+        // Update local state
         update((store) => ({
           ...store,
           data:
@@ -168,6 +165,7 @@ function createPaymentsStore() {
           loading: false,
         }));
       } catch (error) {
+        console.error("Error updating payment:", error);
         update((store) => ({
           ...store,
           loading: false,
@@ -181,12 +179,17 @@ function createPaymentsStore() {
       update((store) => ({ ...store, loading: true }));
 
       try {
+        // Delete from Firebase
+        await deleteDoc(doc(db, "payments", id));
+
+        // Update local state
         update((store) => ({
           ...store,
           data: store.data?.filter((payment) => payment.id !== id) || null,
           loading: false,
         }));
       } catch (error) {
+        console.error("Error deleting payment:", error);
         update((store) => ({
           ...store,
           loading: false,

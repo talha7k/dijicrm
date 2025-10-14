@@ -1,0 +1,62 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isCompanyMember(companyId) {
+      return isAuthenticated() &&
+             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.companyAssociations.hasAny(function(ca) {
+               return ca.companyId == companyId;
+             });
+    }
+
+    function isCompanyAdmin(companyId) {
+      return isAuthenticated() &&
+             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.companyAssociations.hasAny(function(ca) {
+               return ca.companyId == companyId && (ca.role == 'admin' || ca.role == 'owner');
+             });
+    }
+
+    function isClientOfCompany(companyId) {
+      return isAuthenticated() &&
+             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'client' &&
+             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.companyAssociations.hasAny(function(ca) {
+               return ca.companyId == companyId;
+             });
+    }
+
+    // Company logos and branding
+    match /companies/{companyId}/{allPaths=**} {
+      allow read: if isCompanyMember(companyId);
+      allow write: if isCompanyAdmin(companyId);
+      allow delete: if isCompanyAdmin(companyId);
+    }
+
+    // Document PDFs and files
+    match /documents/{companyId}/{allPaths=**} {
+      allow read: if isCompanyMember(companyId);
+      allow write: if isCompanyMember(companyId);
+      allow delete: if isCompanyAdmin(companyId);
+    }
+
+    // Client-uploaded files (proof of payment, signed documents, etc.)
+    match /clients/{companyId}/{clientId}/{allPaths=**} {
+      allow read: if isCompanyMember(companyId) || (isClientOfCompany(companyId) && request.auth.uid == clientId);
+      allow write: if isCompanyMember(companyId) || (isClientOfCompany(companyId) && request.auth.uid == clientId);
+      allow delete: if isCompanyAdmin(companyId);
+    }
+
+    // Public files (if any)
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+      allow delete: if false;
+    }
+  }
+}

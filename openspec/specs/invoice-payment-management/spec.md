@@ -8,7 +8,7 @@ TBD - created by archiving change add-invoice-payment-management. Update Purpose
 
 ### Requirement: Record Invoice Payments
 
-Company users SHALL be able to record payments received against specific invoices.
+Company users SHALL be able to record payments received against specific invoices, stored in Firebase.
 
 #### Scenario: Record full payment
 
@@ -17,6 +17,14 @@ Company users SHALL be able to record payments received against specific invoice
 - **THEN** invoice status changes to "paid"
 - **AND** payment is recorded with date, amount, and method
 - **AND** outstanding balance becomes zero
+
+#### Scenario: Record payment in Firebase
+
+- **GIVEN** an outstanding invoice exists in Firebase
+- **WHEN** company user records a payment
+- **THEN** payment document is created in Firebase payments collection
+- **AND** invoice status is updated in Firebase invoices collection
+- **AND** outstanding balance is recalculated and saved
 
 #### Scenario: Record partial payment
 
@@ -43,6 +51,13 @@ Company users SHALL be able to view complete payment history for any invoice.
 - **THEN** they see chronological list of all payments
 - **AND** each payment shows date, amount, method, and reference
 - **AND** running balance is displayed
+
+#### Scenario: View payment history from Firebase
+
+- **WHEN** company user views invoice details
+- **THEN** payments are queried from Firebase payments collection
+- **AND** filtered by invoiceId
+- **AND** displayed in chronological order
 
 ### Requirement: Invoice Status Management
 
@@ -83,6 +98,13 @@ The system SHALL maintain accurate outstanding balances for all invoices.
 - **THEN** outstanding balance is recalculated
 - **AND** balance is displayed on invoice details
 - **AND** company dashboard reflects updated totals
+
+#### Scenario: Balance calculation from Firebase
+
+- **WHEN** payment is recorded in Firebase
+- **THEN** outstanding balance is recalculated using Firebase data
+- **AND** balance is updated in invoice document
+- **AND** company dashboard reflects updated totals via listeners
 
 ### Requirement: Payment Method Tracking
 
@@ -142,7 +164,18 @@ Client detail pages SHALL provide dedicated invoice management interface integra
 - **WHEN** viewing client invoices tab
 - **THEN** summary cards show total invoiced, paid, and outstanding amounts
 - **AND** overdue invoices are highlighted with visual alerts
-- **AND** quick filters allow viewing by status (all, paid, outstanding, overdue)</content>
+- **AND** quick filters allow viewing by status (all, paid, outstanding, overdue)
+
+### Requirement: Client Invoice Access with Firebase
+
+Client users SHALL be able to view their invoices loaded from Firebase.
+
+#### Scenario: Client views invoices from Firebase
+
+- **WHEN** client user accesses their dashboard
+- **THEN** invoices are loaded from Firebase invoices collection
+- **AND** filtered by clientId matching current user
+- **AND** status and payment information is displayed</content>
   </xai:function_call">Now let me create the tasks.md file with concrete, verifiable work items.
 
 <xai:function_call name="write">
