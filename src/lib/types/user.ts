@@ -29,6 +29,13 @@ export interface UserProfile {
   role: "client" | "company";
   permissions: string[];
 
+  // Company associations for multi-tenant support
+  companyAssociations?: {
+    companyId: string;
+    role: "member" | "admin" | "owner";
+    joinedAt: Timestamp;
+  }[];
+
   // Address information (optional)
   address?: {
     street: string;

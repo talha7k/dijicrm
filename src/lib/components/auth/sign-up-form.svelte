@@ -10,9 +10,10 @@
 
 	interface Props {
 		invitationToken?: string | null;
+		selectedRole?: 'client' | 'company-member' | 'create-company' | null;
 	}
 
-	let { invitationToken }: Props = $props();
+	let { invitationToken, selectedRole }: Props = $props();
 
 	let formData = $state({
 		firstName: '',
@@ -61,6 +62,11 @@
 				// Redirect to invitation acceptance flow
 				goto(`/invite/${invitationToken}`);
 				return;
+			}
+
+			// Store selected role for post-registration processing
+			if (selectedRole) {
+				localStorage.setItem('pendingRoleSelection', selectedRole);
 			}
 
 			// Sign up

@@ -4,12 +4,32 @@
 
 	import Button from '../ui/button/button.svelte';
 	import { goto } from '$app/navigation';
-	let { label = 'Sign in with' }: { label: string } = $props();
+	let {
+		label = 'Sign in with',
+		selectedRole = null,
+		disabled = false
+	}: {
+		label: string;
+		selectedRole?: 'client' | 'company-member' | 'create-company' | null;
+		disabled?: boolean;
+	} = $props();
 
 	async function signInWithGoogle() {
 		try {
+			// Store selected role for post-auth processing
+			if (selectedRole) {
+				localStorage.setItem('pendingRoleSelection', selectedRole);
+			}
+
 			await firekitAuth.signInWithGoogle();
-			await goto('/dashboard');
+
+			// After successful sign-in, redirect based on role
+			if (selectedRole) {
+				// For new users, the role will be processed during profile creation
+				await goto('/dashboard');
+			} else {
+				await goto('/dashboard');
+			}
 		} catch (error) {
 			if (error instanceof Error) {
 				toast.error(error.message);
@@ -20,7 +40,7 @@
 	}
 </script>
 
-<Button onclick={signInWithGoogle} class="w-full gap-2" variant="outline">
+<Button onclick={signInWithGoogle} class="w-full gap-2" variant="outline" {disabled}>
 	<svg
 		class="h-4 w-4 flex-shrink-0"
 		width="33"
