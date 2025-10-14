@@ -18,7 +18,7 @@ async function generatePdfFromHtml(
   // For now, return a mock PDF buffer with branding info
   let brandingInfo = "";
   if (branding) {
-    brandingInfo = ` | Logo: ${branding.logoUrl ? "Yes" : "No"} | Stamp: ${branding.stampText || "None"}`;
+    brandingInfo = ` | Logo: ${branding.logoUrl ? "Yes" : "No"} | Stamp: ${branding.stampImageUrl ? "Yes" : "None"}`;
   }
 
   const mockPdf = new TextEncoder().encode(

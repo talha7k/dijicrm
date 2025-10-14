@@ -58,11 +58,14 @@
     showCreateDialog = true;
   }
 
-  function handleProductSave(product: Partial<Product>) {
-    // TODO: Save product
-    console.log("Saving product:", product);
-    showCreateDialog = false;
-    // TODO: Refresh products list when Firebase integration is added
+  async function handleProductSave(product: Partial<Product>) {
+    try {
+      await productsStore.createProduct(product as Omit<Product, "id" | "createdAt" | "updatedAt">);
+      showCreateDialog = false;
+    } catch (error) {
+      console.error("Failed to save product:", error);
+      // TODO: Show error message to user
+    }
   }
 
   function handleEditProduct(product: Product) {
@@ -126,7 +129,7 @@
             Add Product/Service
           </Button>
         </DialogTrigger>
-        <DialogContent class="max-w-2xl">
+        <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Product/Service</DialogTitle>
             <DialogDescription>

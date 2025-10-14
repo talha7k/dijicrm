@@ -22,8 +22,8 @@
       name: "Standard Invoice Template",
       description: "Professional invoice template with automatic company branding (logo and stamp)",
       type: "invoice",
-      htmlContent: `
-        <div class="invoice-container">
+       htmlContent: `
+        <div class="invoice-container" style="position: relative;">
           <header class="invoice-header">
             <div class="company-logo" style="text-align: center; margin-bottom: 20px;">
               <img src="{{companyLogo}}" alt="Company Logo" style="max-width: 200px; max-height: 100px;" />
@@ -31,8 +31,8 @@
 
             <!-- ZATCA QR Code -->
             {{#if zatcaQRCode}}
-            <div class="zatca-qr-code" style="position: absolute; bottom: 20px; right: 20px; width: 100px; height: 100px;">
-              <img src="data:image/png;base64,{{zatcaQRCode}}" alt="ZATCA QR Code" style="width: 100%; height: 100%;" />
+            <div class="zatca-qr-code" style="position: absolute; top: 20px; right: 20px; width: 100px; height: 100px;">
+              <img src="{{zatcaQRCode}}" alt="ZATCA QR Code" style="width: 100%; height: 100%;" />
             </div>
             {{/if}}
             <h1>Invoice</h1>
@@ -114,7 +114,7 @@
         { key: "taxAmount", label: "Tax Amount", type: "number", required: false },
         { key: "total", label: "Total Amount", type: "number", required: true },
         { key: "paymentTerms", label: "Payment Terms", type: "text", required: false },
-        { key: "zatcaQRCode", label: "ZATCA QR Code (Base64)", type: "text", required: false },
+        { key: "zatcaQRCode", label: "ZATCA QR Code (Base64)", type: "image", required: false },
       ],
       tags: ["invoice", "professional"]
     },

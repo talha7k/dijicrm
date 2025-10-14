@@ -126,12 +126,37 @@ async function generateCompanyData(): Promise<{
 async function generateBrandingData(
   companyId: string,
 ): Promise<StoredCompanyBranding> {
+  // Generate sample logo and stamp as data URLs for demo purposes
+  const sampleLogoUrl =
+    "data:image/svg+xml;base64," +
+    btoa(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100">
+      <rect width="200" height="100" fill="#f3f4f6"/>
+      <rect x="10" y="10" width="180" height="80" fill="#3b82f6" rx="8"/>
+      <text x="100" y="45" text-anchor="middle" font-size="18" fill="white" font-weight="bold">LOGO</text>
+      <text x="100" y="65" text-anchor="middle" font-size="12" fill="white">Sample Company</text>
+    </svg>
+  `);
+
+  const sampleStampUrl =
+    "data:image/svg+xml;base64," +
+    btoa(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150">
+      <circle cx="75" cy="75" r="70" fill="#f3f4f6" stroke="#d1d5db" stroke-width="2"/>
+      <circle cx="75" cy="75" r="60" fill="none" stroke="#3b82f6" stroke-width="2"/>
+      <text x="75" y="70" text-anchor="middle" font-size="12" fill="#374151" font-weight="bold">STAMP</text>
+      <text x="75" y="85" text-anchor="middle" font-size="10" fill="#374151">APPROVED</text>
+      <text x="75" y="100" text-anchor="middle" font-size="8" fill="#6b7280">Sample Company LLC</text>
+      <text x="75" y="115" text-anchor="middle" font-size="6" fill="#9ca3af">${new Date().toLocaleDateString()}</text>
+    </svg>
+  `);
+
   const branding: StoredCompanyBranding = {
     companyId,
     companyName: "Sample Company LLC",
     vatNumber: "123456789012345", // Sample VAT for ZATCA
-    logoUrl: undefined, // No logo for sample
-    stampImageUrl: undefined, // No stamp image for sample
+    logoUrl: sampleLogoUrl,
+    stampImageUrl: sampleStampUrl,
     stampPosition: "bottom-right",
     primaryColor: "#3b82f6",
     secondaryColor: "#64748b",
@@ -152,7 +177,11 @@ async function generateClientData(companyId: string): Promise<UserProfile[]> {
       lastName: "Johnson",
       email: `alice-${Date.now()}@sampleclient.com`,
     },
-    { firstName: "Bob", lastName: "Smith", email: `bob-${Date.now()}@sampleclient.com` },
+    {
+      firstName: "Bob",
+      lastName: "Smith",
+      email: `bob-${Date.now()}@sampleclient.com`,
+    },
     {
       firstName: "Carol",
       lastName: "Williams",

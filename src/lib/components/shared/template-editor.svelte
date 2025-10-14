@@ -6,6 +6,7 @@
   import { Label } from '$lib/components/ui/label';
   import { Textarea } from '$lib/components/ui/textarea';
   import * as Select from '$lib/components/ui/select/index.js';
+  import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
   import Icon from '@iconify/svelte';
   import { validateTemplate, generatePreviewData, renderTemplate } from '$lib/utils/template-validation';
 
@@ -35,6 +36,7 @@
 
   let htmlEditor = $state(template.htmlContent || '');
   let previewMode = $state(false);
+  let showPreviewModal = $state(false);
 
   function handleSave() {
     const updatedTemplate = {
@@ -59,26 +61,35 @@
     dispatch('save', updatedTemplate);
   }
 
-  function handlePreview() {
+  async function handlePreview() {
+    await generatePreviewHtml();
+    showPreviewModal = true;
+  }
+
+  let previewHtml = $state('');
+
+  async function generatePreviewHtml() {
     const previewTemplate = {
       ...template,
       htmlContent: htmlEditor,
       type: template.type as 'custom' | 'invoice' | 'legal' | 'business'
     };
 
-    dispatch('preview', previewTemplate);
+    try {
+      const previewData = await generatePreviewData(previewTemplate);
+      previewHtml = renderTemplate(previewTemplate, previewData);
+    } catch (error) {
+      console.error('Error generating preview:', error);
+      previewHtml = '<div class="text-red-500 p-4">Error generating preview</div>';
+    }
   }
 
-  function generatePreviewHtml() {
-    const previewTemplate = {
-      ...template,
-      htmlContent: htmlEditor,
-      type: template.type as 'custom' | 'invoice' | 'legal' | 'business'
-    };
-
-    const previewData = generatePreviewData(previewTemplate);
-    return renderTemplate(previewTemplate, previewData);
-  }
+  // Generate preview when component mounts or when preview mode is toggled
+  $effect(() => {
+    if (previewMode) {
+      generatePreviewHtml();
+    }
+  });
 </script>
 
 <div class="space-y-6">
@@ -152,8 +163,8 @@
     </CardHeader>
     <CardContent>
       {#if previewMode}
-        <div class="border rounded p-4 bg-muted/50">
-          {@html generatePreviewHtml()}
+        <div class="border rounded p-4 bg-muted/50 relative min-h-[600px]">
+          {@html previewHtml}
         </div>
       {:else}
         <Textarea
@@ -176,4 +187,36 @@
       Create Template
     </Button>
   </div>
+
+  <!-- Preview Modal -->
+  <Dialog bind:open={showPreviewModal}>
+    <DialogContent class="max-w-4xl max-h-[80vh] overflow-auto">
+      <DialogHeader>
+        <DialogTitle>Document Preview</DialogTitle>
+        <DialogDescription>
+          Preview of how the document will appear when generated
+        </DialogDescription>
+      </DialogHeader>
+      <div class="mt-4">
+        <div class="border rounded-lg p-6 bg-white shadow-sm min-h-[600px] relative">
+          <style>
+            .invoice-container { max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif; }
+            .invoice-header { margin-bottom: 30px; }
+            .company-info h2 { margin: 0 0 10px 0; font-size: 18px; }
+            .company-info p { margin: 5px 0; }
+            .billing-info { margin-bottom: 30px; }
+            .bill-to h3 { margin: 0 0 10px 0; font-size: 16px; }
+            .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .invoice-table th, .invoice-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            .invoice-table th { background-color: #f5f5f5; font-weight: bold; }
+            .totals { text-align: right; margin-bottom: 30px; }
+            .total-row { margin-bottom: 5px; }
+            .total-row.total { font-weight: bold; font-size: 18px; }
+            .invoice-footer { margin-top: 40px; text-align: center; }
+          </style>
+          {@html generatePreviewHtml()}
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
 </div>

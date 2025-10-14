@@ -38,10 +38,8 @@ describe("BrandingService", () => {
 
   const mockBranding: CompanyBranding = {
     logoUrl: "https://example.com/logo.png",
-    stampText: "Approved",
+    stampImageUrl: "https://example.com/stamp.png",
     stampPosition: "bottom-right",
-    stampFontSize: 12,
-    stampColor: "#000000",
     primaryColor: "#007bff",
     secondaryColor: "#6c757d",
   };
@@ -61,7 +59,7 @@ describe("BrandingService", () => {
         expect.objectContaining({
           companyId: "company-1",
           logoUrl: "https://example.com/logo.png",
-          stampText: "Approved",
+          stampImageUrl: "https://example.com/stamp.png",
           stampPosition: "bottom-right",
           stampFontSize: 12,
           stampColor: "#000000",
@@ -94,7 +92,7 @@ describe("BrandingService", () => {
         data: () => ({
           companyId: "company-1",
           logoUrl: "https://example.com/logo.png",
-          stampText: "Approved",
+          stampImageUrl: "https://example.com/stamp.png",
           stampPosition: "bottom-right",
           stampFontSize: 12,
           stampColor: "#000000",
@@ -141,14 +139,14 @@ describe("BrandingService", () => {
     it("should update branding configuration successfully", async () => {
       mockUpdateDoc.mockResolvedValue(undefined);
 
-      const updates = { stampText: "Reviewed" };
+      const updates = { stampImageUrl: "https://example.com/new-stamp.png" };
       const result = await brandingService.updateBranding("company-1", updates);
 
       expect(result.success).toBe(true);
       expect(mockUpdateDoc).toHaveBeenCalledWith(
         "mock-doc-ref",
         expect.objectContaining({
-          stampText: "Reviewed",
+          stampImageUrl: "https://example.com/new-stamp.png",
           updatedAt: expect.any(Object),
         }),
       );
@@ -159,7 +157,7 @@ describe("BrandingService", () => {
       mockUpdateDoc.mockRejectedValue(error);
 
       const result = await brandingService.updateBranding("company-1", {
-        stampText: "Reviewed",
+        stampImageUrl: "https://example.com/new-stamp.png",
       });
 
       expect(result.success).toBe(false);

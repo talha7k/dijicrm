@@ -49,11 +49,9 @@ export function injectBrandingIntoHtml(
     }
   }
 
-  // Inject stamp if configured
-  if (branding.stampText) {
+  // Inject stamp image if available
+  if (branding.stampImageUrl) {
     const stampPosition = branding.stampPosition || "bottom-right";
-    const stampFontSize = branding.stampFontSize || 12;
-    const stampColor = branding.stampColor || "#000000";
 
     // Position styles based on stamp position
     let positionStyles = "";
@@ -74,9 +72,7 @@ export function injectBrandingIntoHtml(
     }
 
     const stampHtml = `
-      <div style="${positionStyles} font-size: ${stampFontSize}px; color: ${stampColor}; opacity: 0.7; transform: rotate(-15deg); pointer-events: none;">
-        ${branding.stampText}
-      </div>
+      <img src="${branding.stampImageUrl}" alt="Company Stamp" style="${positionStyles} max-width: 150px; max-height: 150px; opacity: 0.8; transform: rotate(-15deg); pointer-events: none;" />
     `;
 
     // Wrap content in relative positioned container and add stamp
