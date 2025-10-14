@@ -5,7 +5,7 @@
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import { Textarea } from '$lib/components/ui/textarea';
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '$lib/components/ui/select/index.js';
+  import * as Select from '$lib/components/ui/select/index.js';
   import Icon from '@iconify/svelte';
   import { validateTemplate, generatePreviewData, renderTemplate } from '$lib/utils/template-validation';
 
@@ -102,17 +102,17 @@
         </div>
         <div>
           <Label for="template-type">Template Type</Label>
-          <Select type="single" bind:value={template.type}>
-            <SelectTrigger class="w-full">
-              <SelectValue placeholder="Select template type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="invoice">Invoice</SelectItem>
-              <SelectItem value="legal">Legal Document</SelectItem>
-              <SelectItem value="business">Business Document</SelectItem>
-              <SelectItem value="custom">Custom</SelectItem>
-            </SelectContent>
-          </Select>
+          <Select.Root type="single" bind:value={template.type}>
+            <Select.Trigger class="w-full">
+              {template.type ? template.type.charAt(0).toUpperCase() + template.type.slice(1) + (template.type === "legal" ? " Document" : template.type === "business" ? " Document" : "") : "Select template type"}
+            </Select.Trigger>
+            <Select.Content>
+              <Select.Item value="invoice">Invoice</Select.Item>
+              <Select.Item value="legal">Legal Document</Select.Item>
+              <Select.Item value="business">Business Document</Select.Item>
+              <Select.Item value="custom">Custom</Select.Item>
+            </Select.Content>
+          </Select.Root>
         </div>
       </div>
 

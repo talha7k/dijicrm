@@ -6,7 +6,7 @@
   import { Input } from "$lib/components/ui/input";
   import { Badge } from "$lib/components/ui/badge";
   import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "$lib/components/ui/dialog";
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "$lib/components/ui/select";
+  import * as Select from "$lib/components/ui/select/index.js";
   import { Checkbox } from "$lib/components/ui/checkbox";
   import { Label } from "$lib/components/ui/label";
   import { Textarea } from "$lib/components/ui/textarea";
@@ -103,17 +103,17 @@
           placeholder="Search requirements..."
           class="w-64"
         />
-        <Select type="single" bind:value={selectedProduct}>
-          <SelectTrigger class="w-48">
-            <SelectValue placeholder="Filter by product" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Products</SelectItem>
+        <Select.Root type="single" bind:value={selectedProduct}>
+          <Select.Trigger class="w-48">
+            {selectedProduct === "all" ? "All Products" : $productsStore.data?.find(p => p.id === selectedProduct)?.name || "Filter by product"}
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item value="all">All Products</Select.Item>
             {#each $productsStore.data || [] as product (product.id)}
-              <SelectItem value={product.id}>{product.name}</SelectItem>
+              <Select.Item value={product.id}>{product.name}</Select.Item>
             {/each}
-          </SelectContent>
-        </Select>
+          </Select.Content>
+        </Select.Root>
       </div>
 
       <Dialog bind:open={showCreateDialog}>

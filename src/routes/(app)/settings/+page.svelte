@@ -6,7 +6,7 @@
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import { Switch } from "$lib/components/ui/switch";
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "$lib/components/ui/select";
+  import * as Select from "$lib/components/ui/select/index.js";
   import { Textarea } from "$lib/components/ui/textarea";
 
   import Icon from "@iconify/svelte";
@@ -508,17 +508,17 @@
             </div>
             <div>
               <Label for="smtp-port">Port</Label>
-              <Select type="single" bind:value={smtpConfig.port} onValueChange={handlePortChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select port" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="25">25 (SMTP)</SelectItem>
-                  <SelectItem value="587">587 (SMTP/TLS)</SelectItem>
-                  <SelectItem value="465">465 (SMTPS/SSL)</SelectItem>
-                  <SelectItem value="2525">2525 (Alternative)</SelectItem>
-                </SelectContent>
-              </Select>
+              <Select.Root type="single" bind:value={smtpConfig.port} onValueChange={handlePortChange}>
+                <Select.Trigger class="w-full">
+                  {smtpConfig.port ? `${smtpConfig.port} (${smtpConfig.port === "25" ? "SMTP" : smtpConfig.port === "587" ? "SMTP/TLS" : smtpConfig.port === "465" ? "SMTPS/SSL" : "Alternative"})` : "Select port"}
+                </Select.Trigger>
+                <Select.Content>
+                  <Select.Item value="25">25 (SMTP)</Select.Item>
+                  <Select.Item value="587">587 (SMTP/TLS)</Select.Item>
+                  <Select.Item value="465">465 (SMTPS/SSL)</Select.Item>
+                  <Select.Item value="2525">2525 (Alternative)</Select.Item>
+                </Select.Content>
+              </Select.Root>
             </div>
           </div>
 
@@ -689,15 +689,17 @@
               <h4 class="text-sm font-medium">Document Stamp Position</h4>
               <div>
                 <Label for="stamp-position">Stamp Position</Label>
-                <Select type="single" bind:value={branding.stampPosition}>
-                  <SelectTrigger><SelectValue placeholder="Select position" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="top-left">Top Left</SelectItem>
-                    <SelectItem value="top-right">Top Right</SelectItem>
-                    <SelectItem value="bottom-left">Bottom Left</SelectItem>
-                    <SelectItem value="bottom-right">Bottom Right</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Select.Root type="single" bind:value={branding.stampPosition}>
+                  <Select.Trigger class="w-full">
+                    {branding.stampPosition ? branding.stampPosition.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : "Select position"}
+                  </Select.Trigger>
+                  <Select.Content>
+                    <Select.Item value="top-left">Top Left</Select.Item>
+                    <Select.Item value="top-right">Top Right</Select.Item>
+                    <Select.Item value="bottom-left">Bottom Left</Select.Item>
+                    <Select.Item value="bottom-right">Bottom Right</Select.Item>
+                  </Select.Content>
+                </Select.Root>
               </div>
             </div>
           </div>

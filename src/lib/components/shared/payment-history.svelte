@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "$lib/components/ui/table";
   import { Input } from "$lib/components/ui/input";
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "$lib/components/ui/select";
+  import * as Select from "$lib/components/ui/select/index.js";
   import { Button } from "$lib/components/ui/button";
   import Icon from "@iconify/svelte";
   import { formatDateShort } from "$lib/utils";
@@ -97,33 +97,33 @@
       </div>
       <div class="w-48">
         <label for="method" class="text-sm font-medium">Payment Method</label>
-        <Select type="single" bind:value={selectedMethod}>
-          <SelectTrigger class="mt-1">
-            <SelectValue placeholder="All methods" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Methods</SelectItem>
+        <Select.Root type="single" bind:value={selectedMethod}>
+          <Select.Trigger class="mt-1 w-full">
+            {selectedMethod === "all" ? "All Methods" : paymentMethods.find(m => m.value === selectedMethod)?.label || "All methods"}
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item value="all">All Methods</Select.Item>
             {#each paymentMethods as method (method.value)}
-              <SelectItem value={method.value}>
+              <Select.Item value={method.value}>
                 {method.label}
-              </SelectItem>
+              </Select.Item>
             {/each}
-          </SelectContent>
-        </Select>
+          </Select.Content>
+        </Select.Root>
       </div>
       <div class="w-48">
         <label for="sort" class="text-sm font-medium">Sort By</label>
-        <Select type="single" bind:value={sortBy}>
-          <SelectTrigger class="mt-1">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date_desc">Newest First</SelectItem>
-            <SelectItem value="date_asc">Oldest First</SelectItem>
-            <SelectItem value="amount_desc">Highest Amount</SelectItem>
-            <SelectItem value="amount_asc">Lowest Amount</SelectItem>
-          </SelectContent>
-        </Select>
+        <Select.Root type="single" bind:value={sortBy}>
+          <Select.Trigger class="mt-1 w-full">
+            {sortBy === "date_desc" ? "Newest First" : sortBy === "date_asc" ? "Oldest First" : sortBy === "amount_desc" ? "Highest Amount" : sortBy === "amount_asc" ? "Lowest Amount" : "Sort by"}
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item value="date_desc">Newest First</Select.Item>
+            <Select.Item value="date_asc">Oldest First</Select.Item>
+            <Select.Item value="amount_desc">Highest Amount</Select.Item>
+            <Select.Item value="amount_asc">Lowest Amount</Select.Item>
+          </Select.Content>
+        </Select.Root>
       </div>
       <Button variant="outline" onclick={clearFilters} size="sm">
         <Icon icon="lucide:x" class="h-4 w-4 mr-2" />

@@ -2,7 +2,7 @@
 import { createEventDispatcher } from "svelte";
 import { Button } from "$lib/components/ui/button";
 import { Input } from "$lib/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "$lib/components/ui/select";
+ import * as Select from "$lib/components/ui/select/index.js";
 import { Label } from "$lib/components/ui/label";
 import { Textarea } from "$lib/components/ui/textarea";
 import Icon from "@iconify/svelte";
@@ -172,18 +172,18 @@ import { uploadMultipleFiles } from "$lib/services/firebaseStorage";
 
   <div class="space-y-2">
     <Label for="payment-method">Payment Method *</Label>
-    <Select type="single" bind:value={formData.paymentMethod}>
-      <SelectTrigger>
-        <SelectValue placeholder="Select payment method" />
-      </SelectTrigger>
-      <SelectContent>
+    <Select.Root type="single" bind:value={formData.paymentMethod}>
+      <Select.Trigger class="w-full">
+        {paymentMethods.find(m => m.value === formData.paymentMethod)?.label || "Select payment method"}
+      </Select.Trigger>
+      <Select.Content>
         {#each paymentMethods as method (method.value)}
-          <SelectItem value={method.value}>
+          <Select.Item value={method.value}>
             {method.label}
-          </SelectItem>
+          </Select.Item>
         {/each}
-      </SelectContent>
-    </Select>
+      </Select.Content>
+    </Select.Root>
     {#if errors.paymentMethod}
       <p class="text-sm text-destructive">{errors.paymentMethod}</p>
     {/if}

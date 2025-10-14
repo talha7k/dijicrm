@@ -5,7 +5,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Badge } from "$lib/components/ui/badge";
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "$lib/components/ui/select";
+  import * as Select from "$lib/components/ui/select/index.js";
 
   import Icon from "@iconify/svelte";
   import { requireCompany } from "$lib/utils/auth";
@@ -94,20 +94,20 @@
           placeholder="Search invoices..."
           class="w-64"
         />
-        <Select type="single" bind:value={selectedStatus}>
-          <SelectTrigger class="w-40">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="quote">Quote</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="partially_paid">Partially Paid</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
-            </SelectContent>
-        </Select>
+        <Select.Root type="single" bind:value={selectedStatus}>
+          <Select.Trigger class="w-40">
+            {selectedStatus ? selectedStatus.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : "Filter by status"}
+          </Select.Trigger>
+            <Select.Content>
+              <Select.Item value="all">All Status</Select.Item>
+              <Select.Item value="draft">Draft</Select.Item>
+              <Select.Item value="quote">Quote</Select.Item>
+              <Select.Item value="sent">Sent</Select.Item>
+              <Select.Item value="partially_paid">Partially Paid</Select.Item>
+              <Select.Item value="paid">Paid</Select.Item>
+              <Select.Item value="overdue">Overdue</Select.Item>
+            </Select.Content>
+        </Select.Root>
       </div>
 
       <Button onclick={handleCreateInvoice}>

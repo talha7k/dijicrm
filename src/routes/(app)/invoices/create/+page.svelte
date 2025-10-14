@@ -5,7 +5,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "$lib/components/ui/select";
+  import * as Select from "$lib/components/ui/select/index.js";
   import { Textarea } from "$lib/components/ui/textarea";
   import { Badge } from "$lib/components/ui/badge";
 
@@ -272,23 +272,23 @@
           <CardContent class="space-y-4">
             <div>
               <Label for="client-select">Select Client (Optional)</Label>
-              <Select type="single" bind:value={selectedClientId} onValueChange={handleClientSelection}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose from existing clients or enter manually" />
-                </SelectTrigger>
-                <SelectContent>
+              <Select.Root type="single" bind:value={selectedClientId} onValueChange={handleClientSelection}>
+                <Select.Trigger class="w-full">
+                  {$clientStore.clients.find(c => c.uid === selectedClientId)?.displayName || $clientStore.clients.find(c => c.uid === selectedClientId)?.firstName + ' ' + $clientStore.clients.find(c => c.uid === selectedClientId)?.lastName || "Choose from existing clients or enter manually"}
+                </Select.Trigger>
+                <Select.Content>
                   {#each $clientStore.clients as client (client.uid)}
-                    <SelectItem value={client.uid}>
+                    <Select.Item value={client.uid}>
                       <div class="flex items-center justify-between w-full">
                         <span>{client.displayName || `${client.firstName} ${client.lastName}`}</span>
                         <Badge variant={client.metadata?.accountStatus === 'active' ? 'default' : 'secondary'}>
                           {client.metadata?.accountStatus === 'active' ? 'Active' : 'Invited'}
                         </Badge>
                       </div>
-                    </SelectItem>
+                    </Select.Item>
                   {/each}
-                </SelectContent>
-              </Select>
+                </Select.Content>
+              </Select.Root>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
@@ -333,17 +333,17 @@
              </div>
              <div>
                <Label for="status">Invoice Status</Label>
-               <Select type="single" bind:value={invoiceData.status}>
-                 <SelectTrigger>
-                   <SelectValue placeholder="Select invoice status" />
-                 </SelectTrigger>
-                 <SelectContent>
-                   <SelectItem value="draft">Draft</SelectItem>
-                   <SelectItem value="quote">Quote</SelectItem>
-                   <SelectItem value="sent">Sent</SelectItem>
-                   <SelectItem value="paid">Paid</SelectItem>
-                 </SelectContent>
-               </Select>
+                <Select.Root type="single" bind:value={invoiceData.status}>
+                  <Select.Trigger class="w-full">
+                    {invoiceData.status ? invoiceData.status.charAt(0).toUpperCase() + invoiceData.status.slice(1) : "Select invoice status"}
+                  </Select.Trigger>
+                  <Select.Content>
+                    <Select.Item value="draft">Draft</Select.Item>
+                    <Select.Item value="quote">Quote</Select.Item>
+                    <Select.Item value="sent">Sent</Select.Item>
+                    <Select.Item value="paid">Paid</Select.Item>
+                  </Select.Content>
+                </Select.Root>
              </div>
           </CardContent>
         </Card>
@@ -358,23 +358,23 @@
             <div class="flex gap-4 items-end">
               <div class="flex-1">
                 <Label for="product-select">Product/Service</Label>
-                <Select type="single" bind:value={selectedProductId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a product or service" />
-                  </SelectTrigger>
-                  <SelectContent>
+                <Select.Root type="single" bind:value={selectedProductId}>
+                  <Select.Trigger class="w-full">
+                    {$productsStore.data?.find(p => p.id === selectedProductId)?.name || "Select a product or service"}
+                  </Select.Trigger>
+                  <Select.Content>
                     {#each $productsStore.data || [] as product (product.id)}
-                      <SelectItem value={product.id}>
+                      <Select.Item value={product.id}>
                         <div class="flex items-center justify-between w-full">
                           <span>{product.name}</span>
                           <Badge variant="outline">
                             {product.price ? formatCurrency(product.price) : "Contact pricing"}
                           </Badge>
                         </div>
-                      </SelectItem>
+                      </Select.Item>
                     {/each}
-                  </SelectContent>
-                </Select>
+                  </Select.Content>
+                </Select.Root>
               </div>
               <div class="w-24">
                 <Label for="quantity">Quantity</Label>

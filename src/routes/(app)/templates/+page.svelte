@@ -8,7 +8,7 @@
   import { Input } from '$lib/components/ui/input';
   import { Badge } from '$lib/components/ui/badge';
   import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '$lib/components/ui/dialog';
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '$lib/components/ui/select/index.js';
+  import * as Select from '$lib/components/ui/select/index.js';
   import { toast } from 'svelte-sonner';
 
   import Icon from '@iconify/svelte';
@@ -323,18 +323,18 @@
             placeholder="Search templates..."
             class="w-64"
           />
-          <Select type="single" value={selectedType} onValueChange={(v) => selectedType = v}>
-            <SelectTrigger class="w-40">
-              <SelectValue placeholder="Filter by type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="invoice">Invoice</SelectItem>
-              <SelectItem value="legal">Legal</SelectItem>
-              <SelectItem value="business">Business</SelectItem>
-              <SelectItem value="custom">Custom</SelectItem>
-            </SelectContent>
-          </Select>
+          <Select.Root type="single" value={selectedType} onValueChange={(v) => selectedType = v}>
+            <Select.Trigger class="w-40">
+              {selectedType ? (selectedType === "all" ? "All Types" : selectedType.charAt(0).toUpperCase() + selectedType.slice(1)) : "Filter by type"}
+            </Select.Trigger>
+            <Select.Content>
+              <Select.Item value="all">All Types</Select.Item>
+              <Select.Item value="invoice">Invoice</Select.Item>
+              <Select.Item value="legal">Legal</Select.Item>
+              <Select.Item value="business">Business</Select.Item>
+              <Select.Item value="custom">Custom</Select.Item>
+            </Select.Content>
+          </Select.Root>
         </div>
 
         <div class="flex gap-2">

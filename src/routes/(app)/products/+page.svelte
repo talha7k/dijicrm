@@ -6,7 +6,7 @@
   import { Input } from "$lib/components/ui/input";
   import { Badge } from "$lib/components/ui/badge";
   import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "$lib/components/ui/dialog";
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "$lib/components/ui/select";
+  import * as Select from "$lib/components/ui/select/index.js";
   import { Label } from "$lib/components/ui/label";
   import { Textarea } from "$lib/components/ui/textarea";
 
@@ -106,17 +106,17 @@
           placeholder="Search products..."
           class="w-64"
         />
-        <Select type="single" bind:value={selectedCategory}>
-          <SelectTrigger class="w-48">
-            <SelectValue placeholder="Filter by category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            <SelectItem value="service">Services</SelectItem>
-            <SelectItem value="product">Products</SelectItem>
-            <SelectItem value="subscription">Subscriptions</SelectItem>
-          </SelectContent>
-        </Select>
+        <Select.Root type="single" bind:value={selectedCategory}>
+          <Select.Trigger class="w-48">
+            {selectedCategory === "all" ? "All Categories" : selectedCategory ? selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1) + (selectedCategory === "service" ? "s" : selectedCategory === "product" ? "s" : "s") : "Filter by category"}
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Item value="all">All Categories</Select.Item>
+            <Select.Item value="service">Services</Select.Item>
+            <Select.Item value="product">Products</Select.Item>
+            <Select.Item value="subscription">Subscriptions</Select.Item>
+          </Select.Content>
+        </Select.Root>
       </div>
 
       <Dialog bind:open={showCreateDialog}>

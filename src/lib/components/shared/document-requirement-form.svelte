@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import { Button } from "$lib/components/ui/button";
-  import { Root as Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "$lib/components/ui/select";
+  import * as Select from "$lib/components/ui/select/index.js";
   import { Checkbox } from "$lib/components/ui/checkbox";
   import { Label } from "$lib/components/ui/label";
   import { Badge } from "$lib/components/ui/badge";
@@ -55,40 +55,40 @@
   <div class="grid grid-cols-2 gap-4">
     <div>
       <Label for="product-select">Product/Service</Label>
-      <Select type="single" bind:value={formData.productId}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select a product or service" />
-        </SelectTrigger>
-        <SelectContent>
+      <Select.Root type="single" bind:value={formData.productId}>
+        <Select.Trigger class="w-full">
+          {products.find(p => p.id === formData.productId)?.name || "Select a product or service"}
+        </Select.Trigger>
+        <Select.Content>
           {#each products as product (product.id)}
-            <SelectItem value={product.id}>
+            <Select.Item value={product.id}>
               <div class="flex items-center gap-2">
                 <span>{product.name}</span>
                 <Badge class={getProductColor(product.category)}>{product.category}</Badge>
               </div>
-            </SelectItem>
+            </Select.Item>
           {/each}
-        </SelectContent>
-      </Select>
+        </Select.Content>
+      </Select.Root>
     </div>
 
     <div>
       <Label for="template-select">Required Document</Label>
-      <Select type="single" bind:value={formData.templateId}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select a document template" />
-        </SelectTrigger>
-        <SelectContent>
+      <Select.Root type="single" bind:value={formData.templateId}>
+        <Select.Trigger class="w-full">
+          {templates.find(t => t.id === formData.templateId)?.name || "Select a document template"}
+        </Select.Trigger>
+        <Select.Content>
           {#each templates as template (template.id)}
-            <SelectItem value={template.id}>
+            <Select.Item value={template.id}>
               <div class="flex items-center gap-2">
                 <span>{template.name}</span>
                 <Badge variant="outline">{template.type}</Badge>
               </div>
-            </SelectItem>
+            </Select.Item>
           {/each}
-        </SelectContent>
-      </Select>
+        </Select.Content>
+      </Select.Root>
     </div>
   </div>
 

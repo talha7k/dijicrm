@@ -2,7 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "$lib/components/ui/select";
+  import * as Select from "$lib/components/ui/select/index.js";
   import { Label } from "$lib/components/ui/label";
   import { Checkbox } from "$lib/components/ui/checkbox";
   import { Card, CardContent, CardHeader, CardTitle } from "$lib/components/ui/card";
@@ -55,18 +55,18 @@
   <CardContent class="space-y-4">
     <div>
       <Label for="template-select">Document Template</Label>
-      <Select type="single" bind:value={formData.templateId}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select a document template" />
-        </SelectTrigger>
-        <SelectContent>
+      <Select.Root type="single" bind:value={formData.templateId}>
+        <Select.Trigger class="w-full">
+          {templates.find(t => t.id === formData.templateId)?.name || "Select a document template"}
+        </Select.Trigger>
+        <Select.Content>
           {#each templates as template (template.id)}
-            <SelectItem value={template.id}>
+            <Select.Item value={template.id}>
               {template.name} - {template.type}
-            </SelectItem>
+            </Select.Item>
           {/each}
-        </SelectContent>
-      </Select>
+        </Select.Content>
+      </Select.Root>
     </div>
 
     <div class="flex items-center space-x-2">

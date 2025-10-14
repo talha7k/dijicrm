@@ -2,7 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
-  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "$lib/components/ui/select";
+  import * as Select from "$lib/components/ui/select/index.js";
   import { Label } from "$lib/components/ui/label";
   import { Textarea } from "$lib/components/ui/textarea";
   import { Checkbox } from "$lib/components/ui/checkbox";
@@ -106,16 +106,16 @@
 
     <div>
       <Label for="product-category">Category</Label>
-      <Select type="single" bind:value={formData.category}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select category" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="service">Service</SelectItem>
-          <SelectItem value="product">Product</SelectItem>
-          <SelectItem value="subscription">Subscription</SelectItem>
-        </SelectContent>
-      </Select>
+      <Select.Root type="single" bind:value={formData.category}>
+        <Select.Trigger class="w-full">
+          {formData.category ? formData.category.charAt(0).toUpperCase() + formData.category.slice(1) : "Select category"}
+        </Select.Trigger>
+        <Select.Content>
+          <Select.Item value="service">Service</Select.Item>
+          <Select.Item value="product">Product</Select.Item>
+          <Select.Item value="subscription">Subscription</Select.Item>
+        </Select.Content>
+      </Select.Root>
     </div>
   </div>
 
