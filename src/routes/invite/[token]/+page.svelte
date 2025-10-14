@@ -32,42 +32,10 @@
   onMount(async () => {
     try {
       // Validate invitation token
-      // In a real implementation, this would query the database
-      // For now, we'll mock validation
-
-      // Mock client data based on token
-      if (token === 'mock-token-123') {
-        clientData = {
-          uid: 'client-2',
-          email: 'jane.smith@client.com',
-          displayName: 'Jane Smith',
-          photoURL: null,
-          isActive: false,
-          lastLoginAt: Timestamp.now(),
-          createdAt: Timestamp.fromDate(new Date('2024-01-05')),
-          updatedAt: Timestamp.fromDate(new Date('2024-01-10')),
-          firstName: 'Jane',
-          lastName: 'Smith',
-          phoneNumber: '+1-555-0456',
-          emailNotifications: true,
-          pushNotifications: false,
-          theme: 'dark',
-          language: 'en',
-          role: 'client',
-          permissions: [],
-          metadata: {
-            accountStatus: 'invited'
-          },
-          invitationToken: token,
-          invitationExpiresAt: Timestamp.fromDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
-          invitedBy: 'company-user-1',
-          invitationStatus: 'pending'
-        };
-        invitationValid = true;
-      } else {
-        invitationValid = false;
-        errors.general = 'Invalid or expired invitation link.';
-      }
+      // TODO: Query database for invitation token
+      // For now, mark as invalid since no invitation system is implemented
+      invitationValid = false;
+      errors.general = 'Invitation system not yet implemented. Please contact support.';
     } catch (error) {
       console.error('Error validating invitation:', error);
       invitationValid = false;

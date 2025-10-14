@@ -101,7 +101,7 @@ export class BrandingService {
   }
 
   /**
-   * Update existing branding configuration
+   * Update existing branding configuration (creates if doesn't exist)
    */
   async updateBranding(
     companyId: string,
@@ -116,7 +116,21 @@ export class BrandingService {
         updatedAt: now,
       };
 
-      await updateDoc(docRef, updateData);
+      // Check if document exists
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        // Update existing document
+        await updateDoc(docRef, updateData);
+      } else {
+        // Create new document with defaults
+        const storedBranding: StoredCompanyBranding = {
+          companyId,
+          createdAt: now,
+          updatedAt: now,
+          ...updates,
+        };
+        await setDoc(docRef, storedBranding);
+      }
 
       return { success: true };
     } catch (error) {
@@ -292,6 +306,157 @@ export class BrandingService {
       return {
         success: false,
         error: error instanceof Error ? error.message : "Failed to update logo",
+      };
+    }
+  }
+
+  /**
+   * Upload company stamp image to Firebase Storage
+   */
+  async uploadStampImage(
+    companyId: string,
+    file: File,
+    options: LogoUploadOptions = {},
+  ): Promise<LogoUploadResult> {
+    try {
+      // Set default options for stamp images (smaller than logos)
+      const uploadOptions = {
+        maxSize: 1 * 1024 * 1024, // 1MB default for stamps
+        allowedTypes: [
+          "image/jpeg",
+          "image/png",
+          "image/svg+xml",
+          "image/webp",
+        ],
+        maxWidth: 500,
+        maxHeight: 500,
+        path: `stamps/${companyId}`,
+        ...options,
+      };
+
+      // Validate file type
+      if (!uploadOptions.allowedTypes.includes(file.type)) {
+        return {
+          success: false,
+          error: `File type ${file.type} is not allowed. Allowed types: ${uploadOptions.allowedTypes.join(", ")}`,
+        };
+      }
+
+      // Validate file size
+      if (file.size > uploadOptions.maxSize) {
+        return {
+          success: false,
+          error: `File size exceeds maximum allowed size of ${uploadOptions.maxSize / (1024 * 1024)}MB`,
+        };
+      }
+
+      // Validate dimensions for non-SVG files
+      if (
+        file.type !== "image/svg+xml" &&
+        uploadOptions.maxWidth &&
+        uploadOptions.maxHeight
+      ) {
+        try {
+          const dimensions = await this.getImageDimensions(file);
+          if (
+            dimensions.width > uploadOptions.maxWidth ||
+            dimensions.height > uploadOptions.maxHeight
+          ) {
+            return {
+              success: false,
+              error: `Image dimensions must be ${uploadOptions.maxWidth}x${uploadOptions.maxHeight} pixels or smaller. Selected image is ${dimensions.width}x${dimensions.height} pixels.`,
+            };
+          }
+        } catch (error) {
+          console.warn("Could not validate image dimensions:", error);
+          // Continue with upload - let Firebase handle it
+        }
+      }
+
+      // Upload file
+      const result = await uploadFile(
+        file,
+        `stamp-${Date.now()}`,
+        uploadOptions,
+      );
+
+      if (!result.success) {
+        return result;
+      }
+
+      // Get image dimensions if it's an image (not SVG)
+      let dimensions: { width?: number; height?: number } = {};
+      if (file.type !== "image/svg+xml") {
+        try {
+          dimensions = await this.getImageDimensions(file);
+        } catch (error) {
+          console.warn("Could not get image dimensions:", error);
+        }
+      }
+
+      return {
+        success: true,
+        url: result.url,
+        path: result.path,
+        ...dimensions,
+      };
+    } catch (error) {
+      console.error("Error uploading stamp image:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to upload stamp image",
+      };
+    }
+  }
+
+  /**
+   * Update branding with new stamp image URL (handles old stamp cleanup)
+   */
+  async updateStampImage(
+    companyId: string,
+    newStampImageUrl: string,
+  ): Promise<BrandingServiceResult> {
+    try {
+      // Load current branding to get old stamp image
+      const currentResult = await this.loadBranding(companyId);
+      if (!currentResult.success) {
+        return currentResult;
+      }
+
+      const currentBranding = currentResult.branding;
+
+      // Delete old stamp image if it exists
+      if (
+        currentBranding?.stampImageUrl &&
+        currentBranding.stampImageUrl !== newStampImageUrl
+      ) {
+        try {
+          const oldPath = this.extractPathFromUrl(
+            currentBranding.stampImageUrl,
+          );
+          if (oldPath) {
+            await this.deleteLogo(oldPath); // Reuse delete method
+          }
+        } catch (error) {
+          console.warn("Could not delete old stamp image:", error);
+        }
+      }
+
+      // Update branding with new stamp image
+      return await this.updateBranding(companyId, {
+        stampImageUrl: newStampImageUrl,
+      });
+    } catch (error) {
+      console.error("Error updating stamp image:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update stamp image",
       };
     }
   }

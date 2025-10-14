@@ -88,11 +88,22 @@
         </svg>
         <h3 class="mt-4 text-lg font-semibold">No clients yet</h3>
         <p class="mt-2 text-muted-foreground">
-          Get started by inviting your first client.
+          Get started by generating sample data or inviting your first client.
         </p>
-        <Button onclick={handleCreateClient} class="mt-4">
-          Invite Client
-        </Button>
+        <div class="flex gap-2 mt-4">
+          <Button onclick={() => goto("/settings")}>
+            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/>
+            </svg>
+            Generate Sample Data
+          </Button>
+          <Button variant="outline" onclick={handleCreateClient}>
+            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+            </svg>
+            Invite Client
+          </Button>
+        </div>
       </div>
     {:else}
       <Table.Root>

@@ -21,75 +21,28 @@
    let invoiceId = $derived($page.params.id);
    let mounted = $state(false);
    let showPaymentDialog = $state(false);
+   let loading = $state(true);
+   let error = $state<string | null>(null);
 
-    onMount(() => {
-      mounted = true;
-      // Company access is checked at layout level
-    });
+   // Invoice data - will be loaded from Firebase
+   let invoice = $state<InvoiceData | null>(null);
 
+   onMount(async () => {
+     mounted = true;
+     // Company access is checked at layout level
 
-
-     // Mock invoice data - will be replaced with Firebase integration
-     let invoice = $state<InvoiceData>({
-       id: "",
-       clientName: "",
-       clientEmail: "",
-       amount: 0,
-       paidAmount: 0,
-       outstandingAmount: 0,
-       status: "draft",
-       createdAt: new Date(),
-       dueDate: new Date(),
-       items: []
-     });
-
-     $effect(() => {
-       const mockInvoices: Record<string, InvoiceData> = {
-         "INV-001": {
-           id: "INV-001",
-           clientName: "Acme Corp",
-           clientEmail: "billing@acme.com",
-           amount: 2500,
-           paidAmount: 1250,
-           outstandingAmount: 1250,
-           status: "partially_paid",
-           createdAt: new Date("2024-01-15"),
-           dueDate: new Date("2024-02-15"),
-           items: [
-             { productName: "Web Development Service", quantity: 1, price: 2500, total: 2500 }
-           ]
-         },
-         "INV-002": {
-           id: "INV-002",
-           clientName: "TechStart Inc",
-           clientEmail: "accounts@techstart.com",
-           amount: 1500,
-           paidAmount: 1500,
-           outstandingAmount: 0,
-           status: "paid",
-           createdAt: new Date("2024-01-10"),
-           dueDate: new Date("2024-02-10"),
-           items: [
-             { productName: "SEO Package", quantity: 1, price: 1500, total: 1500 }
-           ]
-         }
-       };
-
-       const inv = (invoiceId && mockInvoices[invoiceId]) || {
-         id: invoiceId || "",
-         clientName: "Unknown Client",
-         clientEmail: "unknown@example.com",
-         amount: 0,
-         paidAmount: 0,
-         outstandingAmount: 0,
-         status: "draft",
-         createdAt: new Date(),
-         dueDate: new Date(),
-         items: []
-       };
-
-       invoice = { ...inv };
-     });
+     // TODO: Load invoice from Firebase
+     // For now, simulate loading and set to null (not found)
+     setTimeout(() => {
+       loading = false;
+       // If invoice not found, set error
+       if (!invoiceId) {
+         error = "Invalid invoice ID";
+       } else {
+         error = "Invoice not found";
+       }
+     }, 500);
+   });
 
   // Load payments for this invoice
   $effect(() => {
@@ -99,6 +52,7 @@
   });
 
   function handleRecordPayment(payment: Omit<Payment, "id" | "createdAt" | "updatedAt">) {
+    if (!invoice) return;
     // Update invoice using utility function
     invoice = updateInvoiceAfterPayment(invoice, payment.amount);
 
@@ -133,6 +87,28 @@
 {#if mounted}
   <DashboardLayout title="Invoice Details" description="View invoice information and manage payments">
     <div class="space-y-6">
+      {#if loading}
+        <Card>
+          <CardContent class="text-center py-8">
+            <Icon icon="lucide:loader" class="h-8 w-8 mx-auto text-muted-foreground mb-4 animate-spin" />
+            <p class="text-muted-foreground">Loading invoice...</p>
+          </CardContent>
+        </Card>
+      {:else if error || !invoice}
+        <Card>
+          <CardContent class="text-center py-8">
+            <Icon icon="lucide:file-x" class="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 class="text-lg font-medium mb-2">Invoice Not Found</h3>
+            <p class="text-muted-foreground mb-4">
+              {error || "The requested invoice could not be found."}
+            </p>
+            <Button variant="outline" onclick={() => goto("/invoices")}>
+              <Icon icon="lucide:arrow-left" class="h-4 w-4 mr-2" />
+              Back to Invoices
+            </Button>
+          </CardContent>
+        </Card>
+      {:else}
       <!-- Invoice Header -->
       <Card>
         <CardHeader>
@@ -239,13 +215,14 @@
          </CardContent>
        </Card>
 
-      <!-- Actions -->
-      <div class="flex justify-end gap-2">
-        <Button variant="outline" onclick={() => goto("/invoices")}>
-          <Icon icon="lucide:arrow-left" class="h-4 w-4 mr-2" />
-          Back to Invoices
-        </Button>
-      </div>
+        <!-- Actions -->
+        <div class="flex justify-end gap-2">
+          <Button variant="outline" onclick={() => goto("/invoices")}>
+            <Icon icon="lucide:arrow-left" class="h-4 w-4 mr-2" />
+            Back to Invoices
+          </Button>
+        </div>
+      {/if}
     </div>
   </DashboardLayout>
 {/if}

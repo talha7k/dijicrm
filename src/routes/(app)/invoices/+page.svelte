@@ -12,71 +12,25 @@
   import { formatDateShort } from "$lib/utils";
   import { goto } from "$app/navigation";
 
-  let mounted = $state(false);
-  let searchQuery = $state("");
-  let selectedStatus = $state("all");
+   let mounted = $state(false);
+   let searchQuery = $state("");
+   let selectedStatus = $state("all");
 
-   onMount(() => {
-     mounted = true;
-     // Company access is checked at layout level
-   });
+    onMount(async () => {
+      mounted = true;
+      // Company access is checked at layout level
 
-  // Mock invoice data - will be replaced with Firebase integration
-  let invoices = $state([
-    {
-      id: "INV-001",
-      clientName: "Acme Corp",
-      amount: 2500,
-      paidAmount: 1250,
-      outstandingAmount: 1250,
-      status: "partially_paid",
-      createdAt: new Date("2024-01-15"),
-      dueDate: new Date("2024-02-15"),
-      items: [
-        { productName: "Web Development Service", quantity: 1, price: 2500 }
-      ]
-    },
-    {
-      id: "INV-002",
-      clientName: "TechStart Inc",
-      amount: 1500,
-      paidAmount: 1500,
-      outstandingAmount: 0,
-      status: "paid",
-      createdAt: new Date("2024-01-10"),
-      dueDate: new Date("2024-02-10"),
-      items: [
-        { productName: "SEO Package", quantity: 1, price: 1500 }
-      ]
-    },
-    {
-      id: "INV-003",
-      clientName: "Global Solutions",
-      amount: 3200,
-      paidAmount: 0,
-      outstandingAmount: 3200,
-      status: "draft",
-      createdAt: new Date("2024-01-20"),
-      dueDate: new Date("2024-02-20"),
-      items: [
-        { productName: "Consulting Subscription", quantity: 1, price: 2000 },
-        { productName: "Web Development Service", quantity: 1, price: 1200 }
-      ]
-    },
-    {
-      id: "INV-004",
-      clientName: "StartupXYZ",
-      amount: 1800,
-      paidAmount: 0,
-      outstandingAmount: 1800,
-      status: "sent",
-      createdAt: new Date("2024-01-05"),
-      dueDate: new Date("2024-01-20"), // Overdue
-      items: [
-        { productName: "Mobile App Development", quantity: 1, price: 1800 }
-      ]
-    }
-  ]);
+      // TODO: Load invoices from Firebase
+      // For now, simulate loading
+      setTimeout(() => {
+        loading = false;
+      }, 500);
+    });
+
+   // Invoice data - will be loaded from Firebase
+   let invoices: any[] = $state([]);
+   let loading = $state(true);
+   let error = $state<string | null>(null);
 
   let filteredInvoices = $derived(() => {
     return invoices.filter((invoice) => {
@@ -162,20 +116,33 @@
       </Button>
     </div>
 
-    <!-- Invoices Grid -->
-    {#if filteredInvoices().length === 0}
+    <!-- Loading State -->
+    {#if loading}
+      <Card>
+        <CardContent class="text-center py-8">
+          <Icon icon="lucide:loader" class="h-8 w-8 mx-auto text-muted-foreground mb-4 animate-spin" />
+          <p class="text-muted-foreground">Loading invoices...</p>
+        </CardContent>
+      </Card>
+    {:else if filteredInvoices().length === 0}
       <Card>
         <CardContent class="text-center py-8">
           <Icon icon="lucide:file-text" class="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 class="text-lg font-medium mb-2">No invoices found</h3>
+          <h3 class="text-lg font-medium mb-2">No invoices yet</h3>
           <p class="text-muted-foreground mb-4">
-            {searchQuery || selectedStatus !== "all" ? "Try adjusting your search or filters." : "Create your first invoice to get started."}
+            {searchQuery || selectedStatus !== "all" ? "Try adjusting your search or filters." : "Get started by generating sample data or creating your first invoice."}
           </p>
           {#if !searchQuery && selectedStatus === "all"}
-            <Button onclick={handleCreateInvoice}>
-              <Icon icon="lucide:plus" class="h-4 w-4 mr-2" />
-              Create Invoice
-            </Button>
+            <div class="flex gap-2">
+              <Button onclick={() => goto("/settings")}>
+                <Icon icon="lucide:database" class="h-4 w-4 mr-2" />
+                Generate Sample Data
+              </Button>
+              <Button variant="outline" onclick={handleCreateInvoice}>
+                <Icon icon="lucide:plus" class="h-4 w-4 mr-2" />
+                Create Invoice
+              </Button>
+            </div>
           {/if}
         </CardContent>
       </Card>

@@ -5,10 +5,8 @@ export interface CompanyBranding {
   companyName?: string; // Company name for ZATCA compliance
   vatNumber?: string; // VAT number for ZATCA compliance (15 digits for Saudi)
   logoUrl?: string; // URL to logo stored in Firebase Storage
-  stampText?: string; // Text to display on document stamps
+  stampImageUrl?: string; // URL to stamp image stored in Firebase Storage
   stampPosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right";
-  stampFontSize?: number; // Font size in points
-  stampColor?: string; // Hex color code
   primaryColor?: string; // Brand primary color
   secondaryColor?: string; // Brand secondary color
 }
