@@ -38,11 +38,29 @@ export function processTemplateSyntax(
     },
   );
 
-  // Handle helper functions like {{formatCurrency value}}
-  html = html.replace(/\{\{formatCurrency\s+(\w+)\}\}/g, (match, varName) => {
-    const value = data[varName];
-    return formatCurrency(typeof value === "number" ? value : 0);
-  });
+  // Handle helper functions like {{formatCurrency value}} or {{formatCurrency (multiply quantity rate)}}
+  html = html.replace(
+    /\{\{formatCurrency\s+(.+?)\}\}/g,
+    (match, expression) => {
+      // Check if it's a nested expression like (multiply quantity rate)
+      if (expression.startsWith("(") && expression.endsWith(")")) {
+        // Evaluate the nested expression first
+        const nestedMatch = expression.match(/multiply\s+(\w+)\s+(\w+)/);
+        if (nestedMatch) {
+          const [, var1, var2] = nestedMatch;
+          const val1 = data[var1];
+          const val2 = data[var2];
+          const result =
+            (typeof val1 === "number" ? val1 : 0) *
+            (typeof val2 === "number" ? val2 : 0);
+          return formatCurrency(result);
+        }
+      }
+      // Simple variable case
+      const value = data[expression.trim()];
+      return formatCurrency(typeof value === "number" ? value : 0);
+    },
+  );
 
   // Handle calculations like {{multiply quantity rate}}
   html = html.replace(

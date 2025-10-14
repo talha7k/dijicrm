@@ -109,11 +109,30 @@ function validatePlaceholders(template: DocumentTemplate): ValidationResult {
   });
 
   // Check for undefined placeholders in HTML
-  const usedPlaceholders = htmlContent.match(/\{\{([^}]+)\}\}/g) || [];
+  // Extract all {{...}} patterns but exclude Handlebars syntax
+  const allPatterns = htmlContent.match(/\{\{([^}]+)\}\}/g) || [];
+  const usedPlaceholders: string[] = [];
+
+  allPatterns.forEach((match) => {
+    const content = match.slice(2, -2).trim(); // Remove {{ and }} and trim
+
+    // Skip Handlebars syntax patterns
+    if (content.startsWith("#") || content.startsWith("/")) {
+      return; // Skip {{#if}}, {{/if}}, {{#each}}, etc.
+    }
+
+    // Skip helper function calls (contain spaces and are not simple variables)
+    if (content.includes(" ") && !content.match(/^\w+$/)) {
+      return; // Skip {{formatCurrency value}}, {{multiply a b}}, etc.
+    }
+
+    // This is a simple placeholder
+    usedPlaceholders.push(content);
+  });
+
   const definedKeys = new Set(placeholders.map((p) => p.key));
 
-  usedPlaceholders.forEach((match) => {
-    const key = match.slice(2, -2); // Remove {{ and }}
+  usedPlaceholders.forEach((key) => {
     if (!definedKeys.has(key)) {
       errors.push(`Placeholder "${key}" is used in HTML but not defined`);
     }

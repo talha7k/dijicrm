@@ -9,6 +9,8 @@
   import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
   import Icon from '@iconify/svelte';
   import { validateTemplate, generatePreviewData, renderTemplate } from '$lib/utils/template-validation';
+  import AlertDialog from './alert-dialog.svelte';
+  import ConfirmDialog from './confirm-dialog.svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -37,6 +39,22 @@
   let htmlEditor = $state(template.htmlContent || '');
   let previewMode = $state(false);
   let showPreviewModal = $state(false);
+  let showAlertDialog = $state(false);
+  let showConfirmDialog = $state(false);
+  let alertTitle = $state('');
+  let alertMessage = $state('');
+  let confirmTitle = $state('');
+  let confirmMessage = $state('');
+
+  const onconfirm = () => {
+    const updatedTemplate = {
+      ...template,
+      htmlContent: htmlEditor,
+      updatedAt: new Date(),
+      type: template.type as 'custom' | 'invoice' | 'legal' | 'business'
+    };
+    dispatch('save', updatedTemplate);
+  };
 
   function handleSave() {
     const updatedTemplate = {
@@ -49,17 +67,23 @@
     // Validate before saving
     const validation = validateTemplate(updatedTemplate);
     if (!validation.isValid) {
-      alert('Validation errors:\n' + validation.errors.join('\n'));
+      alertTitle = 'Validation Errors';
+      alertMessage = validation.errors.join('\n');
+      showAlertDialog = true;
       return;
     }
 
     if (validation.warnings.length > 0) {
-      const proceed = confirm('Warnings found:\n' + validation.warnings.join('\n') + '\n\nSave anyway?');
-      if (!proceed) return;
+      confirmTitle = 'Warnings Found';
+      confirmMessage = validation.warnings.join('\n') + '\n\nSave anyway?';
+      showConfirmDialog = true;
+      return;
     }
 
     dispatch('save', updatedTemplate);
   }
+
+
 
   async function handlePreview() {
     await generatePreviewHtml();
@@ -219,4 +243,21 @@
       </div>
     </DialogContent>
   </Dialog>
+
+  <!-- Alert Dialog -->
+  <AlertDialog
+    bind:open={showAlertDialog}
+    title={alertTitle}
+    message={alertMessage}
+    type="error"
+  />
+
+  <!-- Confirm Dialog -->
+  <ConfirmDialog
+    bind:open={showConfirmDialog}
+    title={confirmTitle}
+    message={confirmMessage}
+    type="warning"
+    {onconfirm}
+  />
 </div>
