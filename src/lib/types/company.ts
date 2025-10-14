@@ -20,3 +20,11 @@ export interface Company {
   isActive: boolean;
   memberCount: number;
 }
+
+// Company context for managing active company state
+export interface CompanyContext {
+  companyId: string;
+  company: Company;
+  role: "member" | "admin" | "owner";
+  permissions: string[];
+}

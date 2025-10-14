@@ -1,4 +1,4 @@
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
 import {
   collection,
   doc,
@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import type { Order } from "$lib/types/document";
+import { activeCompanyId } from "./companyContext";
 
 function createOrdersStore() {
   const { subscribe, set, update } = writable<{
@@ -62,10 +63,21 @@ function createOrdersStore() {
       update((store) => ({ ...store, loading: true, error: null }));
 
       try {
-        // Query Firebase for orders by client
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          set({
+            data: null,
+            loading: false,
+            error: "No active company",
+          });
+          return;
+        }
+
+        // Query Firebase for orders by client and company
         const ordersQuery = query(
           collection(db, "orders"),
           where("clientId", "==", clientId),
+          where("companyId", "==", companyId),
         );
 
         const querySnapshot = await getDocs(ordersQuery);
@@ -87,13 +99,19 @@ function createOrdersStore() {
     },
 
     createOrder: async (
-      order: Omit<Order, "id" | "createdAt" | "updatedAt">,
+      order: Omit<Order, "id" | "createdAt" | "updatedAt" | "companyId">,
     ) => {
       update((store) => ({ ...store, loading: true }));
 
       try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          throw new Error("No active company");
+        }
+
         const newOrder: Order = {
           ...order,
+          companyId,
           id: `order-${Date.now()}`,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),

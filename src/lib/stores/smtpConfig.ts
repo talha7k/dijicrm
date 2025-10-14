@@ -1,8 +1,9 @@
 // Store for managing SMTP configuration loading and initialization
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
 import { smtpService } from "$lib/services/smtpService";
 import { emailService } from "$lib/services/emailService";
 import type { SMTPConfig } from "$lib/types/smtp";
+import { activeCompanyId } from "./companyContext";
 
 interface SMTPConfigState {
   config: SMTPConfig | null;
@@ -23,10 +24,20 @@ function createSMTPConfigStore() {
     subscribe: store.subscribe,
 
     // Initialize SMTP config for a company (call on app startup)
-    async initialize(companyId: string) {
+    async initialize() {
       store.update((state) => ({ ...state, loading: true, error: null }));
 
       try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          store.update((state) => ({
+            ...state,
+            error: "No active company",
+            loading: false,
+          }));
+          return;
+        }
+
         const result = await smtpService.loadSMTPConfig(companyId);
 
         if (result.success && result.config) {
@@ -68,10 +79,20 @@ function createSMTPConfigStore() {
     },
 
     // Save new SMTP configuration
-    async saveConfig(companyId: string, config: SMTPConfig) {
+    async saveConfig(config: SMTPConfig) {
       store.update((state) => ({ ...state, loading: true, error: null }));
 
       try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          store.update((state) => ({
+            ...state,
+            error: "No active company",
+            loading: false,
+          }));
+          return { success: false, error: "No active company" };
+        }
+
         const result = await smtpService.saveSMTPConfig(companyId, config);
 
         if (result.success) {
@@ -119,7 +140,7 @@ function createSMTPConfigStore() {
       }
 
       const updatedConfig = { ...currentConfig, ...updates };
-      return this.saveConfig(companyId, updatedConfig);
+      return this.saveConfig(updatedConfig);
     },
 
     // Get current config synchronously

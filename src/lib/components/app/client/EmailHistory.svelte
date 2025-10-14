@@ -40,7 +40,7 @@
      const unsubscribe = documentTypesStore.subscribe((state) => {
        documentTypes = state.data || [];
      });
-     documentTypesStore.loadDocumentTypes('company-1'); // Mock company ID
+     documentTypesStore.loadDocumentTypes();
      return unsubscribe;
    });
 

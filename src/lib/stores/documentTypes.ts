@@ -1,4 +1,4 @@
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
 import {
   collection,
   doc,
@@ -12,6 +12,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
+import { activeCompanyId } from "./companyContext";
 
 export interface DocumentType {
   id: string;
@@ -39,10 +40,20 @@ function createDocumentTypesStore() {
     set,
     update,
 
-    loadDocumentTypes: async (companyId: string) => {
+    loadDocumentTypes: async () => {
       update((store) => ({ ...store, loading: true, error: null }));
 
       try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          set({
+            data: null,
+            loading: false,
+            error: "No active company",
+          });
+          return;
+        }
+
         // Query Firebase for document types
         const typesQuery = query(
           collection(db, "documentTypes"),
@@ -68,13 +79,19 @@ function createDocumentTypesStore() {
     },
 
     createDocumentType: async (
-      type: Omit<DocumentType, "id" | "createdAt" | "updatedAt">,
+      type: Omit<DocumentType, "id" | "createdAt" | "updatedAt" | "companyId">,
     ) => {
       update((store) => ({ ...store, loading: true }));
 
       try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          throw new Error("No active company");
+        }
+
         const newType: DocumentType = {
           ...type,
+          companyId,
           id: `type-${Date.now()}`,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),

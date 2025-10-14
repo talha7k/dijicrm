@@ -90,7 +90,6 @@
     try {
       await paymentsStore.recordPayment({
         invoiceId: order.id,
-        companyId: order.companyId,
         clientId: order.clientId,
         amount,
         paymentDate: Timestamp.now(),

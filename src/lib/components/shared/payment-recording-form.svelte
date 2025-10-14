@@ -101,6 +101,7 @@ import { uploadMultipleFiles } from "$lib/services/firebaseStorage";
           .filter(result => result.success)
           .map((result, index) => ({
             id: `proof-${Date.now()}-${index}`,
+            companyId: "company-1", // TODO: Get from context
             fileName: fileInput![index].name,
             fileUrl: result.url!,
             fileType: fileInput![index].type,

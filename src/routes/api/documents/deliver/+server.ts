@@ -73,6 +73,7 @@ export const POST = async ({ request }: RequestEvent) => {
     // Create delivery records
     const deliveries: DocumentDelivery[] = documentIds.map((documentId) => ({
       id: `delivery-${documentId}-${Date.now()}`,
+      companyId: "company-1", // TODO: Get from auth or order
       documentId,
       recipientEmail,
       status: emailResult.success ? "sent" : "bounced",

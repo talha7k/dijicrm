@@ -47,6 +47,7 @@ describe("paymentsStore", () => {
       proofFiles: [
         {
           id: "proof-1",
+          companyId: "company-1",
           fileName: "receipt.pdf",
           fileUrl: "https://example.com/receipt.pdf",
           fileType: "application/pdf",

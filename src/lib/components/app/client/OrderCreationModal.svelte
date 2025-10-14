@@ -27,7 +27,7 @@
   // Load products on mount
   $effect(() => {
     if (open) {
-      productsStore.loadProducts('company-1'); // Mock company ID
+      productsStore.loadProducts();
       const unsubscribe = productsStore.subscribe((state) => {
         products = state.data || [];
       });

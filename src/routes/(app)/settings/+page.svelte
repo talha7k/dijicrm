@@ -106,7 +106,7 @@
 
     try {
       // Load SMTP config
-      await smtpStore.initialize(companyId);
+      await smtpStore.initialize();
       const loadedSMTPConfig = smtpStore.getCurrentConfig();
       if (loadedSMTPConfig) {
         smtpConfig = {
@@ -177,7 +177,7 @@
         port: parseInt(smtpConfig.port),
       };
 
-      const result = await smtpStore.saveConfig(companyId, configToSave);
+      const result = await smtpStore.saveConfig(configToSave);
 
       if (result.success) {
         showAlert("Success", "SMTP configuration saved successfully!", "success");

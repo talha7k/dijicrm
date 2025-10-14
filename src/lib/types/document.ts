@@ -34,6 +34,7 @@ export interface TemplatePlaceholder {
 
 export interface GeneratedDocument {
   id: string;
+  companyId: string;
   orderId: string; // Reference to the order
   clientId: string;
   templateId: string;
@@ -59,6 +60,7 @@ export interface GeneratedDocument {
 
 export interface DocumentFile {
   id: string;
+  companyId: string;
   fileName: string;
   fileUrl: string; // Firebase Storage URL
   fileType: string;
@@ -69,6 +71,7 @@ export interface DocumentFile {
 
 export interface DocumentDelivery {
   id: string;
+  companyId: string;
   documentId: string;
   recipientEmail: string;
   status: "pending" | "sent" | "delivered" | "bounced" | "complained";

@@ -35,7 +35,7 @@
   // Load document types on mount
   $effect(() => {
     if (open) {
-      documentTypesStore.loadDocumentTypes('company-1'); // Mock company ID
+      documentTypesStore.loadDocumentTypes();
       const unsubscribe = documentTypesStore.subscribe((state) => {
         documentTypes = state.data || [];
       });

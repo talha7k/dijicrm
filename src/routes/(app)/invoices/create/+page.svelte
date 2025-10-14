@@ -43,9 +43,8 @@
    // Load data on mount
    $effect(() => {
      if (mounted) {
-       const companyId = "company-1"; // TODO: Get from auth context
-       productsStore.loadProducts(companyId);
-       clientStore.loadClients(companyId);
+        productsStore.loadProducts();
+        clientStore.loadClients();
      }
    });
 

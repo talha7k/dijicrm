@@ -86,7 +86,7 @@
          lastName: formData.lastName,
          phoneNumber: formData.phoneNumber || undefined,
          address
-       }, 'company-1'); // Mock company ID
+        });
 
        toast.success('Client added successfully!');
       goto('/clients');

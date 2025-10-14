@@ -118,7 +118,7 @@
       }
 
       // Load products and invoices
-      await productStore.loadProducts('company-1'); // Mock company ID
+      await productStore.loadProducts();
       productStore.subscribe((state) => {
         products = state.data || [];
       });
@@ -182,9 +182,8 @@
 
    async function handleCreateOrder(order: any) {
      try {
-       await orderStore.createOrder({
-         companyId: "company-1", // TODO: Get from auth
-         clientId,
+        await orderStore.createOrder({
+          clientId,
          title: order.title,
          description: order.description,
          selectedProducts: order.selectedProducts,

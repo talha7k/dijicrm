@@ -1,5 +1,5 @@
 // Store for company-side client management
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
 import type { UserProfile } from "$lib/types/user";
 import {
   Timestamp,
@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import { toast } from "svelte-sonner";
+import { activeCompanyId } from "./companyContext";
 
 interface ClientManagementState {
   clients: UserProfile[];
@@ -35,10 +36,20 @@ function createClientManagementStore() {
     subscribe: store.subscribe,
 
     // Load all clients for the current company
-    async loadClients(companyId: string) {
+    async loadClients() {
       store.update((state) => ({ ...state, loading: true, error: null }));
 
       try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          store.update((state) => ({
+            ...state,
+            error: "No active company",
+            loading: false,
+          }));
+          return;
+        }
+
         // Clean up previous listener
         if (unsubscribe) {
           unsubscribe();
@@ -109,14 +120,12 @@ function createClientManagementStore() {
         address?: UserProfile["address"];
       },
       invitedBy: string,
-      companyId: string,
     ) {
       try {
-        // Generate invitation token
-        const invitationToken = crypto.randomUUID();
-        const invitationExpiresAt = Timestamp.fromDate(
-          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        ); // 7 days
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          throw new Error("No active company");
+        }
 
         const newClientData = {
           email: clientData.email,
@@ -206,16 +215,13 @@ function createClientManagementStore() {
     },
 
     // Add a new client directly without sending an invitation
-    async addClient(
-      clientData: {
-        email: string;
-        firstName: string;
-        lastName: string;
-        phoneNumber?: string;
-        address?: UserProfile["address"];
-      },
-      companyId: string,
-    ) {
+    async addClient(clientData: {
+      email: string;
+      firstName: string;
+      lastName: string;
+      phoneNumber?: string;
+      address?: UserProfile["address"];
+    }) {
       try {
         const newClientData = {
           email: clientData.email,

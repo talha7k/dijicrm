@@ -78,8 +78,7 @@
 
   onMount(() => {
     // Load clients for current company
-    // For now, use mock company ID
-    clientStore.loadClients('company-1');
+    clientStore.loadClients();
   });
 
   function getStatusBadge(client: UserProfile) {
@@ -119,7 +118,7 @@
     try {
       await clientStore.inviteClient(clientId, 'company-user-1'); // Mock invitedBy
       // Reload clients to update status
-      clientStore.loadClients('company-1');
+      clientStore.loadClients();
       toast.success('Invitation sent successfully');
     } catch (error) {
       console.error('Error inviting client:', error);

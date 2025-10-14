@@ -1,4 +1,4 @@
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
 import {
   collection,
   doc,
@@ -12,6 +12,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
+import { activeCompanyId } from "./companyContext";
 
 export interface Product {
   id: string;
@@ -41,10 +42,20 @@ function createProductsStore() {
     set,
     update,
 
-    loadProducts: async (companyId: string) => {
+    loadProducts: async () => {
       update((store) => ({ ...store, loading: true, error: null }));
 
       try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          set({
+            data: null,
+            loading: false,
+            error: "No active company",
+          });
+          return;
+        }
+
         // Query Firebase for products
         const productsQuery = query(
           collection(db, "products"),
@@ -123,13 +134,19 @@ function createProductsStore() {
     },
 
     createProduct: async (
-      product: Omit<Product, "id" | "createdAt" | "updatedAt">,
+      product: Omit<Product, "id" | "createdAt" | "updatedAt" | "companyId">,
     ) => {
       update((store) => ({ ...store, loading: true }));
 
       try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          throw new Error("No active company");
+        }
+
         const newProduct: Product = {
           ...product,
+          companyId,
           id: `prod-${Date.now()}`,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),

@@ -1,4 +1,4 @@
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
 import {
   Timestamp,
   collection,
@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import type { Payment } from "$lib/types/document";
+import { activeCompanyId } from "./companyContext";
 
 function createPaymentsStore() {
   const { subscribe, set, update } = writable<{
@@ -69,10 +70,21 @@ function createPaymentsStore() {
       update((store) => ({ ...store, loading: true, error: null }));
 
       try {
-        // Query Firebase for payments by invoice
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          set({
+            data: null,
+            loading: false,
+            error: "No active company",
+          });
+          return;
+        }
+
+        // Query Firebase for payments by invoice and company
         const paymentsQuery = query(
           collection(db, "payments"),
           where("invoiceId", "==", invoiceId),
+          where("companyId", "==", companyId),
         );
 
         const querySnapshot = await getDocs(paymentsQuery);
@@ -105,13 +117,19 @@ function createPaymentsStore() {
     },
 
     recordPayment: async (
-      payment: Omit<Payment, "id" | "createdAt" | "updatedAt">,
+      payment: Omit<Payment, "id" | "createdAt" | "updatedAt" | "companyId">,
     ) => {
       update((store) => ({ ...store, loading: true }));
 
       try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          throw new Error("No active company");
+        }
+
         const newPaymentData = {
           ...payment,
+          companyId,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
         };

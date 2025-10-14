@@ -1,4 +1,4 @@
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
 import type { DocumentTemplate } from "$lib/types/document";
 import {
   Timestamp,
@@ -13,6 +13,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
+import { activeCompanyId } from "./companyContext";
 
 // Mock data for document templates - replace with actual Firebase queries
 const mockTemplates: DocumentTemplate[] = [
@@ -379,10 +380,20 @@ function createDocumentTemplatesStore() {
   return {
     subscribe: store.subscribe,
 
-    loadTemplates: async (companyId: string) => {
+    loadTemplates: async () => {
       store.update((state) => ({ ...state, loading: true, error: null }));
 
       try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          store.update((state) => ({
+            ...state,
+            error: "No active company",
+            loading: false,
+          }));
+          return;
+        }
+
         // Clean up previous listener
         if (unsubscribe) {
           unsubscribe();
@@ -439,11 +450,20 @@ function createDocumentTemplatesStore() {
     },
 
     createTemplate: async (
-      template: Omit<DocumentTemplate, "id" | "createdAt" | "updatedAt">,
+      template: Omit<
+        DocumentTemplate,
+        "id" | "createdAt" | "updatedAt" | "companyId"
+      >,
     ) => {
       try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          throw new Error("No active company");
+        }
+
         const newTemplateData = {
           ...template,
+          companyId,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
         };

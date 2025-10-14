@@ -29,6 +29,7 @@ function createDocumentHistoryStore() {
         const mockDocuments: GeneratedDocument[] = [
           {
             id: "doc-1",
+            companyId: "company-1",
             orderId,
             clientId: "client-1",
             templateId: "template-1",
@@ -51,6 +52,7 @@ function createDocumentHistoryStore() {
           },
           {
             id: "doc-2",
+            companyId: "company-1",
             orderId,
             clientId: "client-1",
             templateId: "template-1",

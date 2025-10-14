@@ -75,6 +75,7 @@ function createDocumentDeliveryStore() {
         // Create delivery record
         const delivery: DocumentDelivery = {
           id: `delivery-${Date.now()}`,
+          companyId: document.companyId,
           documentId: document.id,
           recipientEmail,
           status: emailResult.success ? "sent" : "bounced",
@@ -156,6 +157,7 @@ function createDocumentDeliveryStore() {
         for (const document of documents) {
           const delivery: DocumentDelivery = {
             id: `delivery-${document.id}-${Date.now()}`,
+            companyId: document.companyId,
             documentId: document.id,
             recipientEmail,
             status: emailResult.success ? "sent" : "bounced",

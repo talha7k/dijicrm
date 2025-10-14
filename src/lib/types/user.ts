@@ -36,6 +36,9 @@ export interface UserProfile {
     joinedAt: Timestamp;
   }[];
 
+  // Active company context for multi-company users
+  currentCompanyId?: string;
+
   // Address information (optional)
   address?: {
     street: string;
