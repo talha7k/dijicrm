@@ -14,7 +14,7 @@
   import * as Tabs from '$lib/components/ui/tabs/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import * as Select from '$lib/components/ui/select/index.js';
-  import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
+
   import { toast } from 'svelte-sonner';
   import OrderCreationModal from '$lib/components/app/client/OrderCreationModal.svelte';
   import DocumentSendModal from '$lib/components/app/client/DocumentSendModal.svelte';
@@ -251,32 +251,11 @@
   </div>
 {:else}
   <div class="space-y-6">
-    <!-- Breadcrumbs -->
-    <Breadcrumb.Root>
-      <Breadcrumb.List>
-        <Breadcrumb.Item>
-          <Breadcrumb.Link href="/clients">Clients</Breadcrumb.Link>
-        </Breadcrumb.Item>
-        <Breadcrumb.Separator />
-        <Breadcrumb.Item>
-          <Breadcrumb.Page>{client?.displayName || 'Client'}</Breadcrumb.Page>
-        </Breadcrumb.Item>
-      </Breadcrumb.List>
-    </Breadcrumb.Root>
-
     <!-- Header -->
     <div class="flex items-center justify-between">
-      <div class="flex items-center space-x-4">
-        <Button variant="ghost" onclick={handleBack}>
-          <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-          </svg>
-          Back to Clients
-        </Button>
-        <div>
-          <h1 class="text-3xl font-bold">{client.displayName}</h1>
-          <p class="text-muted-foreground">{client.email}</p>
-        </div>
+      <div>
+        <h1 class="text-3xl font-bold">{client.displayName}</h1>
+        <p class="text-muted-foreground">{client.email}</p>
       </div>
       <div class="flex space-x-2">
         <Button variant="outline" onclick={handleSendDocument}>
