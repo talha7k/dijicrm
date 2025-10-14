@@ -12,6 +12,7 @@
    import * as Select from '$lib/components/ui/select/index.js';
    import type { UserProfile } from '$lib/types/user';
    import type { ClientInvoice } from '$lib/stores/clientInvoices';
+   import { toast } from 'svelte-sonner';
 
    // Company access is checked at layout level
 
@@ -29,6 +30,7 @@
     const statusDisplay = $derived(
         statusFilter === 'all' ? 'All Status' :
         statusFilter === 'active' ? 'Active' :
+        statusFilter === 'added' ? 'Added' :
         statusFilter === 'invited' ? 'Invited' :
         statusFilter === 'inactive' ? 'Inactive' :
         'Status'
@@ -83,6 +85,7 @@
   function getStatusBadge(client: UserProfile) {
     const status = client.metadata?.accountStatus || 'unknown';
     const variant = status === 'active' ? 'default' as const :
+                    status === 'added' ? 'default' as const :
                     status === 'invited' ? 'secondary' as const :
                     status === 'inactive' ? 'destructive' as const : 'outline' as const;
 
@@ -111,6 +114,18 @@
   function handleClientClick(clientId: string) {
     goto(`/clients/${clientId}`);
   }
+
+  async function handleInviteClient(clientId: string) {
+    try {
+      await clientStore.inviteClient(clientId, 'company-user-1'); // Mock invitedBy
+      // Reload clients to update status
+      clientStore.loadClients('company-1');
+      toast.success('Invitation sent successfully');
+    } catch (error) {
+      console.error('Error inviting client:', error);
+      toast.error('Failed to send invitation');
+    }
+  }
 </script>
 
 <svelte:head>
@@ -121,15 +136,15 @@
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-3xl font-bold tracking-tight">Client Management</h1>
-      <p class="text-muted-foreground">
-        Manage your client accounts and send invitations
-      </p>
+       <p class="text-muted-foreground">
+         Manage your client accounts and add new clients
+       </p>
     </div>
     <Button onclick={handleCreateClient}>
       <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
       </svg>
-      Invite Client
+           Add Client
     </Button>
   </div>
 
@@ -147,12 +162,13 @@
          <Select.Trigger class="w-32">
            {statusDisplay}
          </Select.Trigger>
-        <Select.Content>
-          <Select.Item value="all">All Status</Select.Item>
-          <Select.Item value="active">Active</Select.Item>
-          <Select.Item value="invited">Invited</Select.Item>
-          <Select.Item value="inactive">Inactive</Select.Item>
-        </Select.Content>
+         <Select.Content>
+           <Select.Item value="all">All Status</Select.Item>
+           <Select.Item value="active">Active</Select.Item>
+           <Select.Item value="added">Added</Select.Item>
+           <Select.Item value="invited">Invited</Select.Item>
+           <Select.Item value="inactive">Inactive</Select.Item>
+         </Select.Content>
       </Select.Root>
 
        <Select.Root type="single" bind:value={activityFilter}>
@@ -186,9 +202,9 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
       </svg>
       <h3 class="mt-4 text-lg font-semibold">No clients yet</h3>
-      <p class="mt-2 text-muted-foreground">
-        Get started by generating sample data or inviting your first client.
-      </p>
+       <p class="mt-2 text-muted-foreground">
+         Get started by generating sample data or adding your first client.
+       </p>
       <div class="flex gap-2 mt-4">
         <Button onclick={() => goto("/settings")}>
           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,7 +216,7 @@
           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
           </svg>
-          Invite Client
+          Add Client
         </Button>
       </div>
     </div>
@@ -250,14 +266,29 @@
               </div>
             </div>
           </Card.Content>
-          <Card.Footer class="pt-3">
-            <div class="flex items-center justify-between w-full">
-              <span class="text-xs text-muted-foreground">Click to view details</span>
-              <svg class="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-              </svg>
-            </div>
-          </Card.Footer>
+           <Card.Footer class="pt-3">
+             <div class="flex items-center justify-between w-full">
+               <span class="text-xs text-muted-foreground">Click to view details</span>
+               <div class="flex items-center space-x-2">
+                 {#if getStatusBadge(client).status === 'Added'}
+                   <Button
+                     size="sm"
+                     variant="outline"
+                     onclick={(e) => {
+                       e.stopPropagation();
+                       handleInviteClient(client.uid);
+                     }}
+                     class="text-xs px-2 py-1 h-6"
+                   >
+                     Invite
+                   </Button>
+                 {/if}
+                 <svg class="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                 </svg>
+               </div>
+             </div>
+           </Card.Footer>
         </Card.Root>
       {/each}
     </div>

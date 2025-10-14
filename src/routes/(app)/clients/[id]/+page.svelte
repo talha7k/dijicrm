@@ -224,6 +224,20 @@
     toast.success('Payment recorded successfully');
   }
 
+  async function handleInviteClient() {
+    if (!client) return;
+
+    try {
+      await clientStore.inviteClient(client.uid, 'company-user-1'); // Mock invitedBy
+      // Update local client state
+      client = { ...client, metadata: { ...client.metadata, accountStatus: 'invited' } };
+      toast.success('Invitation sent successfully');
+    } catch (error) {
+      console.error('Error inviting client:', error);
+      toast.error('Failed to send invitation');
+    }
+  }
+
   function handleOrderStatusChange(orderId: string, newStatus: string) {
     clientOrders = clientOrders.map(order =>
       order.id === orderId
@@ -257,17 +271,25 @@
         <h1 class="text-3xl font-bold">{client.displayName}</h1>
         <p class="text-muted-foreground">{client.email}</p>
       </div>
-      <div class="flex space-x-2">
-        <Button variant="outline" onclick={handleSendDocument}>
-          <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-          </svg>
-          Send Document
-        </Button>
-        <Button variant="outline" onclick={() => goto(`/clients/${clientId}/edit`)}>
-          Edit Client
-        </Button>
-      </div>
+       <div class="flex space-x-2">
+         <Button variant="outline" onclick={handleSendDocument}>
+           <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+           </svg>
+           Send Document
+         </Button>
+         {#if client.metadata?.accountStatus === 'added'}
+           <Button variant="outline" onclick={handleInviteClient}>
+             <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+             </svg>
+             Invite to Portal
+           </Button>
+         {/if}
+         <Button variant="outline" onclick={() => goto(`/clients/${clientId}/edit`)}>
+           Edit Client
+         </Button>
+       </div>
     </div>
 
     <!-- Client Info Cards -->
@@ -306,12 +328,12 @@
           <Card.Title>Account Status</Card.Title>
         </Card.Header>
         <Card.Content>
-          <div class="flex items-center justify-between">
-            <span class="text-sm">Status</span>
-            <Badge variant={client.isActive ? 'default' : 'secondary'}>
-              {client.isActive ? 'Active' : 'Inactive'}
-            </Badge>
-          </div>
+           <div class="flex items-center justify-between">
+             <span class="text-sm">Status</span>
+             <Badge variant={client.metadata?.accountStatus === 'active' || client.metadata?.accountStatus === 'added' ? 'default' : client.metadata?.accountStatus === 'invited' ? 'secondary' : 'destructive'}>
+               {client.metadata?.accountStatus ? client.metadata.accountStatus.charAt(0).toUpperCase() + client.metadata.accountStatus.slice(1) : 'Unknown'}
+             </Badge>
+           </div>
           <div class="flex items-center justify-between mt-2">
             <span class="text-sm">Last Login</span>
             <span class="text-sm text-muted-foreground">

@@ -52,7 +52,7 @@ export interface UserProfile {
       platform: string;
     };
     lastIPAddress?: string;
-    accountStatus: "invited" | "active" | "inactive";
+    accountStatus: "invited" | "active" | "inactive" | "added";
   };
 
   // Invitation system for pre-registered clients

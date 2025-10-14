@@ -188,6 +188,135 @@ function createClientManagementStore() {
       }
     },
 
+    // Add a new client directly without sending an invitation
+    async addClient(
+      clientData: {
+        email: string;
+        firstName: string;
+        lastName: string;
+        phoneNumber?: string;
+        address?: UserProfile["address"];
+      },
+      companyId: string,
+    ) {
+      try {
+        const newClient: UserProfile = {
+          uid: `client-${Date.now()}`,
+          email: clientData.email,
+          displayName: `${clientData.firstName} ${clientData.lastName}`,
+          photoURL: null,
+          isActive: true, // Added clients are active by default
+          lastLoginAt: Timestamp.now(),
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+          firstName: clientData.firstName,
+          lastName: clientData.lastName,
+          phoneNumber: clientData.phoneNumber,
+          emailNotifications: true,
+          pushNotifications: true,
+          theme: "system",
+          language: "en",
+          role: "client",
+          permissions: [],
+          address: clientData.address,
+          metadata: {
+            accountStatus: "added", // Distinguish from invited clients
+          },
+          // No invitation fields for added clients
+        };
+
+        // Mock: Add to local state (will be replaced with Firebase)
+        store.update((state) => ({
+          ...state,
+          clients: [...state.clients, newClient],
+        }));
+
+        toast.success("Client added successfully");
+
+        return newClient.uid;
+      } catch (error) {
+        console.error("Error adding client:", error);
+        toast.error("Failed to add client");
+        throw error;
+      }
+    },
+
+    // Send invitation to an existing client
+    async inviteClient(clientId: string, invitedBy: string) {
+      try {
+        const client = this.getClient(clientId);
+        if (!client) {
+          throw new Error("Client not found");
+        }
+
+        // Generate invitation token
+        const invitationToken = crypto.randomUUID();
+        const invitationExpiresAt = Timestamp.fromDate(
+          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        ); // 7 days
+
+        // Update client with invitation details
+        const updatedClient = {
+          ...client,
+          invitationToken,
+          invitationExpiresAt,
+          invitedBy,
+          invitationStatus: "pending" as const,
+          metadata: {
+            ...client.metadata,
+            accountStatus: "invited" as const, // Update status to invited
+          },
+          updatedAt: Timestamp.now(),
+        };
+
+        // Mock: Update in local state (will be replaced with Firebase)
+        store.update((state) => ({
+          ...state,
+          clients: state.clients.map((c) =>
+            c.uid === clientId ? updatedClient : c,
+          ),
+        }));
+
+        // Send invitation email
+        try {
+          const invitationUrl = `${window.location.origin}/invite/${invitationToken}`;
+          const emailTemplate = await import("$lib/services/emailService").then(
+            (module) =>
+              module.EmailTemplates.clientInvitation(
+                client.displayName || `${client.firstName} ${client.lastName}`,
+                "Company Name",
+                invitationUrl,
+              ),
+          );
+
+          // Mock email sending - replace with actual email service
+          console.log("Sending invitation email:", {
+            to: client.email,
+            template: emailTemplate,
+          });
+
+          // In real implementation:
+          // await emailService.sendEmail({
+          //   to: client.email,
+          //   subject: emailTemplate.subject,
+          //   htmlBody: emailTemplate.htmlBody,
+          //   textBody: emailTemplate.textBody
+          // });
+        } catch (emailError) {
+          console.error("Failed to send invitation email:", emailError);
+          // Don't fail the whole operation for email issues
+        }
+
+        toast.success("Client invitation sent successfully");
+
+        return clientId;
+      } catch (error) {
+        console.error("Error inviting client:", error);
+        toast.error("Failed to send client invitation");
+        throw error;
+      }
+    },
+
     // Update client information
     async updateClient(clientId: string, updates: Partial<UserProfile>) {
       try {

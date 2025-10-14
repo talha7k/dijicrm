@@ -80,19 +80,19 @@
         postalCode: formData.postalCode
       } : undefined;
 
-      await clientStore.createClient({
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phoneNumber: formData.phoneNumber || undefined,
-        address
-      }, 'company-user-1', 'company-1'); // Mock values for now
+       await clientStore.addClient({
+         email: formData.email,
+         firstName: formData.firstName,
+         lastName: formData.lastName,
+         phoneNumber: formData.phoneNumber || undefined,
+         address
+       }, 'company-1'); // Mock company ID
 
-      toast.success('Client invitation sent successfully!');
+       toast.success('Client added successfully!');
       goto('/clients');
     } catch (error) {
       console.error('Error creating client:', error);
-      toast.error('Failed to send client invitation');
+       toast.error('Failed to add client');
     } finally {
       isSubmitting = false;
     }
@@ -104,7 +104,7 @@
 </script>
 
 <svelte:head>
-  <title>Invite Client - CRM</title>
+   <title>Add Client - CRM</title>
 </svelte:head>
 
 <div class="max-w-2xl mx-auto space-y-6">
@@ -119,10 +119,10 @@
 
   <Card.Root>
     <Card.Header>
-      <Card.Title>Invite New Client</Card.Title>
-      <Card.Description>
-        Send an invitation to a new client. They'll receive an email with instructions to complete their account setup.
-      </Card.Description>
+       <Card.Title>Add New Client</Card.Title>
+       <Card.Description>
+         Add a new client to your account. They can be invited to access the portal later if needed.
+       </Card.Description>
     </Card.Header>
     <Card.Content>
       <form onsubmit={handleSubmit} class="space-y-6">
@@ -244,7 +244,7 @@
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Sending Invitation...' : 'Send Invitation'}
+             {isSubmitting ? 'Adding Client...' : 'Add Client'}
           </Button>
         </div>
       </form>
