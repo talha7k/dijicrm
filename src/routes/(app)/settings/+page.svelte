@@ -634,193 +634,130 @@
         <CardTitle>Company Branding</CardTitle>
          <CardDescription>Customize your company's logo and document branding</CardDescription>
        </CardHeader>
-        <CardContent class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-         <!-- Company Information Section -->
-         <div class="space-y-4">
-           <h4 class="text-sm font-medium">Company Information</h4>
-
-           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div>
-               <Label for="company-name">Company Name</Label>
-               <Input
-                 id="company-name"
-                 bind:value={branding.companyName}
-                 placeholder="Your Company Name"
-                 required
-               />
-             </div>
-             <div>
-               <Label for="vat-number">VAT Number</Label>
-               <Input
-                 id="vat-number"
-                 bind:value={branding.vatNumber}
-                 placeholder="15-digit Saudi VAT number"
-                  maxlength={15}
-                 pattern="[0-9]{15}"
-                 required
-               />
-               <p class="text-xs text-muted-foreground mt-1">
-                 Saudi VAT numbers must be exactly 15 digits
-               </p>
-             </div>
-           </div>
-         </div>
-
-          <!-- Logo Upload Section -->
-         <div class="space-y-4 lg:col-start-2">
-          <h4 class="text-sm font-medium">Company Logo</h4>
-
-          <!-- Current Logo Display -->
-          {#if logoPreview}
-            <div class="flex items-center space-x-4 p-4 border rounded-lg">
-              <img src={logoPreview} alt="Company Logo" class="h-16 w-16 object-contain" />
-              <div class="flex-1">
-                <p class="text-sm text-muted-foreground">Current logo</p>
+        <CardContent class="grid grid-cols-1 lg:grid-cols-2 lg:items-start gap-8">
+          <div class="space-y-4">
+            <div class="space-y-4">
+              <h4 class="text-sm font-medium">Company Information</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label for="company-name">Company Name</Label>
+                  <Input id="company-name" bind:value={branding.companyName} placeholder="Your Company Name" required />
+                </div>
+                <div>
+                  <Label for="vat-number">VAT Number</Label>
+                  <Input id="vat-number" bind:value={branding.vatNumber} placeholder="15-digit Saudi VAT number" maxlength={15} pattern="[0-9]{15}" required />
+                  <p class="text-xs text-muted-foreground mt-1">Saudi VAT numbers must be exactly 15 digits</p>
+                </div>
               </div>
             </div>
-          {/if}
 
-          <!-- Logo Upload -->
-          <div class="space-y-2">
-            <Label for="logo-upload">Upload New Logo</Label>
-            <Input
-              id="logo-upload"
-              type="file"
-              accept="image/*"
-              onchange={handleLogoFileSelect}
-              disabled={isUploadingLogo}
-            />
-            <p class="text-xs text-muted-foreground">
-              Supported formats: JPEG, PNG, SVG, WebP. Maximum size: 2MB.
-            </p>
-          </div>
-
-          <!-- Upload Button -->
-          {#if selectedLogoFile}
-            <div class="flex items-center space-x-4">
-              <Button
-                onclick={handleLogoUpload}
-                disabled={isUploadingLogo}
-                size="sm"
-              >
-                {#if isUploadingLogo}
-                  <Icon icon="lucide:loader" class="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
+            <div class="space-y-4">
+              <h4 class="text-sm font-medium">Document Stamp Image</h4>
+              <div class="flex items-center space-x-4 p-4 border rounded-lg min-h-[100px]">
+                {#if stampPreview}
+                  <img src={stampPreview} alt="Stamp Image" class="h-16 w-16 object-contain" />
+                  <div class="flex-1">
+                    <p class="text-sm text-muted-foreground">{selectedStampFile ? "New stamp preview" : "Current stamp"}</p>
+                  </div>
                 {:else}
-                  <Icon icon="lucide:upload" class="h-4 w-4 mr-2" />
-                  Upload Logo
+                  <div class="flex h-16 w-16 items-center justify-center rounded-md bg-muted">
+                    <Icon icon="lucide:image" class="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <div class="flex-1"><p class="text-sm text-muted-foreground">No stamp image has been uploaded.</p></div>
                 {/if}
-              </Button>
-              <p class="text-sm text-muted-foreground">
-                Selected: {selectedLogoFile.name} ({(selectedLogoFile.size / 1024 / 1024).toFixed(2)} MB)
-              </p>
+              </div>
+              <div class="space-y-2">
+                <Label for="stamp-upload">Upload Stamp Image</Label>
+                <Input id="stamp-upload" type="file" accept="image/*" onchange={handleStampFileSelect} disabled={isUploadingStamp} />
+                <p class="text-xs text-muted-foreground">Supported formats: JPEG, PNG, SVG, WebP. Maximum size: 1MB. Recommended: 500x500px or smaller.</p>
+              </div>
+              {#if selectedStampFile}
+                <div class="flex items-center space-x-4">
+                  <Button onclick={handleStampUpload} disabled={isUploadingStamp} size="sm">
+                    {#if isUploadingStamp}
+                      <Icon icon="lucide:loader" class="h-4 w-4 mr-2 animate-spin" /> Uploading...
+                    {:else}
+                      <Icon icon="lucide:upload" class="h-4 w-4 mr-2" /> Upload Stamp Image
+                    {/if}
+                  </Button>
+                  <p class="text-sm text-muted-foreground">Selected: {selectedStampFile.name} ({(selectedStampFile.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+              {/if}
             </div>
-          {/if}
-         </div>
 
-         <!-- Stamp Image Upload Section -->
-         <div class="space-y-4">
-           <h4 class="text-sm font-medium">Document Stamp Image</h4>
-
-           <!-- Current Stamp Image Display -->
-           {#if stampPreview}
-             <div class="flex items-center space-x-4 p-4 border rounded-lg">
-               <img src={stampPreview} alt="Stamp Image" class="h-16 w-16 object-contain" />
-               <div class="flex-1">
-                 <p class="text-sm text-muted-foreground">Current stamp image</p>
-               </div>
-             </div>
-           {/if}
-
-           <!-- Stamp Image Upload -->
-           <div class="space-y-2">
-             <Label for="stamp-upload">Upload Stamp Image</Label>
-             <Input
-               id="stamp-upload"
-               type="file"
-               accept="image/*"
-               onchange={handleStampFileSelect}
-               disabled={isUploadingStamp}
-             />
-             <p class="text-xs text-muted-foreground">
-               Supported formats: JPEG, PNG, SVG, WebP. Maximum size: 1MB. Recommended: 500x500px or smaller.
-             </p>
-           </div>
-
-           <!-- Upload Button -->
-           {#if selectedStampFile}
-             <div class="flex items-center space-x-4">
-               <Button
-                 onclick={handleStampUpload}
-                 disabled={isUploadingStamp}
-                 size="sm"
-               >
-                 {#if isUploadingStamp}
-                   <Icon icon="lucide:loader" class="h-4 w-4 mr-2 animate-spin" />
-                   Uploading...
-                 {:else}
-                   <Icon icon="lucide:upload" class="h-4 w-4 mr-2" />
-                   Upload Stamp Image
-                 {/if}
-               </Button>
-               <p class="text-sm text-muted-foreground">
-                 Selected: {selectedStampFile.name} ({(selectedStampFile.size / 1024 / 1024).toFixed(2)} MB)
-               </p>
-             </div>
-           {/if}
-         </div>
-
-          <!-- Brand Colors -->
-         <div class="space-y-4 border-t pt-4 lg:col-start-2">
-          <h4 class="text-sm font-medium">Brand Colors</h4>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label for="primary-color">Primary Color</Label>
-              <Input
-                id="primary-color"
-                type="color"
-                bind:value={branding.primaryColor}
-              />
-            </div>
-            <div>
-              <Label for="secondary-color">Secondary Color</Label>
-              <Input
-                id="secondary-color"
-                type="color"
-                bind:value={branding.secondaryColor}
-              />
+            <div class="space-y-4 border-t pt-4">
+              <h4 class="text-sm font-medium">Document Stamp Position</h4>
+              <div>
+                <Label for="stamp-position">Stamp Position</Label>
+                <Select type="single" bind:value={branding.stampPosition}>
+                  <SelectTrigger><SelectValue placeholder="Select position" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="top-left">Top Left</SelectItem>
+                    <SelectItem value="top-right">Top Right</SelectItem>
+                    <SelectItem value="bottom-left">Bottom Left</SelectItem>
+                    <SelectItem value="bottom-right">Bottom Right</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
-         </div>
 
-        <!-- Stamp Configuration -->
-        <div class="space-y-4 border-t pt-4">
-          <h4 class="text-sm font-medium">Document Stamp Position</h4>
+          <div class="space-y-4">
+            <div class="space-y-4">
+              <h4 class="text-sm font-medium">Company Logo</h4>
+              <div class="flex items-center space-x-4 p-4 border rounded-lg min-h-[100px]">
+                {#if logoPreview}
+                  <img src={logoPreview} alt="Company Logo" class="h-16 w-16 object-contain" />
+                  <div class="flex-1">
+                    <p class="text-sm text-muted-foreground">{selectedLogoFile ? "New logo preview" : "Current logo"}</p>
+                  </div>
+                {:else}
+                  <div class="flex h-16 w-16 items-center justify-center rounded-md bg-muted">
+                    <Icon icon="lucide:image" class="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <div class="flex-1"><p class="text-sm text-muted-foreground">No logo has been uploaded.</p></div>
+                {/if}
+              </div>
+              <div class="space-y-2">
+                <Label for="logo-upload">Upload New Logo</Label>
+                <Input id="logo-upload" type="file" accept="image/*" onchange={handleLogoFileSelect} disabled={isUploadingLogo} />
+                <p class="text-xs text-muted-foreground">Supported formats: JPEG, PNG, SVG, WebP. Maximum size: 2MB.</p>
+              </div>
+              {#if selectedLogoFile}
+                <div class="flex items-center space-x-4">
+                  <Button onclick={handleLogoUpload} disabled={isUploadingLogo} size="sm">
+                    {#if isUploadingLogo}
+                      <Icon icon="lucide:loader" class="h-4 w-4 mr-2 animate-spin" /> Uploading...
+                    {:else}
+                      <Icon icon="lucide:upload" class="h-4 w-4 mr-2" /> Upload Logo
+                    {/if}
+                  </Button>
+                  <p class="text-sm text-muted-foreground">Selected: {selectedLogoFile.name} ({(selectedLogoFile.size / 1024 / 1024).toFixed(2)} MB)</p>
+                </div>
+              {/if}
+            </div>
 
-          <div>
-            <Label for="stamp-position">Stamp Position</Label>
-            <Select type="single" bind:value={branding.stampPosition}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select position" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="top-left">Top Left</SelectItem>
-                <SelectItem value="top-right">Top Right</SelectItem>
-                <SelectItem value="bottom-left">Bottom Left</SelectItem>
-                <SelectItem value="bottom-right">Bottom Right</SelectItem>
-              </SelectContent>
-            </Select>
+            <div class="space-y-4 border-t pt-4">
+              <h4 class="text-sm font-medium">Brand Colors</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label for="primary-color">Primary Color</Label>
+                  <Input id="primary-color" type="color" bind:value={branding.primaryColor} />
+                </div>
+                <div>
+                  <Label for="secondary-color">Secondary Color</Label>
+                  <Input id="secondary-color" type="color" bind:value={branding.secondaryColor} />
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <!-- Save Branding Button -->
-        <div class="flex justify-end border-t pt-4 lg:col-span-2">
-          <Button onclick={handleSaveBranding}>
-            <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
-            Save Branding
-          </Button>
-        </div>
+          <div class="flex justify-end border-t pt-4 lg:col-span-2">
+            <Button onclick={handleSaveBranding}>
+              <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
+              Save Branding
+            </Button>
+          </div>
        </CardContent>
      </Card>
 
