@@ -20,7 +20,7 @@
     <!-- Client Role -->
     <button
       class="role-card p-6 border rounded-lg text-left hover:border-blue-500 transition-colors {selectedRole === 'client' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}"
-      on:click={() => selectRole('client')}
+      onclick={() => selectRole('client')}
     >
       <div class="flex items-center mb-2">
         <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
@@ -38,7 +38,7 @@
     <!-- Company Member Role -->
     <button
       class="role-card p-6 border rounded-lg text-left hover:border-green-500 transition-colors {selectedRole === 'company-member' ? 'border-green-500 bg-green-50' : 'border-gray-200'}"
-      on:click={() => selectRole('company-member')}
+      onclick={() => selectRole('company-member')}
     >
       <div class="flex items-center mb-2">
         <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
@@ -56,7 +56,7 @@
     <!-- Create Company Role -->
     <button
       class="role-card p-6 border rounded-lg text-left hover:border-purple-500 transition-colors {selectedRole === 'create-company' ? 'border-purple-500 bg-purple-50' : 'border-gray-200'}"
-      on:click={() => selectRole('create-company')}
+      onclick={() => selectRole('create-company')}
     >
       <div class="flex items-center mb-2">
         <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">

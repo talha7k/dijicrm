@@ -473,7 +473,7 @@
           <Card.Content>
             <div class="space-y-4">
                {#each clientOrders as order}
-                 <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors" onclick={() => handleOrderClick(order)}>
+                  <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors" role="button" tabindex="0" onclick={() => handleOrderClick(order)} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { handleOrderClick(order); e.preventDefault(); } }}>
                    <div class="flex-1">
                      <h4 class="font-medium">{order.title}</h4>
                      <p class="text-sm text-muted-foreground">

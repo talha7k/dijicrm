@@ -239,12 +239,3 @@
   </CardContent>
 </Card>
 
-<style>
-  .valid-pattern:valid {
-    border-color: rgb(34 197 94);
-  }
-
-  .valid-pattern:invalid:not(:placeholder-shown) {
-    border-color: rgb(239 68 68);
-  }
-</style>

@@ -5,8 +5,8 @@
 
   let showDropdown = $state(false);
 
-  $: currentCompany = $userProfile.data?.companyAssociations?.[0]; // For now, assume first company
-  $: companies = $userProfile.data?.companyAssociations || [];
+  let currentCompany = $derived($userProfile.data?.companyAssociations?.[0]); // For now, assume first company
+  let companies = $derived($userProfile.data?.companyAssociations || []);
 
   function switchCompany(companyId: string) {
     // In a full implementation, update current company context
@@ -63,7 +63,7 @@
 
 <!-- Close dropdown when clicking outside -->
 <svelte:window onclick={(e) => {
-  if (!e.target.closest('.company-switcher')) {
+  if (e.target && !(e.target as HTMLElement).closest('.company-switcher')) {
     showDropdown = false;
   }
 }} />
