@@ -1,6 +1,11 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { initializeApp, getApps } from "firebase-admin/app";
+import {
+  initializeApp,
+  getApps,
+  cert,
+  applicationDefault,
+} from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { PUBLIC_FIREBASE_PROJECT_ID } from "$env/static/public";
@@ -23,9 +28,31 @@ let auth: any;
 
 function initializeFirebaseAdmin() {
   if (getApps().length === 0) {
-    // For development, try to use default credentials
-    // In production, you would use a service account key
+    // For local development, use application default credentials
+    // Run: gcloud auth application-default login
+    // For production, use service account key
+    const isProduction = process.env.NODE_ENV === "production";
+    let credential;
+
+    if (isProduction) {
+      const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+      if (!serviceAccountKey) {
+        throw new Error(
+          "FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set",
+        );
+      }
+      const serviceAccount = JSON.parse(serviceAccountKey);
+      credential = cert({
+        clientEmail: serviceAccount.client_email,
+        privateKey: serviceAccount.private_key,
+        projectId: serviceAccount.project_id,
+      });
+    } else {
+      credential = applicationDefault();
+    }
+
     adminApp = initializeApp({
+      credential,
       projectId: PUBLIC_FIREBASE_PROJECT_ID,
     });
   } else {
