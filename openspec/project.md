@@ -25,6 +25,7 @@ TK-Crm is a multi-dashboard portal for clients and companies to manage invoices.
 - Store all hard-coded values (colors, strings, etc.) in a centralized configuration or constants file.
 - Use the `let { prop = default } = $props();` syntax for Svelte 5 runes in component props.
 - Always use Shadcn/Svelte UI components instead of raw HTML elements. Never use native `<select>`, `<input>`, or `<button>` directly.
+- Always use theme colors from CSS custom properties (e.g., `hsl(var(--primary))`) instead of hardcoded color values. Never use raw hex codes, RGB values, or color names directly in components.
 - Centralize common operations like date formatting and string manipulation in utility functions within `$lib/utils.ts` to reduce code duplication.
 
 ### Architecture Patterns

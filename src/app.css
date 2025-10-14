@@ -18,7 +18,7 @@
   --primary-foreground: 0 0% 100%;
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
-  --accent: 45.4 93.4% 47.5%;
+  --accent: 45.4 99.4% 77.5%;
   --accent-foreground: 222.2 47.4% 11.2%;
   --destructive: 0 72.2% 50.6%;
   --destructive-foreground: 210 40% 98%;
@@ -53,11 +53,11 @@
   --card-foreground: 210 40% 98%;
   --border: 217.2 32.6% 22%;
   --input: 217.2 32.6% 22%;
-  --primary: 142.1 70.6% 45.3%;
+  --primary: 142.1 70.6% 34%;
   --primary-foreground: 0 0% 100%;
   --secondary: 217.2 32.6% 22%;
   --secondary-foreground: 210 40% 98%;
-  --accent: 45.4 93.4% 47.5%;
+  --accent: 45.4 93.4% 35%;
   --accent-foreground: 210 40% 98%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
@@ -125,5 +125,10 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Form label spacing */
+  label {
+    @apply mb-1.5 block;
   }
 }
