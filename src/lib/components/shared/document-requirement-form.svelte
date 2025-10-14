@@ -9,6 +9,7 @@
   import Icon from "@iconify/svelte";
   import type { DocumentRequirement } from "$lib/types/document";
   import type { Product } from "$lib/stores/products";
+  import AlertDialog from "./alert-dialog.svelte";
 
   interface Props {
     products: Product[];
@@ -20,18 +21,25 @@
 
   const dispatch = createEventDispatcher();
 
-  let formData = $state({
-    productId: requirement?.productId || "",
-    templateId: requirement?.templateId || "",
-    isMandatory: requirement?.isMandatory ?? true,
-    conditions: requirement?.conditions || [],
-  });
+   let formData = $state({
+     productId: requirement?.productId || "",
+     templateId: requirement?.templateId || "",
+     isMandatory: requirement?.isMandatory ?? true,
+     conditions: requirement?.conditions || [],
+   });
 
-  function handleSave() {
-    if (!formData.productId || !formData.templateId) {
-      alert("Please select both a product and template");
-      return;
-    }
+   // Dialog state
+   let showAlertDialog = $state(false);
+   let alertTitle = $state('');
+   let alertMessage = $state('');
+
+   function handleSave() {
+     if (!formData.productId || !formData.templateId) {
+       alertTitle = "Validation Error";
+       alertMessage = "Please select both a product and template";
+       showAlertDialog = true;
+       return;
+     }
 
     const requirementData: Partial<DocumentRequirement> = {
       ...formData,
@@ -108,4 +116,12 @@
       Save Requirement
     </Button>
   </div>
+
+  <!-- Alert Dialog -->
+  <AlertDialog
+    bind:open={showAlertDialog}
+    title={alertTitle}
+    message={alertMessage}
+    type="error"
+  />
 </div>

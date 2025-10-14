@@ -9,12 +9,19 @@
 
   import Icon from "@iconify/svelte";
   import { requireCompany } from "$lib/utils/auth";
-  import { formatDateShort } from "$lib/utils";
-  import { goto } from "$app/navigation";
+   import { formatDateShort } from "$lib/utils";
+   import { goto } from "$app/navigation";
+   import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
 
    let mounted = $state(false);
    let searchQuery = $state("");
    let selectedStatus = $state("all");
+
+   // Dialog state
+   let showConfirmDialog = $state(false);
+   let confirmTitle = $state('');
+   let confirmMessage = $state('');
+   let invoiceToDelete = $state<any>(null);
 
     onMount(async () => {
       mounted = true;
@@ -57,12 +64,20 @@
     console.log("Edit invoice:", invoice);
   }
 
-  function handleDeleteInvoice(invoice: any) {
-    if (confirm(`Are you sure you want to delete invoice ${invoice.id}?`)) {
-      // TODO: Delete invoice
-      console.log("Delete invoice:", invoice);
-    }
-  }
+   function handleDeleteInvoice(invoice: any) {
+     invoiceToDelete = invoice;
+     confirmTitle = "Delete Invoice";
+     confirmMessage = `Are you sure you want to delete invoice ${invoice.id}?`;
+     showConfirmDialog = true;
+   }
+
+   function handleConfirmDelete() {
+     if (invoiceToDelete) {
+       // TODO: Delete invoice
+       console.log("Delete invoice:", invoiceToDelete);
+       invoiceToDelete = null;
+     }
+   }
 
   function getStatusColor(status: string): string {
     switch (status) {
@@ -212,5 +227,14 @@
         {/each}
       </div>
     {/if}
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
+      bind:open={showConfirmDialog}
+      title={confirmTitle}
+      message={confirmMessage}
+      type="danger"
+      onconfirm={handleConfirmDelete}
+    />
   </DashboardLayout>
 {/if}

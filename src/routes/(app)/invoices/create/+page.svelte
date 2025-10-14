@@ -19,8 +19,15 @@
    import { Timestamp } from "firebase/firestore";
    import type { BusinessCase, GeneratedDocument } from "$lib/types/document";
    import { goto } from "$app/navigation";
+   import AlertDialog from "$lib/components/shared/alert-dialog.svelte";
 
-  let mounted = $state(false);
+   let mounted = $state(false);
+
+   // Dialog state
+   let showAlertDialog = $state(false);
+   let alertTitle = $state('');
+   let alertMessage = $state('');
+   let alertType = $state<'info' | 'success' | 'warning' | 'error'>('info');
 
    onMount(() => {
      mounted = true;
@@ -74,17 +81,23 @@
     return invoiceData.items.reduce((sum, item) => sum + item.total, 0);
   });
 
-  function addProductToInvoice() {
-    if (!selectedProductId) {
-      alert("Please select a product");
-      return;
-    }
+   function addProductToInvoice() {
+     if (!selectedProductId) {
+       alertTitle = "Validation Error";
+       alertMessage = "Please select a product";
+       alertType = "error";
+       showAlertDialog = true;
+       return;
+     }
 
-    const product = $productsStore.data?.find(p => p.id === selectedProductId);
-    if (!product) {
-      alert("Product not found");
-      return;
-    }
+     const product = $productsStore.data?.find(p => p.id === selectedProductId);
+     if (!product) {
+       alertTitle = "Error";
+       alertMessage = "Product not found";
+       alertType = "error";
+       showAlertDialog = true;
+       return;
+     }
 
     const existingItem = invoiceData.items.find(item => item.productId === selectedProductId);
     if (existingItem) {
@@ -128,17 +141,23 @@
     });
   }
 
-  function handleSaveDraft() {
-    // TODO: Save as draft
-    console.log("Saving draft:", invoiceData);
-    alert("Invoice saved as draft");
-  }
+   function handleSaveDraft() {
+     // TODO: Save as draft
+     console.log("Saving draft:", invoiceData);
+     alertTitle = "Success";
+     alertMessage = "Invoice saved as draft";
+     alertType = "success";
+     showAlertDialog = true;
+   }
 
-  async function handleSendInvoice() {
-    if (!invoiceData.clientName || !invoiceData.clientEmail || invoiceData.items.length === 0) {
-      alert("Please fill in all required fields and add at least one item");
-      return;
-    }
+   async function handleSendInvoice() {
+     if (!invoiceData.clientName || !invoiceData.clientEmail || invoiceData.items.length === 0) {
+       alertTitle = "Validation Error";
+       alertMessage = "Please fill in all required fields and add at least one item";
+       alertType = "error";
+       showAlertDialog = true;
+       return;
+     }
 
     // Check if selected client is invited
     const selectedClient = selectedClientId ? $clientStore.clients.find(c => c.uid === selectedClientId) : null;
@@ -224,16 +243,25 @@
         isInvitedClient
       });
 
-      if (isInvitedClient) {
-        alert(`Invoice created successfully! Documents will be sent automatically when the client activates their account.`);
-      } else {
-        alert(`Invoice sent successfully! ${generatedDocuments.length} document(s) were also sent to the client.`);
-      }
-      goto("/invoices");
-    } catch (error) {
-      console.error("Failed to send invoice:", error);
-      alert("Failed to send invoice. Please try again.");
-    }
+       if (isInvitedClient) {
+         alertTitle = "Success";
+         alertMessage = "Invoice created successfully! Documents will be sent automatically when the client activates their account.";
+         alertType = "success";
+         showAlertDialog = true;
+       } else {
+         alertTitle = "Success";
+         alertMessage = `Invoice sent successfully! ${generatedDocuments.length} document(s) were also sent to the client.`;
+         alertType = "success";
+         showAlertDialog = true;
+       }
+       goto("/invoices");
+     } catch (error) {
+       console.error("Failed to send invoice:", error);
+       alertTitle = "Send Failed";
+       alertMessage = "Failed to send invoice. Please try again.";
+       alertType = "error";
+       showAlertDialog = true;
+     }
   }
 
   function handleClientSelection(clientId: string) {
@@ -550,6 +578,14 @@
           </Card>
         {/if}
       </div>
+
+      <!-- Alert Dialog -->
+      <AlertDialog
+        bind:open={showAlertDialog}
+        title={alertTitle}
+        message={alertMessage}
+        type={alertType}
+      />
     </div>
   </DashboardLayout>
 {/if}

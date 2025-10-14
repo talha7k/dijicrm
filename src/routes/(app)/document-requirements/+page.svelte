@@ -13,17 +13,24 @@
 
   import Icon from "@iconify/svelte";
   import { requireCompany } from "$lib/utils/auth";
-  import { documentRequirementsStore } from "$lib/stores/documentRequirements";
+   import { documentRequirementsStore } from "$lib/stores/documentRequirements";
+   import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
   import { productsStore } from "$lib/stores/products";
   import { documentTemplatesStore } from "$lib/stores/documentTemplates";
   import DocumentRequirementForm from "$lib/components/shared/document-requirement-form.svelte";
   import type { DocumentRequirement } from "$lib/types/document";
   import type { Product } from "$lib/stores/products";
 
-  let mounted = $state(false);
-  let searchQuery = $state("");
-  let selectedProduct = $state("all");
-  let showCreateDialog = $state(false);
+   let mounted = $state(false);
+   let searchQuery = $state("");
+   let selectedProduct = $state("all");
+   let showCreateDialog = $state(false);
+
+   // Dialog state
+   let showConfirmDialog = $state(false);
+   let confirmTitle = $state('');
+   let confirmMessage = $state('');
+   let requirementToDelete = $state<DocumentRequirement | null>(null);
 
    onMount(() => {
      mounted = true;
@@ -67,13 +74,21 @@
     console.log("Edit requirement:", requirement);
   }
 
-  function handleDeleteRequirement(requirement: DocumentRequirement) {
-    if (confirm(`Are you sure you want to delete this requirement?`)) {
-      // TODO: Delete requirement
-      console.log("Delete requirement:", requirement);
-      // TODO: Refresh requirements list when Firebase integration is added
-    }
-  }
+   function handleDeleteRequirement(requirement: DocumentRequirement) {
+     requirementToDelete = requirement;
+     confirmTitle = "Delete Requirement";
+     confirmMessage = "Are you sure you want to delete this requirement?";
+     showConfirmDialog = true;
+   }
+
+   function handleConfirmDelete() {
+     if (requirementToDelete) {
+       // TODO: Delete requirement
+       console.log("Delete requirement:", requirementToDelete);
+       // TODO: Refresh requirements list when Firebase integration is added
+       requirementToDelete = null;
+     }
+   }
 
   function getProductName(productId: string): string {
     return $productsStore.data?.find((p: Product) => p.id === productId)?.name || "Unknown Product";
@@ -213,5 +228,15 @@
         {/each}
       </div>
     {/if}
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
+      bind:open={showConfirmDialog}
+      title={confirmTitle}
+      message={confirmMessage}
+      type="danger"
+      onconfirm={handleConfirmDelete}
+    />
+
   </DashboardLayout>
 {/if}

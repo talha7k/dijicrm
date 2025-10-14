@@ -14,15 +14,22 @@
    import { requireCompany } from "$lib/utils/auth";
     import { productsStore } from "$lib/stores/products";
     import { documentTemplatesStore } from "$lib/stores/documentTemplates";
+    import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
    import ProductForm from "$lib/components/shared/product-form.svelte";
    import DocumentRequirementsSummary from "$lib/components/shared/document-requirements-summary.svelte";
     import type { Product } from "$lib/stores/products";
    import type { DocumentTemplate } from "$lib/types/document";
 
-  let mounted = $state(false);
-  let searchQuery = $state("");
-  let selectedCategory = $state("all");
-  let showCreateDialog = $state(false);
+   let mounted = $state(false);
+   let searchQuery = $state("");
+   let selectedCategory = $state("all");
+   let showCreateDialog = $state(false);
+
+   // Dialog state
+   let showConfirmDialog = $state(false);
+   let confirmTitle = $state('');
+   let confirmMessage = $state('');
+   let productToDelete = $state<Product | null>(null);
 
    onMount(() => {
      mounted = true;
@@ -73,13 +80,21 @@
     console.log("Edit product:", product);
   }
 
-  function handleDeleteProduct(product: Product) {
-    if (confirm(`Are you sure you want to delete "${product.name}"?`)) {
-      // TODO: Delete product
-      console.log("Delete product:", product);
-      // TODO: Refresh products list when Firebase integration is added
-    }
-  }
+   function handleDeleteProduct(product: Product) {
+     productToDelete = product;
+     confirmTitle = "Delete Product";
+     confirmMessage = `Are you sure you want to delete "${product.name}"?`;
+     showConfirmDialog = true;
+   }
+
+   function handleConfirmDelete() {
+     if (productToDelete) {
+       // TODO: Delete product
+       console.log("Delete product:", productToDelete);
+       // TODO: Refresh products list when Firebase integration is added
+       productToDelete = null;
+     }
+   }
 
   function getCategoryColor(category: string): string {
     switch (category) {
@@ -210,5 +225,14 @@
         {/each}
       </div>
     {/if}
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
+      bind:open={showConfirmDialog}
+      title={confirmTitle}
+      message={confirmMessage}
+      type="danger"
+      onconfirm={handleConfirmDelete}
+    />
   </DashboardLayout>
 {/if}

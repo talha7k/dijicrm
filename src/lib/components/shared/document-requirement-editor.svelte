@@ -8,6 +8,7 @@
   import { Card, CardContent, CardHeader, CardTitle } from "$lib/components/ui/card";
   import Icon from "@iconify/svelte";
   import type { DocumentRequirement, DocumentTemplate } from "$lib/types/document";
+  import AlertDialog from "./alert-dialog.svelte";
 
   interface Props {
     requirement: Partial<DocumentRequirement>;
@@ -18,17 +19,24 @@
 
   let { requirement, templates, onSave, onCancel }: Props = $props();
 
-  let formData = $state({
-    templateId: requirement?.templateId || "",
-    isMandatory: requirement?.isMandatory ?? true,
-    conditions: requirement?.conditions || [],
-  });
+   let formData = $state({
+     templateId: requirement?.templateId || "",
+     isMandatory: requirement?.isMandatory ?? true,
+     conditions: requirement?.conditions || [],
+   });
 
-  function handleSave() {
-    if (!formData.templateId) {
-      alert("Please select a document template");
-      return;
-    }
+   // Dialog state
+   let showAlertDialog = $state(false);
+   let alertTitle = $state('');
+   let alertMessage = $state('');
+
+   function handleSave() {
+     if (!formData.templateId) {
+       alertTitle = "Validation Error";
+       alertMessage = "Please select a document template";
+       showAlertDialog = true;
+       return;
+     }
 
     const requirementData: Partial<DocumentRequirement> = {
       ...requirement,
@@ -84,4 +92,12 @@
       </Button>
     </div>
   </CardContent>
+
+  <!-- Alert Dialog -->
+  <AlertDialog
+    bind:open={showAlertDialog}
+    title={alertTitle}
+    message={alertMessage}
+    type="error"
+  />
 </Card>

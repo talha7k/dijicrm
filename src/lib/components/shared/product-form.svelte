@@ -13,6 +13,8 @@
   import type { DocumentRequirement, DocumentTemplate } from "$lib/types/document";
   import DocumentRequirementsSummary from "./document-requirements-summary.svelte";
   import DocumentRequirementEditor from "./document-requirement-editor.svelte";
+  import AlertDialog from "./alert-dialog.svelte";
+  import ConfirmDialog from "./confirm-dialog.svelte";
 
   interface Props {
     product?: Partial<Product>;
@@ -35,14 +37,27 @@
   let showRequirementsEditor = $state(false);
   let editingRequirement = $state<Partial<DocumentRequirement> | null>(null);
 
+  // Dialog state
+  let showAlertDialog = $state(false);
+  let showConfirmDialog = $state(false);
+  let alertTitle = $state('');
+  let alertMessage = $state('');
+  let confirmTitle = $state('');
+  let confirmMessage = $state('');
+  let requirementToDelete = $state<string | null>(null);
+
   function handleSave() {
     if (!formData.name.trim()) {
-      alert("Please enter a product/service name");
+      alertTitle = "Validation Error";
+      alertMessage = "Please enter a product/service name";
+      showAlertDialog = true;
       return;
     }
 
     if (!formData.category) {
-      alert("Please select a category");
+      alertTitle = "Validation Error";
+      alertMessage = "Please select a category";
+      showAlertDialog = true;
       return;
     }
 
@@ -86,8 +101,16 @@
   }
 
   function handleDeleteRequirement(requirementId: string) {
-    if (confirm("Are you sure you want to remove this document requirement?")) {
-      formData.documentRequirements = formData.documentRequirements.filter(req => req.id !== requirementId);
+    requirementToDelete = requirementId;
+    confirmTitle = "Delete Requirement";
+    confirmMessage = "Are you sure you want to remove this document requirement?";
+    showConfirmDialog = true;
+  }
+
+  function handleConfirmDelete() {
+    if (requirementToDelete) {
+      formData.documentRequirements = formData.documentRequirements.filter(req => req.id !== requirementToDelete);
+      requirementToDelete = null;
     }
   }
 </script>
@@ -210,4 +233,21 @@
       Save Product/Service
     </Button>
   </div>
+
+  <!-- Alert Dialog -->
+  <AlertDialog
+    bind:open={showAlertDialog}
+    title={alertTitle}
+    message={alertMessage}
+    type="error"
+  />
+
+  <!-- Confirm Dialog -->
+  <ConfirmDialog
+    bind:open={showConfirmDialog}
+    title={confirmTitle}
+    message={confirmMessage}
+    type="warning"
+    onconfirm={handleConfirmDelete}
+  />
 </div>

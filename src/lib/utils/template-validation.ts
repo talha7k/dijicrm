@@ -91,6 +91,57 @@ function validateHtmlContent(htmlContent: string): ValidationResult {
   return { isValid: errors.length === 0, errors, warnings };
 }
 
+/**
+ * Extract used placeholders from HTML content with context awareness
+ * Handles Handlebars syntax like {{#each}} loops properly
+ */
+function extractUsedPlaceholders(htmlContent: string): string[] {
+  const usedPlaceholders: string[] = [];
+  const loopStack: string[] = []; // Track nested loops
+
+  // Split content by Handlebars patterns to process contextually
+  const parts = htmlContent.split(/(\{\{[#/][^}]+\}\})/);
+
+  for (const part of parts) {
+    if (part.startsWith("{{#each ")) {
+      // Extract array name from {{#each items}}
+      const match = part.match(/\{\{#each\s+(\w+)\}\}/);
+      if (match) {
+        loopStack.push(match[1]); // Push array name to stack
+      }
+    } else if (part.startsWith("{{/each}}")) {
+      loopStack.pop(); // Pop from stack when exiting loop
+    } else if (
+      part.match(/\{\{([^}]+)\}\}/) &&
+      !part.startsWith("{{#") &&
+      !part.startsWith("{{/")
+    ) {
+      // This is a {{...}} pattern that's not a control structure
+      const content = part.slice(2, -2).trim();
+
+      // Skip helper function calls (contain spaces and are not simple variables)
+      if (content.includes(" ") && !content.match(/^\w+$/)) {
+        continue; // Skip {{formatCurrency value}}, {{multiply a b}}, etc.
+      }
+
+      // If we're inside a loop, this might be a loop item property, not a top-level placeholder
+      if (loopStack.length > 0) {
+        // For now, we'll be conservative and only validate obvious top-level placeholders
+        // Loop item properties like {{description}}, {{quantity}} will be skipped
+        // This is a heuristic - we could enhance this to be more precise
+        continue;
+      }
+
+      // This is a top-level placeholder
+      if (!usedPlaceholders.includes(content)) {
+        usedPlaceholders.push(content);
+      }
+    }
+  }
+
+  return usedPlaceholders;
+}
+
 function validatePlaceholders(template: DocumentTemplate): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -98,41 +149,12 @@ function validatePlaceholders(template: DocumentTemplate): ValidationResult {
   const htmlContent = template.htmlContent;
   const placeholders = template.placeholders;
 
-  // Check if all placeholders are used in HTML
-  placeholders.forEach((placeholder) => {
-    const placeholderRegex = new RegExp(`{{${placeholder.key}}}`, "g");
-    if (!placeholderRegex.test(htmlContent)) {
-      warnings.push(
-        `Placeholder "${placeholder.key}" is defined but not used in HTML`,
-      );
-    }
-  });
-
-  // Check for undefined placeholders in HTML
-  // Extract all {{...}} patterns but exclude Handlebars syntax
-  const allPatterns = htmlContent.match(/\{\{([^}]+)\}\}/g) || [];
-  const usedPlaceholders: string[] = [];
-
-  allPatterns.forEach((match) => {
-    const content = match.slice(2, -2).trim(); // Remove {{ and }} and trim
-
-    // Skip Handlebars syntax patterns
-    if (content.startsWith("#") || content.startsWith("/")) {
-      return; // Skip {{#if}}, {{/if}}, {{#each}}, etc.
-    }
-
-    // Skip helper function calls (contain spaces and are not simple variables)
-    if (content.includes(" ") && !content.match(/^\w+$/)) {
-      return; // Skip {{formatCurrency value}}, {{multiply a b}}, etc.
-    }
-
-    // This is a simple placeholder
-    usedPlaceholders.push(content);
-  });
+  // Check for undefined placeholders in HTML with context awareness
+  const topLevelPlaceholders = extractUsedPlaceholders(htmlContent);
 
   const definedKeys = new Set(placeholders.map((p) => p.key));
 
-  usedPlaceholders.forEach((key) => {
+  topLevelPlaceholders.forEach((key: string) => {
     if (!definedKeys.has(key)) {
       errors.push(`Placeholder "${key}" is used in HTML but not defined`);
     }

@@ -13,13 +13,20 @@
 
   import Icon from '@iconify/svelte';
   import { requireCompany } from '$lib/utils/auth';
-  import { documentTemplatesStore } from '$lib/stores/documentTemplates';
+   import { documentTemplatesStore } from '$lib/stores/documentTemplates';
+   import ConfirmDialog from '$lib/components/shared/confirm-dialog.svelte';
   import type { DocumentTemplate } from '$lib/types/document';
 
-  let mounted = $state(false);
-  let searchQuery = $state('');
-  let selectedType = $state('all');
-  let showSampleDialog = $state(false);
+   let mounted = $state(false);
+   let searchQuery = $state('');
+   let selectedType = $state('all');
+   let showSampleDialog = $state(false);
+
+   // Dialog state
+   let showConfirmDialog = $state(false);
+   let confirmTitle = $state('');
+   let confirmMessage = $state('');
+   let templateToDelete = $state<any>(null);
 
   // Sample templates for quick copy
   const sampleTemplates = [
@@ -272,14 +279,22 @@
     console.log('Edit template:', template);
   }
 
-  function handleDeleteTemplate(template: DocumentTemplate) {
-    if (confirm(`Are you sure you want to delete "${template.name}"?`)) {
-      // TODO: Delete template from Firebase
-      console.log('Delete template:', template);
-      // Refresh templates list
-     templates = documentTemplatesStore;
-    }
-  }
+   function handleDeleteTemplate(template: any) {
+     templateToDelete = template;
+     confirmTitle = "Delete Template";
+     confirmMessage = `Are you sure you want to delete "${template.name}"?`;
+     showConfirmDialog = true;
+   }
+
+   function handleConfirmDelete() {
+     if (templateToDelete) {
+       // TODO: Delete template from Firebase
+       console.log('Delete template:', templateToDelete);
+       // Refresh templates list
+       templates = documentTemplatesStore;
+       templateToDelete = null;
+     }
+   }
 
   async function handleCopySampleTemplate(template: any) {
     try {
@@ -481,5 +496,14 @@
         {/each}
       </div>
     {/if}
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
+      bind:open={showConfirmDialog}
+      title={confirmTitle}
+      message={confirmMessage}
+      type="danger"
+      onconfirm={handleConfirmDelete}
+    />
   </DashboardLayout>
 {/if}

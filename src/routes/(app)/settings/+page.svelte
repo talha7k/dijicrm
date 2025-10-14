@@ -13,8 +13,42 @@
   import { brandingService } from "$lib/services/brandingService";
   import type { CompanyBranding } from "$lib/types/branding";
   import { smtpConfigStore } from "$lib/stores/smtpConfig";
+  import AlertDialog from "$lib/components/shared/alert-dialog.svelte";
+  import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
 
   let mounted = $state(false);
+
+  // Dialog state
+  let showAlertDialog = $state(false);
+  let showConfirmDialog = $state(false);
+  let alertTitle = $state('');
+  let alertMessage = $state('');
+  let alertType = $state<'info' | 'success' | 'warning' | 'error'>('info');
+  let confirmTitle = $state('');
+  let confirmMessage = $state('');
+  let pendingConfirmAction = $state<(() => void) | null>(null);
+
+  // Helper functions for dialogs
+  function showAlert(title: string, message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') {
+    alertTitle = title;
+    alertMessage = message;
+    alertType = type;
+    showAlertDialog = true;
+  }
+
+  function showConfirm(title: string, message: string, action: () => void) {
+    confirmTitle = title;
+    confirmMessage = message;
+    pendingConfirmAction = action;
+    showConfirmDialog = true;
+  }
+
+  function handleConfirm() {
+    if (pendingConfirmAction) {
+      pendingConfirmAction();
+      pendingConfirmAction = null;
+    }
+  }
 
   // SMTP Configuration state from hook
   let smtpConfig = $state({
@@ -98,7 +132,7 @@
     } catch (error) {
       console.error("Failed to load configurations:", error);
       // Show error to user but don't block the page
-      alert("Failed to load existing configurations. You can still configure new settings.");
+      showAlert("Configuration Error", "Failed to load existing configurations. You can still configure new settings.", "warning");
     }
   });
 
@@ -109,29 +143,29 @@
     // Basic validation
     if (smtpConfig.enabled) {
       if (!smtpConfig.host.trim()) {
-        alert("SMTP host is required when SMTP is enabled.");
+        showAlert("Validation Error", "SMTP host is required when SMTP is enabled.", "error");
         return;
       }
       if (!smtpConfig.auth.user.trim()) {
-        alert("SMTP username is required when SMTP is enabled.");
+        showAlert("Validation Error", "SMTP username is required when SMTP is enabled.", "error");
         return;
       }
       if (!smtpConfig.auth.pass.trim()) {
-        alert("SMTP password is required when SMTP is enabled.");
+        showAlert("Validation Error", "SMTP password is required when SMTP is enabled.", "error");
         return;
       }
       if (!smtpConfig.fromEmail.trim()) {
-        alert("From email is required when SMTP is enabled.");
+        showAlert("Validation Error", "From email is required when SMTP is enabled.", "error");
         return;
       }
       if (!smtpConfig.fromName.trim()) {
-        alert("From name is required when SMTP is enabled.");
+        showAlert("Validation Error", "From name is required when SMTP is enabled.", "error");
         return;
       }
 
       const portNum = parseInt(smtpConfig.port);
       if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
-        alert("Please enter a valid port number (1-65535).");
+        showAlert("Validation Error", "Please enter a valid port number (1-65535).", "error");
         return;
       }
     }
@@ -146,19 +180,19 @@
       const result = await smtpStore.saveConfig(companyId, configToSave);
 
       if (result.success) {
-        alert("SMTP configuration saved successfully!");
+        showAlert("Success", "SMTP configuration saved successfully!", "success");
       } else {
-        alert(`Failed to save SMTP configuration: ${result.error}`);
+        showAlert("Save Failed", `Failed to save SMTP configuration: ${result.error}`, "error");
       }
     } catch (error) {
       console.error("Failed to save SMTP config:", error);
-      alert("Failed to save SMTP configuration. Please try again.");
+      showAlert("Save Failed", "Failed to save SMTP configuration. Please try again.", "error");
     }
   }
 
   async function handleTestEmail() {
     if (!testEmail) {
-      alert("Please enter a test email address");
+      showAlert("Validation Error", "Please enter a test email address", "error");
       return;
     }
 
@@ -200,7 +234,7 @@
   // Branding functions
   async function handleLogoUpload() {
     if (!selectedLogoFile) {
-      alert("Please select a logo file first.");
+      showAlert("Validation Error", "Please select a logo file first.", "error");
       return;
     }
 
@@ -218,16 +252,16 @@
           branding.logoUrl = result.url;
           logoPreview = result.url;
           selectedLogoFile = null;
-          alert("Logo uploaded successfully!");
+          showAlert("Success", "Logo uploaded successfully!", "success");
         } else {
-          alert(`Failed to update branding: ${updateResult.error}`);
+          showAlert("Upload Failed", `Failed to update branding: ${updateResult.error}`, "error");
         }
       } else {
-        alert(`Failed to upload logo: ${result.error}`);
+        showAlert("Upload Failed", `Failed to upload logo: ${result.error}`, "error");
       }
     } catch (error) {
       console.error("Logo upload error:", error);
-      alert("Failed to upload logo. Please try again.");
+      showAlert("Upload Failed", "Failed to upload logo. Please try again.", "error");
     } finally {
       isUploadingLogo = false;
     }
@@ -245,13 +279,13 @@
       const maxHeight = 2000;
 
       if (file.size > maxSize) {
-        alert("File size must be less than 2MB.");
+        showAlert("File Too Large", "File size must be less than 2MB.", "error");
         target.value = ""; // Clear the input
         return;
       }
 
       if (!allowedTypes.includes(file.type)) {
-        alert("Please select a valid image file (JPEG, PNG, SVG, or WebP).");
+        showAlert("Invalid File Type", "Please select a valid image file (JPEG, PNG, SVG, or WebP).", "error");
         target.value = ""; // Clear the input
         return;
       }
@@ -261,7 +295,7 @@
         try {
           const dimensions = await getImageDimensions(file);
           if (dimensions.width > maxWidth || dimensions.height > maxHeight) {
-            alert(`Image dimensions must be ${maxWidth}x${maxHeight} pixels or smaller. Selected image is ${dimensions.width}x${dimensions.height} pixels.`);
+            showAlert("Image Too Large", `Image dimensions must be ${maxWidth}x${maxHeight} pixels or smaller. Selected image is ${dimensions.width}x${dimensions.height} pixels.`, "error");
             target.value = ""; // Clear the input
             return;
           }
@@ -305,7 +339,7 @@
   // Stamp image functions
   async function handleStampUpload() {
     if (!selectedStampFile) {
-      alert("Please select a stamp image file first.");
+      showAlert("Validation Error", "Please select a stamp image file first.", "error");
       return;
     }
 
@@ -323,16 +357,16 @@
           branding.stampImageUrl = result.url;
           stampPreview = result.url;
           selectedStampFile = null;
-          alert("Stamp image uploaded successfully!");
+          showAlert("Success", "Stamp image uploaded successfully!", "success");
         } else {
-          alert(`Failed to update branding: ${updateResult.error}`);
+          showAlert("Upload Failed", `Failed to update branding: ${updateResult.error}`, "error");
         }
       } else {
-        alert(`Failed to upload stamp image: ${result.error}`);
+        showAlert("Upload Failed", `Failed to upload stamp image: ${result.error}`, "error");
       }
     } catch (error) {
       console.error("Stamp upload error:", error);
-      alert("Failed to upload stamp image. Please try again.");
+      showAlert("Upload Failed", "Failed to upload stamp image. Please try again.", "error");
     } finally {
       isUploadingStamp = false;
     }
@@ -350,13 +384,13 @@
       const maxHeight = 500;
 
       if (file.size > maxSize) {
-        alert("File size must be less than 1MB.");
+        showAlert("File Too Large", "File size must be less than 1MB.", "error");
         target.value = ""; // Clear the input
         return;
       }
 
       if (!allowedTypes.includes(file.type)) {
-        alert("Please select a valid image file (JPEG, PNG, SVG, or WebP).");
+        showAlert("Invalid File Type", "Please select a valid image file (JPEG, PNG, SVG, or WebP).", "error");
         target.value = ""; // Clear the input
         return;
       }
@@ -366,7 +400,7 @@
         try {
           const dimensions = await getImageDimensions(file);
           if (dimensions.width > maxWidth || dimensions.height > maxHeight) {
-            alert(`Image dimensions must be ${maxWidth}x${maxHeight} pixels or smaller. Selected image is ${dimensions.width}x${dimensions.height} pixels.`);
+            showAlert("Image Too Large", `Image dimensions must be ${maxWidth}x${maxHeight} pixels or smaller. Selected image is ${dimensions.width}x${dimensions.height} pixels.`, "error");
             target.value = ""; // Clear the input
             return;
           }
@@ -392,13 +426,13 @@
 
     // Validation
     if (branding.companyName && branding.companyName.trim().length === 0) {
-      alert("Company name cannot be empty if provided.");
+      showAlert("Validation Error", "Company name cannot be empty if provided.", "error");
       return;
     }
 
     if (branding.vatNumber) {
       if (!/^[0-9]{15}$/.test(branding.vatNumber)) {
-        alert("VAT number must be exactly 15 digits.");
+        showAlert("Validation Error", "VAT number must be exactly 15 digits.", "error");
         return;
       }
     }
@@ -407,13 +441,13 @@
       const result = await brandingService.saveBranding(companyId, branding);
 
       if (result.success) {
-        alert("Branding configuration saved successfully!");
+        showAlert("Success", "Branding configuration saved successfully!", "success");
       } else {
-        alert(`Failed to save branding: ${result.error}`);
+        showAlert("Save Failed", `Failed to save branding: ${result.error}`, "error");
       }
     } catch (error) {
       console.error("Save branding error:", error);
-      alert("Failed to save branding configuration. Please try again.");
+      showAlert("Save Failed", "Failed to save branding configuration. Please try again.", "error");
     }
   }
 
@@ -429,45 +463,35 @@
   }
 
   async function handleGenerateSampleData() {
-    const confirmed = confirm(
-      "This will generate sample data including companies, clients, invoices, and payments. This action cannot be easily undone. Are you sure you want to continue?"
-    );
+    showConfirm(
+      "Generate Sample Data",
+      "This will generate sample data including companies, clients, invoices, and payments. This action cannot be easily undone. Are you sure you want to continue?",
+      async () => {
+        isGeneratingSampleData = true;
+        sampleDataResult = null;
 
-    if (!confirmed) return;
+        try {
+          const response = await fetch("/api/sample-data", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
 
-    isGeneratingSampleData = true;
-    sampleDataResult = null;
-
-    try {
-      const response = await fetch("/api/sample-data", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        sampleDataResult = {
-          success: true,
-          message: "Sample data generated successfully!",
-          data: result.data,
-        };
-      } else {
-        sampleDataResult = {
-          success: false,
-          message: result.error || "Failed to generate sample data",
-        };
+          if (response.ok) {
+            const result = await response.json();
+            sampleDataResult = { success: true, message: result.message || "Sample data generated successfully!" };
+          } else {
+            sampleDataResult = { success: false, message: "Failed to generate sample data" };
+          }
+        } catch (error) {
+          console.error("Sample data generation error:", error);
+          sampleDataResult = { success: false, message: "Network error occurred" };
+        } finally {
+          isGeneratingSampleData = false;
+        }
       }
-    } catch (error) {
-      sampleDataResult = {
-        success: false,
-        message: "Network error occurred while generating sample data",
-      };
-    } finally {
-      isGeneratingSampleData = false;
-    }
+    );
   }
 </script>
 
@@ -845,6 +869,23 @@
            {/if}
          </div>
        </CardContent>
-     </Card>
-   </DashboardLayout>
- {/if}
+      </Card>
+
+      <!-- Alert Dialog -->
+      <AlertDialog
+        bind:open={showAlertDialog}
+        title={alertTitle}
+        message={alertMessage}
+        type={alertType}
+      />
+
+      <!-- Confirm Dialog -->
+      <ConfirmDialog
+        bind:open={showConfirmDialog}
+        title={confirmTitle}
+        message={confirmMessage}
+        type="warning"
+        onconfirm={handleConfirm}
+      />
+    </DashboardLayout>
+  {/if}
