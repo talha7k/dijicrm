@@ -478,4 +478,4 @@ function createDocumentDeliveryStore() {
   };
 }
 
-export const useDocumentDelivery = createDocumentDeliveryStore();
+export const documentDeliveryStore = createDocumentDeliveryStore();

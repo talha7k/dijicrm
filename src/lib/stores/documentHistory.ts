@@ -175,4 +175,4 @@ function createDocumentHistoryStore() {
   };
 }
 
-export const useDocumentHistory = createDocumentHistoryStore();
+export const documentHistoryStore = createDocumentHistoryStore();

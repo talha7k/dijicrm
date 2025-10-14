@@ -12,11 +12,11 @@
 
    import Icon from "@iconify/svelte";
    import { requireCompany } from "$lib/utils/auth";
-   import { useProducts } from "$lib/hooks/useProducts";
-   import { useDocumentTemplates } from "$lib/hooks/useDocumentTemplates";
+    import { productsStore } from "$lib/stores/products";
+    import { documentTemplatesStore } from "$lib/stores/documentTemplates";
    import ProductForm from "$lib/components/shared/product-form.svelte";
    import DocumentRequirementsSummary from "$lib/components/shared/document-requirements-summary.svelte";
-   import type { Product } from "$lib/hooks/useProducts";
+    import type { Product } from "$lib/stores/products";
    import type { DocumentTemplate } from "$lib/types/document";
 
   let mounted = $state(false);
@@ -29,8 +29,8 @@
      // Company access is checked at layout level
    });
 
-  let productsStore = useProducts();
-  let templatesStore = useDocumentTemplates();
+
+  let templatesStore = documentTemplatesStore;
 
   // Load data on mount
   $effect(() => {

@@ -196,6 +196,4 @@ function createProductsStore() {
   };
 }
 
-export function useProducts() {
-  return createProductsStore();
-}
+export const productsStore = createProductsStore();

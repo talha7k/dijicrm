@@ -1,15 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { usePayments } from "./usePayments";
+import { paymentsStore } from "../stores/payments";
 import type { Payment } from "$lib/types/document";
 import { Timestamp } from "firebase/firestore";
 
-describe("usePayments Hook", () => {
+describe("paymentsStore", () => {
   it("should initialize with empty state", () => {
-    const paymentsStore = usePayments();
+    const store = paymentsStore;
 
-    expect(paymentsStore.subscribe).toBeDefined();
-    expect(paymentsStore.loadPayments).toBeDefined();
-    expect(paymentsStore.recordPayment).toBeDefined();
+    expect(store.subscribe).toBeDefined();
+    expect(store.loadPayments).toBeDefined();
+    expect(store.recordPayment).toBeDefined();
   });
 
   it("should validate payment data structure", () => {

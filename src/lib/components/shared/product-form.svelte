@@ -9,7 +9,7 @@
   import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "$lib/components/ui/collapsible";
 
   import Icon from "@iconify/svelte";
-  import type { Product } from "$lib/hooks/useProducts";
+  import type { Product } from "$lib/stores/products";
   import type { DocumentRequirement, DocumentTemplate } from "$lib/types/document";
   import DocumentRequirementsSummary from "./document-requirements-summary.svelte";
   import DocumentRequirementEditor from "./document-requirement-editor.svelte";

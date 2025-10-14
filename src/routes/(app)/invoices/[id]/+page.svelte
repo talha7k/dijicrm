@@ -11,7 +11,7 @@
   import Icon from "@iconify/svelte";
    import { requireCompany } from "$lib/utils/auth";
    import { formatDateShort } from "$lib/utils";
-   import { usePayments } from "$lib/hooks/usePayments";
+    import { paymentsStore } from "$lib/stores/payments";
    import { updateInvoiceAfterPayment, type InvoiceData } from "$lib/utils/paymentCalculations";
   import PaymentRecordingForm from "$lib/components/shared/payment-recording-form.svelte";
   import PaymentHistory from "$lib/components/shared/payment-history.svelte";
@@ -27,23 +27,23 @@
       // Company access is checked at layout level
     });
 
-   let paymentsStore = usePayments();
 
-    // Mock invoice data - will be replaced with Firebase integration
-    let invoice = $state<InvoiceData>({
-      id: invoiceId || "",
-      clientName: "Acme Corp",
-      clientEmail: "billing@acme.com",
-      amount: 2500,
-      paidAmount: 1250,
-      outstandingAmount: 1250,
-      status: "partially_paid",
-      createdAt: new Date("2024-01-15"),
-      dueDate: new Date("2024-02-15"),
-      items: [
-        { productName: "Web Development Service", quantity: 1, price: 2500, total: 2500 }
-      ]
-    });
+
+     // Mock invoice data - will be replaced with Firebase integration
+     let invoice = $derived<InvoiceData>({
+       id: invoiceId || "",
+       clientName: "Acme Corp",
+       clientEmail: "billing@acme.com",
+       amount: 2500,
+       paidAmount: 1250,
+       outstandingAmount: 1250,
+       status: "partially_paid",
+       createdAt: new Date("2024-01-15"),
+       dueDate: new Date("2024-02-15"),
+       items: [
+         { productName: "Web Development Service", quantity: 1, price: 2500, total: 2500 }
+       ]
+     });
 
   // Load payments for this invoice
   $effect(() => {

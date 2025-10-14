@@ -7,11 +7,11 @@
   import { Button } from '$lib/components/ui/button';
   import { requireClient } from '$lib/utils/auth';
   import { formatDateShort } from '$lib/utils';
-  import { useClientDocuments } from '$lib/hooks/useClientDocuments';
+  import { clientDocumentsStore } from '$lib/stores/clientDocuments';
   import type { GeneratedDocument } from '$lib/types/document';
 
   let mounted = $state(false);
-  let documents = useClientDocuments;
+  let documents = clientDocumentsStore;
 
   onMount(() => {
     mounted = true;

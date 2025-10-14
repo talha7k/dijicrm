@@ -8,7 +8,7 @@
 
   import Icon from "@iconify/svelte";
   import type { DocumentRequirement } from "$lib/types/document";
-  import type { Product } from "$lib/hooks/useProducts";
+  import type { Product } from "$lib/stores/products";
 
   interface Props {
     products: Product[];

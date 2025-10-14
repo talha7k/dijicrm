@@ -84,4 +84,4 @@ function createDocumentGenerationStore() {
   };
 }
 
-export const useDocumentGeneration = createDocumentGenerationStore();
+export const documentGenerationStore = createDocumentGenerationStore();

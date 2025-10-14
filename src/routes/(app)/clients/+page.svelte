@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { requireCompany } from '$lib/utils/auth';
-  import { useClientManagement } from '$lib/hooks/useClientManagement';
+  import { clientManagementStore } from '$lib/stores/clientManagement';
   import { userProfile } from '$lib/stores/user';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Badge } from '$lib/components/ui/badge';
@@ -11,7 +11,7 @@
 
    // Company access is checked at layout level
 
-  const clientStore = useClientManagement;
+  const clientStore = clientManagementStore;
   let clients = $state<UserProfile[]>([]);
   let loading = $state(false);
   let error = $state<string | null>(null);

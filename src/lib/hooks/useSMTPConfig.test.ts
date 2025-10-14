@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useSMTPConfig } from "./useSMTPConfig";
+import { smtpConfigStore } from "../stores/smtpConfig";
 
 // Mock the SMTP service
 vi.mock("$lib/services/smtpService", () => ({
@@ -16,13 +16,13 @@ vi.mock("$lib/services/emailService", () => ({
   },
 }));
 
-describe("useSMTPConfig Hook", () => {
+describe("smtpConfigStore", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("should initialize with empty state", () => {
-    const smtpStore = useSMTPConfig();
+    const smtpStore = smtpConfigStore;
 
     expect(smtpStore.subscribe).toBeDefined();
     expect(smtpStore.initialize).toBeDefined();
@@ -49,7 +49,7 @@ describe("useSMTPConfig Hook", () => {
       config: mockConfig,
     });
 
-    const smtpStore = useSMTPConfig();
+    const smtpStore = smtpConfigStore;
     await smtpStore.initialize("company-1");
 
     expect(smtpService.loadSMTPConfig).toHaveBeenCalledWith("company-1");
@@ -63,7 +63,7 @@ describe("useSMTPConfig Hook", () => {
       success: true,
     });
 
-    const smtpStore = useSMTPConfig();
+    const smtpStore = smtpConfigStore;
     const mockConfig = {
       enabled: true,
       host: "smtp.gmail.com",

@@ -1,4 +1,4 @@
-// Hook for company-side client management
+// Store for company-side client management
 import { writable } from "svelte/store";
 import type { UserProfile } from "$lib/types/user";
 import { Timestamp } from "firebase/firestore";
@@ -240,4 +240,4 @@ function createClientManagementStore() {
   };
 }
 
-export const useClientManagement = createClientManagementStore();
+export const clientManagementStore = createClientManagementStore();

@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { requireCompany } from '$lib/utils/auth';
-  import { useClientManagement } from '$lib/hooks/useClientManagement';
+  import { clientManagementStore } from '$lib/stores/clientManagement';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
@@ -14,7 +14,7 @@
 
    // Company access is checked at layout level
 
-  const clientStore = useClientManagement;
+  const clientStore = clientManagementStore;
   const clientId = $page.params.id as string;
 
   let client = $state<UserProfile | undefined>(undefined);

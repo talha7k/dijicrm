@@ -13,12 +13,12 @@
 
   import Icon from "@iconify/svelte";
   import { requireCompany } from "$lib/utils/auth";
-  import { useDocumentRequirements } from "$lib/hooks/useDocumentRequirements";
-  import { useProducts } from "$lib/hooks/useProducts";
-  import { useDocumentTemplates } from "$lib/hooks/useDocumentTemplates";
+  import { documentRequirementsStore } from "$lib/stores/documentRequirements";
+  import { productsStore } from "$lib/stores/products";
+  import { documentTemplatesStore } from "$lib/stores/documentTemplates";
   import DocumentRequirementForm from "$lib/components/shared/document-requirement-form.svelte";
   import type { DocumentRequirement } from "$lib/types/document";
-  import type { Product } from "$lib/hooks/useProducts";
+  import type { Product } from "$lib/stores/products";
 
   let mounted = $state(false);
   let searchQuery = $state("");
@@ -30,9 +30,9 @@
      // Company access is checked at layout level
    });
 
-  let requirementsStore = useDocumentRequirements();
-  let productsStore = useProducts();
-  let templatesStore = useDocumentTemplates();
+  let requirementsStore = documentRequirementsStore;
+
+  let templatesStore = documentTemplatesStore;
 
   let filteredRequirements = $derived(() => {
     if (!$requirementsStore.data) return [];

@@ -42,17 +42,13 @@ export interface ClientInvoice {
   description: string;
 }
 
-export function useClientInvoices() {
-  // In a real app, this would query Firebase based on the current user's client ID
-  // For now, return mock data
-  return derived(userProfile, ($userProfile) => {
-    if (!$userProfile.data) return { data: [], loading: true, error: null };
+export const clientInvoicesStore = derived(userProfile, ($userProfile) => {
+  if (!$userProfile.data) return { data: [], loading: true, error: null };
 
-    // Simulate loading
-    return {
-      data: mockClientInvoices,
-      loading: false,
-      error: null,
-    };
-  });
-}
+  // Simulate loading
+  return {
+    data: mockClientInvoices,
+    loading: false,
+    error: null,
+  };
+});

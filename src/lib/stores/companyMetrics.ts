@@ -68,12 +68,8 @@ const mockCompanyMetrics: CompanyMetrics = {
   ],
 };
 
-export function useCompanyMetrics() {
-  // In a real app, this would query Firebase for company-specific metrics
-  // For now, return mock data
-  return writable({
-    data: mockCompanyMetrics,
-    loading: false,
-    error: null,
-  });
-}
+export const companyMetricsStore = writable({
+  data: mockCompanyMetrics,
+  loading: false,
+  error: null,
+});

@@ -8,13 +8,13 @@
   import { Button } from '$lib/components/ui/button';
    import { requireClient } from '$lib/utils/auth';
    import { formatDateShort } from '$lib/utils';
-   import { useClientInvoices, type ClientInvoice } from '$lib/hooks/useClientInvoices';
-   import { useClientDocuments } from '$lib/hooks/useClientDocuments';
+    import { clientInvoicesStore, type ClientInvoice } from '$lib/stores/clientInvoices';
+    import { clientDocumentsStore } from '$lib/stores/clientDocuments';
    import type { GeneratedDocument } from '$lib/types/document';
 
    let mounted = $state(false);
-   let invoices = useClientInvoices();
-   let documents = useClientDocuments;
+    let invoices = clientInvoicesStore;
+    let documents = clientDocumentsStore;
 
    onMount(() => {
      mounted = true;

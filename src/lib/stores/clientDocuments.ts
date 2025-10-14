@@ -129,4 +129,4 @@ function createClientDocumentsStore() {
   };
 }
 
-export const useClientDocuments = createClientDocumentsStore();
+export const clientDocumentsStore = createClientDocumentsStore();

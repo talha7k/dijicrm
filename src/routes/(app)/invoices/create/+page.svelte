@@ -11,11 +11,11 @@
 
   import Icon from "@iconify/svelte";
    import { requireCompany } from "$lib/utils/auth";
-   import { useProducts } from "$lib/hooks/useProducts";
-   import { useDocumentRequirements } from "$lib/hooks/useDocumentRequirements";
-   import { useDocumentGeneration } from "$lib/hooks/useDocumentGeneration";
-   import { useDocumentDelivery } from "$lib/hooks/useDocumentDelivery";
-   import { useClientManagement } from "$lib/hooks/useClientManagement";
+    import { productsStore } from "$lib/stores/products";
+    import { documentRequirementsStore } from "$lib/stores/documentRequirements";
+    import { documentGenerationStore } from "$lib/stores/documentGeneration";
+    import { documentDeliveryStore } from "$lib/stores/documentDelivery";
+    import { clientManagementStore } from "$lib/stores/clientManagement";
    import { Timestamp } from "firebase/firestore";
    import type { BusinessCase, GeneratedDocument } from "$lib/types/document";
    import { goto } from "$app/navigation";
@@ -27,11 +27,11 @@
      // Company access is checked at layout level
    });
 
-    let productsStore = useProducts();
-    let requirementsStore = useDocumentRequirements();
-    let generationStore = useDocumentGeneration();
-    let deliveryStore = useDocumentDelivery();
-    let clientStore = useClientManagement();
+
+     let requirementsStore = documentRequirementsStore;
+      let generationStore = documentGenerationStore;
+      let deliveryStore = documentDeliveryStore;
+     let clientStore = clientManagementStore;
 
   // Load data on mount
   $effect(() => {

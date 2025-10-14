@@ -12,7 +12,7 @@
 
   import Icon from '@iconify/svelte';
   import { requireCompany } from '$lib/utils/auth';
-  import { useDocumentTemplates } from '$lib/hooks/useDocumentTemplates';
+  import { documentTemplatesStore } from '$lib/stores/documentTemplates';
   import type { DocumentTemplate } from '$lib/types/document';
 
   let mounted = $state(false);
@@ -25,7 +25,7 @@
      // Company access is checked at layout level
    });
 
-  let templates = useDocumentTemplates();
+  let templates = documentTemplatesStore;
 
   let filteredTemplates = $derived((): DocumentTemplate[] => {
     if (!$templates.data) return [];
@@ -48,7 +48,7 @@
     console.log('Saving template:', template);
     showCreateDialog = false;
     // Refresh templates list
-    templates = useDocumentTemplates();
+    templates = documentTemplatesStore;
   }
 
   function handleTemplatePreview(template: DocumentTemplate) {
@@ -66,7 +66,7 @@
       // TODO: Delete template from Firebase
       console.log('Delete template:', template);
       // Refresh templates list
-      templates = useDocumentTemplates();
+    templates = documentTemplatesStore;
     }
   }
 

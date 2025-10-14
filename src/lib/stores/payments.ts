@@ -198,6 +198,4 @@ function createPaymentsStore() {
   };
 }
 
-export function usePayments() {
-  return createPaymentsStore();
-}
+export const paymentsStore = createPaymentsStore();

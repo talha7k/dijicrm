@@ -1,7 +1,7 @@
 import { json, error } from "@sveltejs/kit";
 import { Timestamp } from "firebase/firestore";
 import type { DocumentDelivery } from "$lib/types/document";
-import { useDocumentDelivery } from "$lib/hooks/useDocumentDelivery";
+import { documentDeliveryStore } from "$lib/stores/documentDelivery";
 
 export const POST = async ({ request }: any) => {
   try {
@@ -56,7 +56,7 @@ export const POST = async ({ request }: any) => {
       }
 
       // Update delivery status
-      useDocumentDelivery.updateDeliveryStatus(deliveryId, status, {
+      documentDeliveryStore.updateDeliveryStatus(deliveryId, status, {
         deliveredAt,
         errorMessage,
         ...additionalData,
@@ -114,7 +114,7 @@ export const GET = async ({ url }: any) => {
 
     // Update delivery status if found
     if (deliveryId) {
-      useDocumentDelivery.updateDeliveryStatus(
+      documentDeliveryStore.updateDeliveryStatus(
         deliveryId,
         mockStatus.status as DocumentDelivery["status"],
         {

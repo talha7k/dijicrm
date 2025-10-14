@@ -8,7 +8,7 @@
   import { Button } from '$lib/components/ui/button';
   import { requireCompany } from '$lib/utils/auth';
   import { formatDateTime } from '$lib/utils';
-  import { useCompanyMetrics, type CompanyMetrics } from '$lib/hooks/useCompanyMetrics';
+  import { companyMetricsStore, type CompanyMetrics } from '$lib/stores/companyMetrics';
   import Icon from '@iconify/svelte';
 
   let mounted = $state(false);
@@ -18,7 +18,7 @@
      // Company access is checked at layout level
    });
 
-  let metrics = useCompanyMetrics();
+  let metrics = companyMetricsStore;
 
   function formatCurrency(amount: number) {
     return new Intl.NumberFormat('en-US', {

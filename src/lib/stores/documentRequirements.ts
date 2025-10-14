@@ -141,6 +141,4 @@ function createDocumentRequirementsStore() {
   };
 }
 
-export function useDocumentRequirements() {
-  return createDocumentRequirementsStore();
-}
+export const documentRequirementsStore = createDocumentRequirementsStore();

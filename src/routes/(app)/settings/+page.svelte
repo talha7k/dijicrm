@@ -12,7 +12,7 @@
   import Icon from "@iconify/svelte";
   import { brandingService } from "$lib/services/brandingService";
   import type { CompanyBranding } from "$lib/types/branding";
-  import { useSMTPConfig } from "$lib/hooks/useSMTPConfig";
+  import { smtpConfigStore } from "$lib/stores/smtpConfig";
 
   let mounted = $state(false);
 
@@ -54,7 +54,7 @@
   let logoPreview = $state<string | null>(null);
 
   // SMTP hook
-  const smtpStore = useSMTPConfig();
+  const smtpStore = smtpConfigStore;
 
   onMount(async () => {
     mounted = true;

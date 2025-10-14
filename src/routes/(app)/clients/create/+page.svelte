@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { requireCompany } from '$lib/utils/auth';
-  import { useClientManagement } from '$lib/hooks/useClientManagement';
+  import { clientManagementStore } from '$lib/stores/clientManagement';
   import { userProfile } from '$lib/stores/user';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Input } from '$lib/components/ui/input/index.js';
@@ -11,7 +11,7 @@
 
    // Company access is checked at layout level
 
-  const clientStore = useClientManagement;
+  const clientStore = clientManagementStore;
 
   let formData = $state({
     firstName: '',

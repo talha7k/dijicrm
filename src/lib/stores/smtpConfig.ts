@@ -1,4 +1,4 @@
-// Hook for managing SMTP configuration loading and initialization
+// Store for managing SMTP configuration loading and initialization
 import { writable } from "svelte/store";
 import { smtpService } from "$lib/services/smtpService";
 import { emailService } from "$lib/services/emailService";
@@ -148,4 +148,4 @@ function createSMTPConfigStore() {
   };
 }
 
-export const useSMTPConfig = createSMTPConfigStore();
+export const smtpConfigStore = createSMTPConfigStore();
