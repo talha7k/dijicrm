@@ -1,10 +1,3 @@
-// Mock Firestore functions at the top
-const mockDoc = vi.fn();
-const mockGetDoc = vi.fn();
-const mockSetDoc = vi.fn();
-const mockUpdateDoc = vi.fn();
-const mockTimestampNow = vi.fn(() => ({ seconds: 1234567890, nanoseconds: 0 }));
-
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { SMTPConfig } from "$lib/types/smtp";
 
@@ -14,22 +7,23 @@ vi.mock("$lib/firebase", () => ({
 }));
 
 vi.mock("firebase/firestore", () => ({
-  doc: mockDoc,
-  getDoc: mockGetDoc,
-  setDoc: mockSetDoc,
-  updateDoc: mockUpdateDoc,
+  doc: vi.fn(),
+  getDoc: vi.fn(),
+  setDoc: vi.fn(),
+  updateDoc: vi.fn(),
   Timestamp: {
-    now: mockTimestampNow,
+    now: vi.fn(() => ({ seconds: 1234567890, nanoseconds: 0 })),
   },
 }));
 
 // Import after mocks
 import { smtpService } from "./smtpService";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
 describe("SMTPService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockDoc.mockReturnValue("mock-doc-ref");
+    vi.mocked(doc).mockReturnValue("mock-doc-ref" as any);
   });
 
   const mockSMTPConfig: SMTPConfig = {
@@ -47,7 +41,7 @@ describe("SMTPService", () => {
 
   describe("saveSMTPConfig", () => {
     it("should save SMTP configuration successfully", async () => {
-      mockSetDoc.mockResolvedValue(undefined);
+      vi.mocked(setDoc).mockResolvedValue(undefined);
 
       const result = await smtpService.saveSMTPConfig(
         "company-1",
@@ -55,8 +49,8 @@ describe("SMTPService", () => {
       );
 
       expect(result.success).toBe(true);
-      expect(mockSetDoc).toHaveBeenCalledWith(
-        expect.any(Object),
+      expect(setDoc).toHaveBeenCalledWith(
+        "mock-doc-ref",
         expect.objectContaining({
           companyId: "company-1",
           enabled: true,
@@ -73,7 +67,7 @@ describe("SMTPService", () => {
 
     it("should handle save errors", async () => {
       const error = new Error("Firestore error");
-      mockSetDoc.mockRejectedValue(error);
+      vi.mocked(setDoc).mockRejectedValue(error);
 
       const result = await smtpService.saveSMTPConfig(
         "company-1",
@@ -104,20 +98,26 @@ describe("SMTPService", () => {
         }),
       };
 
-      mockGetDoc.mockResolvedValue(mockDocSnap);
+      vi.mocked(getDoc).mockResolvedValue(mockDocSnap as any);
 
       const result = await smtpService.loadSMTPConfig("company-1");
 
       expect(result.success).toBe(true);
-      expect(result.config).toEqual(mockSMTPConfig);
+      expect(result.config).toEqual({
+        ...mockSMTPConfig,
+        auth: {
+          ...mockSMTPConfig.auth,
+          pass: "password123", // decrypted password
+        },
+      });
     });
 
-    it("should return null when no configuration exists", async () => {
+    it("should return null when no SMTP config exists", async () => {
       const mockDocSnap = {
         exists: () => false,
       };
 
-      mockGetDoc.mockResolvedValue(mockDocSnap);
+      vi.mocked(getDoc).mockResolvedValue(mockDocSnap as any);
 
       const result = await smtpService.loadSMTPConfig("company-1");
 
@@ -127,25 +127,46 @@ describe("SMTPService", () => {
 
     it("should handle load errors", async () => {
       const error = new Error("Firestore error");
-      mockGetDoc.mockRejectedValue(error);
+      vi.mocked(getDoc).mockRejectedValue(error);
+
+      await expect(smtpService.loadSMTPConfig("company-1")).rejects.toThrow(
+        "Failed to load SMTP configuration",
+      );
+    });
+
+    it("should return null when no configuration exists", async () => {
+      const mockDocSnap = {
+        exists: () => false,
+      };
+
+      vi.mocked(getDoc).mockResolvedValue(mockDocSnap as any);
 
       const result = await smtpService.loadSMTPConfig("company-1");
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("Firestore error");
+      expect(result.success).toBe(true);
+      expect(result.config).toBeNull();
+    });
+
+    it("should handle load errors", async () => {
+      const error = new Error("Firestore error");
+      vi.mocked(getDoc).mockRejectedValue(error);
+
+      await expect(smtpService.loadSMTPConfig("company-1")).rejects.toThrow(
+        "Failed to load SMTP configuration",
+      );
     });
   });
 
   describe("updateSMTPConfig", () => {
     it("should update SMTP configuration successfully", async () => {
-      mockUpdateDoc.mockResolvedValue(undefined);
+      vi.mocked(updateDoc).mockResolvedValue(undefined);
 
       const updates = { enabled: false };
       const result = await smtpService.updateSMTPConfig("company-1", updates);
 
       expect(result.success).toBe(true);
-      expect(mockUpdateDoc).toHaveBeenCalledWith(
-        expect.any(Object),
+      expect(updateDoc).toHaveBeenCalledWith(
+        "mock-doc-ref",
         expect.objectContaining({
           enabled: false,
           updatedAt: expect.any(Object),
@@ -155,7 +176,7 @@ describe("SMTPService", () => {
 
     it("should handle update errors", async () => {
       const error = new Error("Update failed");
-      mockUpdateDoc.mockRejectedValue(error);
+      vi.mocked(updateDoc).mockRejectedValue(error);
 
       const result = await smtpService.updateSMTPConfig("company-1", {
         enabled: false,
@@ -168,13 +189,13 @@ describe("SMTPService", () => {
 
   describe("deleteSMTPConfig", () => {
     it("should delete SMTP configuration successfully", async () => {
-      mockUpdateDoc.mockResolvedValue(undefined);
+      vi.mocked(updateDoc).mockResolvedValue(undefined);
 
       const result = await smtpService.deleteSMTPConfig("company-1");
 
       expect(result.success).toBe(true);
-      expect(mockUpdateDoc).toHaveBeenCalledWith(
-        expect.any(Object),
+      expect(updateDoc).toHaveBeenCalledWith(
+        "mock-doc-ref",
         expect.objectContaining({
           enabled: false,
           updatedAt: expect.any(Object),
@@ -199,7 +220,7 @@ describe("SMTPService", () => {
         }),
       };
 
-      mockGetDoc.mockResolvedValue(mockDocSnap);
+      vi.mocked(getDoc).mockResolvedValue(mockDocSnap as any);
 
       const result = await smtpService.hasSMTPConfig("company-1");
 
@@ -211,7 +232,7 @@ describe("SMTPService", () => {
         exists: () => false,
       };
 
-      mockGetDoc.mockResolvedValue(mockDocSnap);
+      vi.mocked(getDoc).mockResolvedValue(mockDocSnap as any);
 
       const result = await smtpService.hasSMTPConfig("company-1");
 
@@ -221,11 +242,11 @@ describe("SMTPService", () => {
 
   describe("password handling", () => {
     it("should not store plain passwords in Firestore", async () => {
-      mockSetDoc.mockResolvedValue(undefined);
+      vi.mocked(setDoc).mockResolvedValue(undefined);
 
       await smtpService.saveSMTPConfig("company-1", mockSMTPConfig);
 
-      const savedData = mockSetDoc.mock.calls[0][1];
+      const savedData = vi.mocked(setDoc).mock.calls[0][1] as any;
       expect(savedData.auth.pass).toBeUndefined();
       expect(savedData.encryptedPassword).toBeDefined();
       expect(savedData.encryptedPassword).not.toBe(mockSMTPConfig.auth.pass);

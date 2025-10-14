@@ -12,18 +12,127 @@ vi.mock("$lib/services/firebaseStorage", () => ({
   deleteFile: vi.fn(),
 }));
 
-// Get mock functions from the mocked module
-const { doc, getDoc, setDoc, updateDoc, Timestamp } = await import(
-  "firebase/firestore"
-);
+// Mock URL for both createObjectURL and constructor
+const mockURL = {
+  createObjectURL: vi.fn(() => "mock-url"),
+  revokeObjectURL: vi.fn(),
+};
+
+// Mock URL constructor
+global.URL = class {
+  static createObjectURL = mockURL.createObjectURL;
+  static revokeObjectURL = mockURL.revokeObjectURL;
+
+  constructor(url: string) {
+    this.href = url;
+    this.hostname = "firebasestorage.googleapis.com";
+
+    // Handle Firebase Storage URLs
+    if (url.includes("firebasestorage.googleapis.com")) {
+      this.pathname = url.split("firebasestorage.googleapis.com")[1];
+    } else if (url.includes("/logos/")) {
+      const parts = url.split("/logos/");
+      this.pathname = "/logos/" + (parts[1] || "old-logo.png");
+      this.hostname = "storage.googleapis.com";
+    } else {
+      this.pathname = "/logos/old-logo.png";
+      this.hostname = "storage.googleapis.com";
+    }
+  }
+  href: string;
+  pathname: string;
+  hostname: string;
+  search = "";
+  hash = "";
+  origin = "https://firebasestorage.googleapis.com";
+} as any;
+
+// Mock URL constructor for path extraction
+global.URL = class {
+  static createObjectURL = mockURL.createObjectURL;
+  static revokeObjectURL = mockURL.revokeObjectURL;
+
+  constructor(url: string) {
+    this.href = url;
+    this.hostname = "firebasestorage.googleapis.com";
+
+    // Handle Firebase Storage URLs
+    if (url.includes("firebasestorage.googleapis.com")) {
+      // Extract the pathname part that contains /o/...? pattern
+      const urlParts = url.split("firebasestorage.googleapis.com");
+      this.pathname =
+        urlParts[1] || "/v0/b/test-bucket/o/logos%2Fold-logo.png?alt=media";
+    } else if (url.includes("/logos/")) {
+      const parts = url.split("/logos/");
+      this.pathname = "/logos/" + (parts[1] || "old-logo.png");
+      this.hostname = "storage.googleapis.com";
+    } else {
+      this.pathname = "/logos/old-logo.png";
+      this.hostname = "storage.googleapis.com";
+    }
+  }
+  href: string;
+  pathname: string;
+  hostname: string;
+  search = "";
+  hash = "";
+  origin = "https://firebasestorage.googleapis.com";
+} as any;
+
+// Mock Image constructor for image dimension tests
+global.Image = class {
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  width = 100;
+  height = 100;
+  src = "";
+
+  constructor() {
+    // Simulate async image loading
+    setTimeout(() => {
+      if (this.src && this.onload) {
+        this.onload();
+      }
+    }, 0);
+  }
+} as any;
+global.Image = class {
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  width = 100;
+  height = 100;
+  src = "";
+
+  constructor() {
+    // Simulate async image loading
+    setTimeout(() => {
+      if (this.src && this.onload) {
+        this.onload();
+      }
+    }, 0);
+  }
+} as any;
+
+// Mock Firestore functions
+vi.mock("firebase/firestore", () => ({
+  doc: vi.fn(),
+  getDoc: vi.fn(),
+  setDoc: vi.fn(),
+  updateDoc: vi.fn(),
+  Timestamp: {
+    now: vi.fn(() => ({ seconds: 1234567890, nanoseconds: 0 })),
+  },
+}));
 
 // Import after mocks
 import { brandingService } from "./brandingService";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { uploadFile, deleteFile } from "$lib/services/firebaseStorage";
 
 describe("BrandingService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockDoc.mockReturnValue("mock-doc-ref");
+    vi.mocked(doc).mockReturnValue("mock-doc-ref" as any);
   });
 
   const mockBranding: CompanyBranding = {
@@ -36,7 +145,7 @@ describe("BrandingService", () => {
 
   describe("saveBranding", () => {
     it("should save branding configuration successfully", async () => {
-      mockSetDoc.mockResolvedValue(undefined);
+      vi.mocked(setDoc).mockResolvedValue(undefined);
 
       const result = await brandingService.saveBranding(
         "company-1",
@@ -44,15 +153,13 @@ describe("BrandingService", () => {
       );
 
       expect(result.success).toBe(true);
-      expect(mockSetDoc).toHaveBeenCalledWith(
+      expect(setDoc).toHaveBeenCalledWith(
         "mock-doc-ref",
         expect.objectContaining({
           companyId: "company-1",
           logoUrl: "https://example.com/logo.png",
           stampImageUrl: "https://example.com/stamp.png",
           stampPosition: "bottom-right",
-          stampFontSize: 12,
-          stampColor: "#000000",
           primaryColor: "#007bff",
           secondaryColor: "#6c757d",
           createdAt: expect.any(Object),
@@ -63,7 +170,7 @@ describe("BrandingService", () => {
 
     it("should handle save errors", async () => {
       const error = new Error("Firestore error");
-      mockSetDoc.mockRejectedValue(error);
+      vi.mocked(setDoc).mockRejectedValue(error);
 
       const result = await brandingService.saveBranding(
         "company-1",
@@ -84,8 +191,6 @@ describe("BrandingService", () => {
           logoUrl: "https://example.com/logo.png",
           stampImageUrl: "https://example.com/stamp.png",
           stampPosition: "bottom-right",
-          stampFontSize: 12,
-          stampColor: "#000000",
           primaryColor: "#007bff",
           secondaryColor: "#6c757d",
           createdAt: { seconds: 1234567890, nanoseconds: 0 },
@@ -93,7 +198,7 @@ describe("BrandingService", () => {
         }),
       };
 
-      mockGetDoc.mockResolvedValue(mockDocSnap);
+      vi.mocked(getDoc).mockResolvedValue(mockDocSnap as any);
 
       const result = await brandingService.loadBranding("company-1");
 
@@ -106,7 +211,7 @@ describe("BrandingService", () => {
         exists: () => false,
       };
 
-      mockGetDoc.mockResolvedValue(mockDocSnap);
+      vi.mocked(getDoc).mockResolvedValue(mockDocSnap as any);
 
       const result = await brandingService.loadBranding("company-1");
 
@@ -116,7 +221,7 @@ describe("BrandingService", () => {
 
     it("should handle load errors", async () => {
       const error = new Error("Firestore error");
-      mockGetDoc.mockRejectedValue(error);
+      vi.mocked(getDoc).mockRejectedValue(error);
 
       const result = await brandingService.loadBranding("company-1");
 
@@ -127,13 +232,19 @@ describe("BrandingService", () => {
 
   describe("updateBranding", () => {
     it("should update branding configuration successfully", async () => {
-      mockUpdateDoc.mockResolvedValue(undefined);
+      // Mock document exists
+      const mockDocSnap = {
+        exists: () => true,
+        data: () => ({}),
+      };
+      vi.mocked(getDoc).mockResolvedValue(mockDocSnap as any);
+      vi.mocked(updateDoc).mockResolvedValue(undefined);
 
       const updates = { stampImageUrl: "https://example.com/new-stamp.png" };
       const result = await brandingService.updateBranding("company-1", updates);
 
       expect(result.success).toBe(true);
-      expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect(updateDoc).toHaveBeenCalledWith(
         "mock-doc-ref",
         expect.objectContaining({
           stampImageUrl: "https://example.com/new-stamp.png",
@@ -143,8 +254,15 @@ describe("BrandingService", () => {
     });
 
     it("should handle update errors", async () => {
+      // Mock document exists
+      const mockDocSnap = {
+        exists: () => true,
+        data: () => ({}),
+      };
+      vi.mocked(getDoc).mockResolvedValue(mockDocSnap as any);
+
       const error = new Error("Update failed");
-      mockUpdateDoc.mockRejectedValue(error);
+      vi.mocked(updateDoc).mockRejectedValue(error);
 
       const result = await brandingService.updateBranding("company-1", {
         stampImageUrl: "https://example.com/new-stamp.png",
@@ -166,8 +284,7 @@ describe("BrandingService", () => {
         path: "logos/company-1/logo.png",
       };
 
-      const { uploadFile } = await import("$lib/services/firebaseStorage");
-      (uploadFile as any).mockResolvedValue(mockUploadResult);
+      vi.mocked(uploadFile).mockResolvedValue(mockUploadResult);
 
       const result = await brandingService.uploadLogo("company-1", mockFile);
 
@@ -206,29 +323,30 @@ describe("BrandingService", () => {
         exists: () => true,
         data: () => ({
           companyId: "company-1",
-          logoUrl: "https://storage.googleapis.com/logos/old-logo.png",
+          logoUrl:
+            "https://firebasestorage.googleapis.com/v0/b/test-bucket/o/logos%2Fold-logo.png?alt=media",
           createdAt: { seconds: 1234567890, nanoseconds: 0 },
           updatedAt: { seconds: 1234567890, nanoseconds: 0 },
         }),
       };
 
-      mockGetDoc.mockResolvedValue(mockDocSnap);
-      mockUpdateDoc.mockResolvedValue(undefined);
+      vi.mocked(getDoc).mockResolvedValue(mockDocSnap as any);
+      vi.mocked(updateDoc).mockResolvedValue(undefined);
 
-      const { deleteFile } = await import("$lib/services/firebaseStorage");
-      (deleteFile as any).mockResolvedValue(true);
+      vi.mocked(deleteFile).mockResolvedValue(true);
 
       const result = await brandingService.updateLogo(
         "company-1",
-        "https://storage.googleapis.com/logos/new-logo.png",
+        "https://firebasestorage.googleapis.com/v0/b/test-bucket/o/logos%2Fnew-updated-logo.png?alt=media",
       );
 
       expect(result.success).toBe(true);
-      expect(deleteFile).toHaveBeenCalled(); // Should attempt to delete old logo
-      expect(mockUpdateDoc).toHaveBeenCalledWith(
+      expect(deleteFile).toHaveBeenCalledWith("logos/old-logo.png"); // Should attempt to delete old logo
+      expect(updateDoc).toHaveBeenCalledWith(
         "mock-doc-ref",
         expect.objectContaining({
-          logoUrl: "https://storage.googleapis.com/logos/new-logo.png",
+          logoUrl:
+            "https://firebasestorage.googleapis.com/v0/b/test-bucket/o/logos%2Fnew-updated-logo.png?alt=media",
         }),
       );
     });
