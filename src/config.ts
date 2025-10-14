@@ -139,11 +139,6 @@ export const socialLinks: SocialLink[] = [
     url: "https://www.linkedin.com/in/talha7k/",
     icon: "linkedin",
   },
-  {
-    title: "talha7k",
-    url: "https://github.com/talha7k/tk-crm.git",
-    icon: "github",
-  },
 ];
 
 export const contactInfo = {
