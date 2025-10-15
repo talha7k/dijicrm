@@ -16,7 +16,7 @@
 <div class="role-selection">
   <h3 class="text-lg font-semibold mb-4">Select Your Role</h3>
 
-  <div class="grid gap-4 md:grid-cols-3">
+  <div class="grid gap-4 grid-cols-1">
     <!-- Client Role -->
     <button
       class="role-card p-6 border rounded-lg text-left hover:border-blue-500 transition-colors {selectedRole === 'client' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}"

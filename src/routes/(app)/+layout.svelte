@@ -4,6 +4,7 @@ import { get } from "svelte/store";
 import AppSidebar from "$lib/components/app/nav/app-sidebar.svelte";
 import AutoBreadcrumb from "$lib/components/shared/auto-breadcrumb.svelte";
 import DarkModeToggle from "$lib/components/shared/dark-mode-toggle.svelte";
+import UserAvatarDropdown from "$lib/components/shared/user-avatar-dropdown.svelte";
 import { Separator } from "$lib/components/ui/separator";
 import * as Sidebar from "$lib/components/ui/sidebar";
 import {
@@ -31,12 +32,12 @@ import {
   let hasHandledInitialNavigation = $state(false);
   let hasInitializedPresence = $state(false);
 
-  $effect(() => {
-    if (firekitUser.initialized && !firekitUser.isAuthenticated && !hasHandledInitialNavigation) {
-      hasHandledInitialNavigation = true;
-      goto("/sign-in");
-    }
-  });
+   $effect(() => {
+     if (firekitUser.initialized && !firekitUser.isAuthenticated && !hasHandledInitialNavigation) {
+       hasHandledInitialNavigation = true;
+       goto("/sign-in");
+     }
+   });
 
   $effect(() => {
     if (firekitUser.initialized && firekitUser.isAuthenticated && !hasInitializedPresence && firekitUser.user) {
@@ -113,9 +114,10 @@ import {
         <Separator orientation="vertical" class="mr-2 h-4" />
         <AutoBreadcrumb />
       </div>
-      <div class="flex items-center gap-2 px-4">
-        <DarkModeToggle />
-      </div>
+       <div class="flex items-center gap-2 px-4">
+         <DarkModeToggle />
+         <UserAvatarDropdown />
+       </div>
     </header>
     <div class="flex flex-1 flex-col gap-4 p-4">
       {@render children()}
