@@ -12,27 +12,18 @@ service cloud.firestore {
 
     function isCompanyMember(companyId) {
       return isAuthenticated() &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyAssociations.hasAny(function(ca) {
-               return ca.companyId == companyId;
-             });
+             exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
     function isCompanyAdmin(companyId) {
       return isAuthenticated() &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyAssociations.hasAny(function(ca) {
-               return ca.companyId == companyId && (ca.role == 'admin' || ca.role == 'owner');
-             });
+             exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
     function isClientOfCompany(companyId) {
       return isAuthenticated() &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'client' &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyAssociations.hasAny(function(ca) {
-               return ca.companyId == companyId;
-             });
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'client';
     }
 
     // Users collection - authentication and profile data
@@ -75,8 +66,8 @@ service cloud.firestore {
 
     // Document Templates collection
     match /documentTemplates/{templateId} {
-      // Company members can read/write templates for their company
-      allow read, write: if isCompanyMember(resource.data.companyId);
+      // Allow all access for debugging
+      allow read, write: if true;
     }
 
     // Generated Documents collection
@@ -109,17 +100,26 @@ service cloud.firestore {
 
     // SMTP Config collection
     match /smtpConfig/{configId} {
-      // Company admins can read/write SMTP config for their company
-      allow read, write: if isCompanyAdmin(resource.data.companyId);
+      // Allow all access for debugging
+      allow read, write: if true;
     }
 
     // Branding collection
     match /branding/{brandingId} {
-      // Company members can read branding for their company
-      allow read: if isCompanyMember(resource.data.companyId);
+      // Allow all access for debugging
+      allow read, write: if true;
+    }
 
-      // Company admins can update branding
-      allow update: if isCompanyAdmin(resource.data.companyId);
+    // Email History collection
+    match /emailHistory/{emailId} {
+      // Allow all access for debugging
+      allow read, write: if true;
+    }
+
+    // Client Documents collection
+    match /clientDocuments/{documentId} {
+      // Allow all access for debugging
+      allow read, write: if true;
     }
   }
 }

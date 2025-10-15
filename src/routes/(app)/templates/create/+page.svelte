@@ -9,6 +9,7 @@
   import { toast } from 'svelte-sonner';
   import Icon from '@iconify/svelte';
   import { requireCompany } from '$lib/utils/auth';
+  import { documentTemplatesStore } from '$lib/stores/documentTemplates';
   import type { DocumentTemplate } from '$lib/types/document';
 
   let mounted = $state(false);
@@ -264,11 +265,42 @@
     showEditor = true;
   }
 
-  function handleTemplateSave(template: DocumentTemplate) {
-    // TODO: Save template to Firebase
-    console.log('Saving template:', template);
-    // Navigate back to templates list
-    goto('/templates');
+  async function handleTemplateSave(template: DocumentTemplate) {
+    try {
+      console.log('Saving template:', template);
+      
+      // Clean up the template data before saving
+      const templateData = {
+        name: template.name,
+        description: template.description,
+        type: template.type,
+        htmlContent: template.htmlContent,
+        placeholders: template.placeholders || [],
+        isActive: template.isActive ?? true,
+        version: template.version ?? 1,
+        tags: template.tags || []
+      };
+
+      console.log('Cleaned template data:', templateData);
+
+      if (template.id && template.id !== '') {
+        // Update existing template
+        console.log('Updating existing template:', template.id);
+        await documentTemplatesStore.updateTemplate(template.id, templateData);
+        toast.success('Template updated successfully!');
+      } else {
+        // Create new template
+        console.log('Creating new template');
+        const templateId = await documentTemplatesStore.createTemplate(templateData);
+        console.log('Template created with ID:', templateId);
+        toast.success('Template created successfully!');
+      }
+      // Navigate back to templates list
+      goto('/templates');
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      toast.error('Failed to save template: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
   }
 
 function handleTemplatePreview(template: DocumentTemplate) {

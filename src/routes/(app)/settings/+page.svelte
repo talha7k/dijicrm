@@ -591,9 +591,18 @@
           </div>
 
           <!-- Security Settings -->
-          <div class="flex items-center space-x-2">
-            <Switch id="smtp-secure" bind:checked={smtpConfig.secure} />
-            <Label for="smtp-secure">Use SSL/TLS encryption</Label>
+          <div class="space-y-2">
+            <div class="flex items-center space-x-2">
+              <Switch id="smtp-secure" bind:checked={smtpConfig.secure} />
+              <Label for="smtp-secure">Use SSL/TLS encryption</Label>
+            </div>
+            <p class="text-xs text-muted-foreground">
+              {smtpConfig.port === "587" 
+                ? "Port 587 typically uses STARTTLS, so this should usually be OFF" 
+                : smtpConfig.port === "465" 
+                ? "Port 465 typically uses SSL/TLS, so this should usually be ON"
+                : "Check your email provider's documentation"}
+            </p>
           </div>
 
           <!-- Authentication -->

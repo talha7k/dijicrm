@@ -405,15 +405,22 @@ function createDocumentTemplatesStore() {
           where("companyId", "==", companyId),
           where("isActive", "==", true),
         );
+        console.log("Setting up templates query for companyId:", companyId);
 
         // Set up real-time listener
         unsubscribe = onSnapshot(
           templatesQuery,
           (querySnapshot) => {
+            console.log(
+              "Templates query snapshot received:",
+              querySnapshot.size,
+              "documents",
+            );
             const templates: DocumentTemplate[] = [];
 
             querySnapshot.forEach((doc) => {
               const data = doc.data();
+              console.log("Template document:", doc.id, data);
               templates.push({
                 id: doc.id,
                 ...data,
@@ -422,6 +429,11 @@ function createDocumentTemplatesStore() {
               } as DocumentTemplate);
             });
 
+            console.log(
+              "Updated templates store with:",
+              templates.length,
+              "templates",
+            );
             store.update((state) => ({
               ...state,
               data: templates,

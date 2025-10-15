@@ -636,15 +636,15 @@ onPreview={(document) => {
        onPaymentComplete={handlePaymentComplete}
      />
 
-     <!-- Document Preview Modal -->
-     <Dialog bind:open={showDocumentPreviewModal}>
-       <DialogContent class="max-w-4xl max-h-[80vh] overflow-auto">
-         <DialogHeader>
-           <DialogTitle>Document Preview</DialogTitle>
-           <DialogDescription>
-             Preview of the document sent to the client
-           </DialogDescription>
-         </DialogHeader>
+      <!-- Document Preview Modal -->
+      <Dialog.Root bind:open={showDocumentPreviewModal}>
+        <Dialog.Content class="max-w-4xl max-h-[80vh] overflow-auto">
+          <Dialog.Header>
+            <Dialog.Title>Document Preview</Dialog.Title>
+            <Dialog.Description>
+              Preview of the document sent to the client
+            </Dialog.Description>
+          </Dialog.Header>
          {#if documentToPreview}
            <div class="mt-4 space-y-4">
              <div class="grid grid-cols-2 gap-4 text-sm">
@@ -691,7 +691,7 @@ onPreview={(document) => {
              </div>
            </div>
          {/if}
-       </DialogContent>
-     </Dialog>
+        </Dialog.Content>
+      </Dialog.Root>
    </div>
  {/if}

@@ -11,11 +11,12 @@
   import * as Select from '$lib/components/ui/select/index.js';
   import { toast } from 'svelte-sonner';
 
-  import Icon from '@iconify/svelte';
-  import { requireCompany } from '$lib/utils/auth';
+   import Icon from '@iconify/svelte';
+   import { requireCompany } from '$lib/utils/auth';
    import { documentTemplatesStore } from '$lib/stores/documentTemplates';
+   import { companyContext } from '$lib/stores/companyContext';
    import ConfirmDialog from '$lib/components/shared/confirm-dialog.svelte';
-  import type { DocumentTemplate } from '$lib/types/document';
+   import type { DocumentTemplate } from '$lib/types/document';
 
    let mounted = $state(false);
    let searchQuery = $state('');
@@ -255,22 +256,50 @@
 
    onMount(() => {
      mounted = true;
+     // Wait for company context to be ready before loading templates
+     if ($companyContext.data && !$companyContext.loading) {
+       documentTemplatesStore.loadTemplates();
+     }
      // Company access is checked at layout level
    });
 
-  let templates = documentTemplatesStore;
+   // Watch for company context changes
+   $effect(() => {
+     if (mounted && $companyContext.data && !$companyContext.loading) {
+       documentTemplatesStore.loadTemplates();
+     }
+   });
 
-  let filteredTemplates = $derived((): DocumentTemplate[] => {
-    if (!$templates.data) return [];
+   let filteredTemplates = $state<DocumentTemplate[]>([]);
 
-    return $templates.data.filter((template: DocumentTemplate) => {
-      const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            template.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesType = selectedType === 'all' || template.type === selectedType;
+   // Compute filtered templates when dependencies change
+   $effect(() => {
+     console.log('Computing filtered templates, store data:', $documentTemplatesStore.data);
+     if (!$documentTemplatesStore.data) {
+       filteredTemplates = [];
+       return;
+     }
 
-      return matchesSearch && matchesType;
-    });
-  });
+     const filtered = $documentTemplatesStore.data.filter((template: DocumentTemplate) => {
+       const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                             template.description?.toLowerCase().includes(searchQuery.toLowerCase());
+       const matchesType = selectedType === 'all' || template.type === selectedType;
+       
+       console.log('Template filter check:', {
+         template: template.name,
+         id: template.id,
+         matchesSearch,
+         matchesType,
+         searchQuery,
+         selectedType
+       });
+
+       return matchesSearch && matchesType;
+     });
+     
+     console.log('Setting filtered templates:', filtered);
+     filteredTemplates = filtered;
+   });
 
 
 
@@ -303,15 +332,18 @@ function handleEditTemplate(template: DocumentTemplate) {
      showConfirmDialog = true;
    }
 
-   function handleConfirmDelete() {
-     if (templateToDelete) {
-       // TODO: Delete template from Firebase
-       console.log('Delete template:', templateToDelete);
-       // Refresh templates list
-       templates = documentTemplatesStore;
-       templateToDelete = null;
-     }
-   }
+    async function handleConfirmDelete() {
+      if (templateToDelete) {
+        try {
+          await documentTemplatesStore.deleteTemplate(templateToDelete.id);
+          toast.success('Template deleted successfully!');
+          templateToDelete = null;
+        } catch (error) {
+          console.error('Failed to delete template:', error);
+          toast.error('Failed to delete template');
+        }
+      }
+    }
 
    async function handleTemplateEdit(templateData: DocumentTemplate) {
      if (!templateToEdit) return;
@@ -451,10 +483,20 @@ function handleEditTemplate(template: DocumentTemplate) {
          </div>
        </div>
 
-    <!-- Templates Grid -->
-    {#if $templates.loading}
-      <div class="text-center py-8">Loading templates...</div>
-    {:else if filteredTemplates.length === 0}
+     <!-- Templates Grid -->
+     {#if $companyContext.loading}
+       <div class="text-center py-8">Loading company context...</div>
+     {:else if $companyContext.error}
+       <Card>
+         <CardContent class="text-center py-8">
+           <Icon icon="lucide:alert-circle" class="h-12 w-12 mx-auto text-destructive mb-4" />
+           <h3 class="text-lg font-medium mb-2">Company Context Error</h3>
+           <p class="text-muted-foreground">{$companyContext.error}</p>
+         </CardContent>
+       </Card>
+     {:else if $documentTemplatesStore.loading}
+       <div class="text-center py-8">Loading templates...</div>
+     {:else if filteredTemplates.length === 0}
       <Card>
         <CardContent class="text-center py-8">
           <Icon icon="lucide:file-text" class="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -472,7 +514,7 @@ function handleEditTemplate(template: DocumentTemplate) {
       </Card>
     {:else}
       <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-         {#each filteredTemplates() as template (template.id)}
+          {#each filteredTemplates as template (template.id)}
           <Card class="hover:shadow-md transition-shadow">
             <CardHeader>
               <div class="flex items-start justify-between">

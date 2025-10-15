@@ -10,6 +10,7 @@ import {
   addDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   doc,
   onSnapshot,
 } from "firebase/firestore";
@@ -478,6 +479,79 @@ function createClientManagementStore() {
         client = state.clients.find((c) => c.uid === clientId);
       })();
       return client;
+    },
+
+    // Delete client and all related data
+    async deleteClient(clientId: string) {
+      try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          throw new Error("No active company");
+        }
+
+        // Delete related data in order to avoid foreign key issues
+        const deletePromises = [];
+
+        // 1. Delete client's orders
+        const ordersQuery = query(
+          collection(db, "orders"),
+          where("clientId", "==", clientId),
+          where("companyId", "==", companyId),
+        );
+        const ordersSnapshot = await getDocs(ordersQuery);
+        ordersSnapshot.forEach((doc) => {
+          deletePromises.push(deleteDoc(doc.ref));
+        });
+
+        // 2. Delete client's document deliveries
+        const deliveriesQuery = query(
+          collection(db, "documentDeliveries"),
+          where("clientId", "==", clientId),
+        );
+        const deliveriesSnapshot = await getDocs(deliveriesQuery);
+        deliveriesSnapshot.forEach((doc) => {
+          deletePromises.push(deleteDoc(doc.ref));
+        });
+
+        // 3. Delete client's email history
+        const emailQuery = query(
+          collection(db, "emailHistory"),
+          where("recipient", "==", this.getClient(clientId)?.email || ""),
+        );
+        const emailSnapshot = await getDocs(emailQuery);
+        emailSnapshot.forEach((doc) => {
+          deletePromises.push(deleteDoc(doc.ref));
+        });
+
+        // 4. Delete client's invoices (if they exist in a separate collection)
+        const invoicesQuery = query(
+          collection(db, "invoices"),
+          where("clientId", "==", clientId),
+          where("companyId", "==", companyId),
+        );
+        const invoicesSnapshot = await getDocs(invoicesQuery);
+        invoicesSnapshot.forEach((doc) => {
+          deletePromises.push(deleteDoc(doc.ref));
+        });
+
+        // 5. Finally, delete the client document
+        deletePromises.push(deleteDoc(doc(db, "users", clientId)));
+
+        // Execute all deletions
+        await Promise.all(deletePromises);
+
+        // Update local state to remove the client
+        store.update((state) => ({
+          ...state,
+          clients: state.clients.filter((c) => c.uid !== clientId),
+        }));
+
+        toast.success("Client and all related data deleted successfully");
+      } catch (error) {
+        console.error("Error deleting client:", error);
+        toast.error("Failed to delete client");
+        throw error;
+      }
     },
 
     // Clear error
