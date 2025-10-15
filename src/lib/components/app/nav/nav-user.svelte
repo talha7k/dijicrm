@@ -10,8 +10,25 @@
 	import { firekitAuth } from 'svelte-firekit';
 
 	let user = $derived($userProfile.data);
+	let imageError = $state(false);
+	let imageLoaded = $state(false);
 
 	const sidebar = useSidebar();
+
+	function handleImageError() {
+		imageError = true;
+	}
+
+	function handleImageLoad() {
+		imageLoaded = true;
+		imageError = false;
+	}
+
+	$effect(() => {
+		// Reset image state when photoURL changes
+		imageError = false;
+		imageLoaded = false;
+	});
 
 	async function logOut() {
 		await firekitAuth.signOut();
@@ -31,8 +48,17 @@
 							{...props}
 						>
 							<Avatar.Root class="h-8 w-8 rounded-lg">
-								<Avatar.Image class="rounded-full" src={user.photoURL} alt={user.displayName} />
-								<Avatar.Fallback class="rounded-lg">
+								{#if user.photoURL && !imageError}
+									<Avatar.Image 
+										class="rounded-full" 
+										src={user.photoURL} 
+										alt={user.displayName}
+										onerror={handleImageError}
+										onload={handleImageLoad}
+										style={imageLoaded ? 'opacity: 1' : 'opacity: 0'}
+									/>
+								{/if}
+								<Avatar.Fallback class="rounded-lg" style={imageLoaded && !imageError ? 'opacity: 0' : 'opacity: 100'}>
 									{getInitials(user.displayName)}
 								</Avatar.Fallback>
 							</Avatar.Root>
@@ -55,8 +81,17 @@
 					<DropdownMenu.Label class="p-0 font-normal">
 						<div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
 							<Avatar.Root class="h-8 w-8 rounded-lg">
-								<Avatar.Image class="rounded-full" src={user.photoURL} alt={user.displayName} />
-								<Avatar.Fallback class="rounded-lg">
+								{#if user.photoURL && !imageError}
+									<Avatar.Image 
+										class="rounded-full" 
+										src={user.photoURL} 
+										alt={user.displayName}
+										onerror={handleImageError}
+										onload={handleImageLoad}
+										style={imageLoaded ? 'opacity: 1' : 'opacity: 0'}
+									/>
+								{/if}
+								<Avatar.Fallback class="rounded-lg" style={imageLoaded && !imageError ? 'opacity: 0' : 'opacity: 100'}>
 									{getInitials(user.displayName)}
 								</Avatar.Fallback>
 							</Avatar.Root>

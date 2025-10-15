@@ -66,8 +66,8 @@ service cloud.firestore {
 
     // Document Templates collection
     match /documentTemplates/{templateId} {
-      // Allow all access for debugging
-      allow read, write: if true;
+      // Company members can read/write templates for their company
+      allow read, write: if isCompanyMember(resource.data.companyId);
     }
 
     // Generated Documents collection
@@ -99,27 +99,43 @@ service cloud.firestore {
     }
 
     // SMTP Config collection
-    match /smtpConfig/{configId} {
-      // Allow all access for debugging
-      allow read, write: if true;
+    match /smtpConfigurations/{configId} {
+      // Allow authenticated users
+      allow read, write: if isAuthenticated();
     }
 
     // Branding collection
-    match /branding/{brandingId} {
-      // Allow all access for debugging
-      allow read, write: if true;
+    match /companyBranding/{brandingId} {
+      // Allow authenticated users
+      allow read, write: if isAuthenticated();
     }
 
     // Email History collection
     match /emailHistory/{emailId} {
-      // Allow all access for debugging
-      allow read, write: if true;
+      // Allow authenticated users
+      allow read, write: if isAuthenticated();
     }
 
     // Client Documents collection
     match /clientDocuments/{documentId} {
-      // Allow all access for debugging
-      allow read, write: if true;
+      // Allow authenticated users
+      allow read, write: if isAuthenticated();
+    }
+
+    // Additional collections
+    match /documentTypes/{documentId} {
+      // Allow authenticated users
+      allow read, write: if isAuthenticated();
+    }
+
+    match /documents/{documentId} {
+      // Allow authenticated users
+      allow read, write: if isAuthenticated();
+    }
+
+    match /invoices/{invoiceId} {
+      // Allow authenticated users
+      allow read, write: if isAuthenticated();
     }
   }
 }

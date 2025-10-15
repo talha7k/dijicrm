@@ -10,23 +10,48 @@ let initializationPromise: Promise<void> | null = null;
 
 function initialize(): Promise<void> {
   return new Promise((resolve, reject) => {
-    app.set({
-      initializing: true,
-      authenticated: false,
-      profileReady: false,
-      companyReady: false,
-      error: null,
-    });
+    // Check if we already have cached data
+    const cachedProfile = get(userProfile);
+    const cachedCompany = get(companyContext);
+
+    // Set initial state based on cached data
+    if (cachedProfile.data && !cachedProfile.loading) {
+      app.set({
+        initializing: true,
+        authenticated: true,
+        profileReady: true,
+        companyReady: cachedCompany.data ? true : false,
+        error: null,
+      });
+    } else {
+      app.set({
+        initializing: true,
+        authenticated: false,
+        profileReady: false,
+        companyReady: false,
+        error: null,
+      });
+    }
 
     onAuthStateChanged(auth, async (user) => {
       try {
         if (user) {
           app.update((s) => ({ ...s, authenticated: true }));
-          await handlePostAuthentication(user);
+
+          // Only fetch profile if we don't have valid cached data
+          if (!cachedProfile.data || cachedProfile.loading) {
+            await handlePostAuthentication(user);
+          }
+
           const profile = get(userProfile);
           if (profile.data) {
             app.update((s) => ({ ...s, profileReady: true }));
-            await initializeFromUser();
+
+            // Only initialize company if we don't have valid cached data
+            if (!cachedCompany.data || cachedCompany.loading) {
+              await initializeFromUser();
+            }
+
             const company = get(companyContext);
             if (company.data) {
               app.update((s) => ({ ...s, companyReady: true }));

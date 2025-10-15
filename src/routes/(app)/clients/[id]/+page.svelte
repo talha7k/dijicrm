@@ -15,6 +15,7 @@
   import * as Tabs from '$lib/components/ui/tabs/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import * as Select from '$lib/components/ui/select/index.js';
+  import * as Dialog from '$lib/components/ui/dialog/index.js';
 
   import { toast } from 'svelte-sonner';
    import OrderCreationModal from '$lib/components/app/client/OrderCreationModal.svelte';

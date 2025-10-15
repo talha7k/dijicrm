@@ -183,11 +183,26 @@ export const activeCompanyId = derived(
   ($context) => $context.data?.companyId || null,
 );
 
+// Simple cache for company data
+const companyCache = new Map<string, { data: Company; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 async function fetchCompany(companyId: string): Promise<Company | null> {
   try {
+    // Check cache first
+    const cached = companyCache.get(companyId);
+    const now = Date.now();
+
+    if (cached && now - cached.timestamp < CACHE_DURATION) {
+      return cached.data;
+    }
+
     const companyDoc = await getDoc(doc(db, "companies", companyId));
     if (companyDoc.exists()) {
-      return companyDoc.data() as Company;
+      const companyData = companyDoc.data() as Company;
+      // Cache the result
+      companyCache.set(companyId, { data: companyData, timestamp: now });
+      return companyData;
     }
     return null;
   } catch (error) {

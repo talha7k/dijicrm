@@ -1,41 +1,63 @@
- <script lang="ts">
-   import { goto } from "$app/navigation";
-   import { firekitAuth } from "svelte-firekit";
-   import { userProfile } from "$lib/stores/user";
-   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
-   import * as Avatar from "$lib/components/ui/avatar";
-   import { Button } from "$lib/components/ui/button";
+  <script lang="ts">
+    import { goto } from "$app/navigation";
+    import { firekitAuth } from "svelte-firekit";
+    import { userProfile } from "$lib/stores/user";
+    import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+    import * as Avatar from "$lib/components/ui/avatar";
+    import { Button } from "$lib/components/ui/button";
 
-   let open = $state(false);
+    let open = $state(false);
+    let imageError = $state(false);
+    let imageLoaded = $state(false);
 
-   function handleAccount() {
-     goto("/account");
-   }
+    function handleAccount() {
+      goto("/account");
+    }
 
-   async function handleLogout() {
-     await firekitAuth.signOut();
-     goto("/sign-in");
-   }
- </script>
+    async function handleLogout() {
+      await firekitAuth.signOut();
+      goto("/sign-in");
+    }
+
+    function handleImageError() {
+      imageError = true;
+    }
+
+    function handleImageLoad() {
+      imageLoaded = true;
+      imageError = false;
+    }
+
+    $effect(() => {
+      // Reset image state when photoURL changes
+      imageError = false;
+      imageLoaded = false;
+    });
+  </script>
 
  <DropdownMenu.Root bind:open>
    <DropdownMenu.Trigger>
      {#snippet child({ props })}
-       <Button
-         variant="ghost"
-         class="relative h-8 w-8 rounded-full"
-         {...props}
-       >
-         <Avatar.Root class="h-8 w-8">
-           <Avatar.Image
-             src={$userProfile.data?.photoURL || undefined}
-             alt={$userProfile.data?.displayName || "User"}
-           />
-           <Avatar.Fallback>
-             {$userProfile.data?.displayName?.charAt(0)?.toUpperCase() || "U"}
-           </Avatar.Fallback>
-         </Avatar.Root>
-       </Button>
+        <Button
+          variant="ghost"
+          class="relative h-8 w-8 rounded-full"
+          {...props}
+        >
+          <Avatar.Root class="h-8 w-8">
+            {#if $userProfile.data?.photoURL && !imageError}
+              <Avatar.Image
+                src={$userProfile.data.photoURL}
+                alt={$userProfile.data.displayName || "User"}
+                onerror={handleImageError}
+                onload={handleImageLoad}
+                style={imageLoaded ? 'opacity: 1' : 'opacity: 0'}
+              />
+            {/if}
+            <Avatar.Fallback style={imageLoaded && !imageError ? 'opacity: 0' : 'opacity: 100'}>
+              {$userProfile.data?.displayName?.charAt(0)?.toUpperCase() || "U"}
+            </Avatar.Fallback>
+          </Avatar.Root>
+        </Button>
      {/snippet}
    </DropdownMenu.Trigger>
    <DropdownMenu.Content class="w-56" align="end">

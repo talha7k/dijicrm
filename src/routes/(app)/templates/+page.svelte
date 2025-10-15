@@ -272,34 +272,23 @@
 
    let filteredTemplates = $state<DocumentTemplate[]>([]);
 
-   // Compute filtered templates when dependencies change
-   $effect(() => {
-     console.log('Computing filtered templates, store data:', $documentTemplatesStore.data);
-     if (!$documentTemplatesStore.data) {
-       filteredTemplates = [];
-       return;
-     }
+// Compute filtered templates when dependencies change
+    $effect(() => {
+      if (!$documentTemplatesStore.data) {
+        filteredTemplates = [];
+        return;
+      }
 
-     const filtered = $documentTemplatesStore.data.filter((template: DocumentTemplate) => {
-       const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                             template.description?.toLowerCase().includes(searchQuery.toLowerCase());
-       const matchesType = selectedType === 'all' || template.type === selectedType;
-       
-       console.log('Template filter check:', {
-         template: template.name,
-         id: template.id,
-         matchesSearch,
-         matchesType,
-         searchQuery,
-         selectedType
-       });
-
-       return matchesSearch && matchesType;
-     });
-     
-     console.log('Setting filtered templates:', filtered);
-     filteredTemplates = filtered;
-   });
+      const filtered = $documentTemplatesStore.data.filter((template: DocumentTemplate) => {
+        const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              template.description?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesType = selectedType === 'all' || template.type === selectedType;
+        
+        return matchesSearch && matchesType;
+      });
+      
+      filteredTemplates = filtered;
+    });
 
 
 
@@ -325,16 +314,29 @@ function handleEditTemplate(template: DocumentTemplate) {
      showEditDialog = true;
    }
 
-   function handleDeleteTemplate(template: any) {
-     templateToDelete = template;
-     confirmTitle = "Delete Template";
-     confirmMessage = `Are you sure you want to delete "${template.name}"?`;
-     showConfirmDialog = true;
-   }
+function handleDeleteTemplate(template: any) {
+      // Check if template has a valid ID before showing delete dialog
+      if (!template.id || template.id === '') {
+        toast.error('Cannot delete template: Invalid template ID');
+        return;
+      }
+      
+      templateToDelete = template;
+      confirmTitle = "Delete Template";
+      confirmMessage = `Are you sure you want to delete "${template.name}"?`;
+      showConfirmDialog = true;
+    }
 
     async function handleConfirmDelete() {
       if (templateToDelete) {
         try {
+          // Check if template has a valid ID
+          if (!templateToDelete.id || templateToDelete.id === '') {
+            toast.error('Cannot delete template: Invalid template ID');
+            templateToDelete = null;
+            return;
+          }
+          
           await documentTemplatesStore.deleteTemplate(templateToDelete.id);
           toast.success('Template deleted successfully!');
           templateToDelete = null;
