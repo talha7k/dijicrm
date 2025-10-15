@@ -109,7 +109,7 @@ export async function createUserProfile(
         {
           companyId: companyId,
           role: getCompanyRole(onboardingData.role),
-          joinedAt: serverTimestamp(),
+          joinedAt: new Date(),
         },
       ],
 

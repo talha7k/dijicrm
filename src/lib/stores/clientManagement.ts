@@ -127,6 +127,12 @@ function createClientManagementStore() {
           throw new Error("No active company");
         }
 
+        // Generate invitation token and expiration
+        const invitationToken = crypto.randomUUID();
+        const invitationExpiresAt = Timestamp.fromDate(
+          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        ); // 7 days
+
         const newClientData = {
           email: clientData.email,
           displayName: `${clientData.firstName} ${clientData.lastName}`,
@@ -223,6 +229,11 @@ function createClientManagementStore() {
       address?: UserProfile["address"];
     }) {
       try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) {
+          throw new Error("No active company");
+        }
+
         const newClientData = {
           email: clientData.email,
           displayName: `${clientData.firstName} ${clientData.lastName}`,

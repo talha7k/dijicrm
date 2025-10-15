@@ -28,7 +28,7 @@
 	// Handle role selection
 	function handleRoleSelected(event: CustomEvent<{ role: 'client' | 'company-member' | 'create-company' }>) {
 		selectedRole = event.detail.role;
-		currentStep = 2;
+		currentStep = 3;
 	}
 
 	// Handle invitation validation
@@ -49,7 +49,7 @@
 	function handleCompanyCreated(event: CustomEvent<{ name: string; description: string }>) {
 		onboardingData.companyName = event.detail.name;
 		onboardingData.companyDescription = event.detail.description;
-		currentStep = 3;
+		currentStep = 4;
 	}
 
 	// Handle onboarding completion

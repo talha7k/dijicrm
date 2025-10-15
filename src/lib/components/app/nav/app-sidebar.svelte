@@ -16,7 +16,7 @@
 	}: ComponentProps<typeof Sidebar.Root> = $props();
 </script>
 
-<div on:mouseenter={() => isSidebarOpen.set(true)} on:mouseleave={() => isSidebarOpen.set(false)}>
+<div role="banner" onmouseenter={() => isSidebarOpen.set(true)} onmouseleave={() => isSidebarOpen.set(false)}>
 	<Sidebar.Root bind:ref {collapsible} {...restProps}>
 		<Sidebar.Header>
 		<Sidebar.Menu>

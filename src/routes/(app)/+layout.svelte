@@ -14,6 +14,7 @@
     firekitDocMutations,
   } from "svelte-firekit";
   import { userProfile } from "$lib/stores/user";
+  import { companyContext } from "$lib/stores/companyContext";
   import { isSidebarOpen } from "$lib/stores/sidebar";
   import type { UserProfile } from "$lib/types/user";
   let { children } = $props();
@@ -112,15 +113,21 @@
           const currentData = doc.data;
           if (currentData) {
             const { Timestamp } = await import("@firebase/firestore");
-            const optimisticData = { ...currentData, ...data, updatedAt: Timestamp.now() };
-            userProfile.update(store => ({ ...store, data: optimisticData }));
+            const optimisticData = {
+              ...currentData,
+              ...data,
+              updatedAt: Timestamp.now(),
+            };
+            userProfile.update((store) => ({ ...store, data: optimisticData }));
           }
 
           try {
             await firekitDocMutations.update(`users/${user.uid}`, data);
 
             // Invalidate profile cache after successful update
-            const { invalidateProfileCache } = await import("$lib/utils/profile-cache");
+            const { invalidateProfileCache } = await import(
+              "$lib/utils/profile-cache"
+            );
             invalidateProfileCache(user.uid);
 
             // Check for displayName
@@ -140,7 +147,10 @@
             }
           } catch (error) {
             // Revert optimistic update on error
-            userProfile.update(store => ({ ...store, data: doc.data ?? undefined }));
+            userProfile.update((store) => ({
+              ...store,
+              data: doc.data ?? undefined,
+            }));
             throw error;
           }
         },
@@ -154,10 +164,18 @@
       });
     }
   });
+
+  // Initialize company context when user profile is loaded
+  $effect(() => {
+    const profile = get(userProfile);
+    if (profile.data && !profile.loading && !profile.error) {
+      get(companyContext).initializeFromUser();
+    }
+  });
 </script>
 
 <Sidebar.Provider bind:open={$isSidebarOpen}>
-  <AppSidebar variant="sidebar" />
+  <AppSidebar variant="inset" />
   <Sidebar.Inset>
     <header
       class="flex h-16 shrink-0 items-center justify-between gap-2 border-b"

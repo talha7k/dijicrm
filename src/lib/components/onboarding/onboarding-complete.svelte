@@ -81,31 +81,31 @@
 </script>
 
 <div class="text-center space-y-6">
-	<div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-		<svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+	<div class="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto">
+		<svg class="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
 		</svg>
 	</div>
 
 	<div>
-		<h3 class="text-xl font-semibold text-gray-900 mb-2">Setup Complete!</h3>
-		<p class="text-gray-600">
-			Your account has been configured as a <strong>{getRoleDisplayName()}</strong>.
+		<h3 class="text-xl font-semibold text-foreground mb-2">Setup Complete!</h3>
+		<p class="text-muted-foreground">
+			Your account has been configured as a <strong class="text-foreground">{getRoleDisplayName()}</strong>.
 		</p>
 	</div>
 
-	<div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-left">
-		<h4 class="font-medium text-gray-900 mb-2">What was set up:</h4>
-		<p class="text-sm text-gray-600">{getSetupSummary()}</p>
+	<div class="bg-muted/50 border border-border rounded-lg p-4 text-left">
+		<h4 class="font-medium text-foreground mb-2">What was set up:</h4>
+		<p class="text-sm text-muted-foreground">{getSetupSummary()}</p>
 		{#if selectedRole === 'create-company' && onboardingData.companyDescription}
-			<p class="text-sm text-gray-600 mt-1">
+			<p class="text-sm text-muted-foreground mt-1">
 				Description: {onboardingData.companyDescription}
 			</p>
 		{/if}
 	</div>
 
 	<div class="space-y-3">
-		<p class="text-sm text-gray-500">
+		<p class="text-sm text-muted-foreground">
 			You're all set! Click below to start using the application.
 		</p>
 
