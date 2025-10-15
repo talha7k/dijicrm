@@ -50,25 +50,15 @@ function initializeFirebaseAdmin() {
   }
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     initializeFirebaseAdmin();
 
-    // Get current user from Authorization header
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    // Get current user from locals (set by auth hooks)
+    const user = locals.user;
+    if (!user || !user.uid || !user.email) {
       throw error(401, "Unauthorized");
     }
-
-    const token = authHeader.substring(7);
-    let decodedToken;
-    try {
-      decodedToken = await auth.verifyIdToken(token);
-    } catch (err) {
-      throw error(401, "Invalid token");
-    }
-
-    const user = decodedToken;
 
     const { name, description } = await request.json();
 

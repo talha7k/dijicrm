@@ -10,10 +10,9 @@
 
 	interface Props {
 		invitationToken?: string | null;
-		selectedRole?: 'client' | 'company-member' | 'create-company' | null;
 	}
 
-	let { invitationToken, selectedRole }: Props = $props();
+	let { invitationToken }: Props = $props();
 
 	let formData = $state({
 		firstName: '',
@@ -64,16 +63,11 @@
 				return;
 			}
 
-			// Store selected role for post-registration processing
-			if (selectedRole) {
-				localStorage.setItem('pendingRoleSelection', selectedRole);
-			}
-
 			// Sign up
 			const displayName = `${formData.firstName} ${formData.lastName}`;
 			await firekitAuth.registerWithEmail(formData.email, formData.password, displayName);
 			toast.success('Account created successfully');
-			goto('/dashboard');
+			goto('/onboarding');
 		} catch (error) {
 			if (error instanceof Error) {
 				toast.error(error.message);

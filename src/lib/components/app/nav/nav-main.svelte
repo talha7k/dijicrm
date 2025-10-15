@@ -12,7 +12,8 @@
 {#each navItems as mainItem (mainItem.title)}
 	<Sidebar.Group>
 		<Sidebar.GroupLabel>{mainItem.title}</Sidebar.GroupLabel>
-		{#each mainItem.items as item (item.title)}
+		<Sidebar.GroupContent>
+			{#each mainItem.items as item (item.title)}
 			{#if item.items && item.items.length > 0}
 				<Sidebar.Menu>
 					<Collapsible.Root class="group/collapsible">
@@ -73,5 +74,6 @@
 				</Sidebar.Menu>
 			{/if}
 		{/each}
+		</Sidebar.GroupContent>
 	</Sidebar.Group>
 {/each}

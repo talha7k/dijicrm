@@ -1,6 +1,7 @@
 import { userProfile } from "$lib/stores/user";
 import { get } from "svelte/store";
 import { goto } from "$app/navigation";
+import { isProfileComplete } from "$lib/services/profileValidationService";
 
 /**
  * Check if the current user has the required role
@@ -58,4 +59,49 @@ export function requireCompany(): boolean {
     return false;
   }
   return true;
+}
+
+/**
+ * Guard function for complete profile requirement
+ */
+export function requireCompleteProfile(): boolean {
+  const profile = get(userProfile);
+  if (!profile.data || !isProfileComplete(profile.data)) {
+    goto("/onboarding");
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Redirect user to onboarding page
+ */
+export function redirectToOnboarding(): void {
+  goto("/onboarding");
+}
+
+/**
+ * Check if current user has a complete profile
+ */
+export function hasCompleteProfile(): boolean {
+  const profile = get(userProfile);
+  return profile.data ? isProfileComplete(profile.data) : false;
+}
+
+/**
+ * Get current user's profile completeness status
+ */
+export function getProfileStatus(): {
+  exists: boolean;
+  isComplete: boolean;
+  isLoading: boolean;
+  error: any;
+} {
+  const profile = get(userProfile);
+  return {
+    exists: profile.data !== null && profile.data !== undefined,
+    isComplete: profile.data ? isProfileComplete(profile.data) : false,
+    isLoading: profile.loading,
+    error: profile.error,
+  };
 }

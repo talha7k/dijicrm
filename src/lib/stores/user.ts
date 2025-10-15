@@ -1,5 +1,11 @@
-import { writable } from "svelte/store";
+import { writable, derived } from "svelte/store";
 import type { UserProfile } from "$lib/types/user";
+import {
+  isProfileComplete,
+  validateProfileStructure,
+  type ValidationResult,
+} from "$lib/services/profileValidationService";
+import { invalidateProfileCache } from "$lib/utils/profile-cache";
 
 type UserProfileStore = {
   data: UserProfile | undefined;
@@ -14,3 +20,32 @@ export const userProfile = writable<UserProfileStore>({
   error: null,
   update: async () => {},
 });
+
+// Derived store for profile completeness status
+export const profileCompleteness = derived(userProfile, ($userProfile) => {
+  if (!$userProfile.data) {
+    return {
+      isComplete: false,
+      isValidating: $userProfile.loading,
+      validation: null as ValidationResult | null,
+      hasMinimumFields: false,
+    };
+  }
+
+  const validation = validateProfileStructure($userProfile.data);
+  const isComplete = isProfileComplete($userProfile.data);
+
+  return {
+    isComplete,
+    isValidating: $userProfile.loading,
+    validation,
+    hasMinimumFields: validation.isValid, // Since isProfileComplete uses validateProfileStructure
+  };
+});
+
+// Helper function to check if profile is ready for app access
+export function isProfileReadyForApp(): boolean {
+  // This would be used in guards/layouts to check if user can access main app
+  // Implementation would check the profileCompleteness derived store
+  return false; // Placeholder - would be implemented with proper store subscription
+}

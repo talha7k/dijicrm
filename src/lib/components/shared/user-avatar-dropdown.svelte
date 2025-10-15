@@ -38,7 +38,7 @@
        </Button>
      {/snippet}
    </DropdownMenu.Trigger>
-  <DropdownMenu.Content class="w-56" align="end" forceMount>
+   <DropdownMenu.Content class="w-56" align="end">
     <DropdownMenu.Label class="font-normal">
       <div class="flex flex-col space-y-1">
         <p class="text-sm font-medium leading-none">

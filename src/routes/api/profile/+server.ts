@@ -1,0 +1,226 @@
+import { json, error } from "@sveltejs/kit";
+import type { RequestHandler } from "./$types";
+import {
+  initializeApp,
+  getApps,
+  cert,
+  applicationDefault,
+} from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import { Timestamp } from "@firebase/firestore";
+import { getAuth } from "firebase-admin/auth";
+import { PUBLIC_FIREBASE_PROJECT_ID } from "$env/static/public";
+import type { UserProfile } from "$lib/types/user";
+import { validateProfileStructure } from "$lib/services/profileValidationService";
+import { invalidateProfileCache } from "$lib/utils/profile-cache";
+
+// Initialize Firebase Admin if not already initialized
+let adminApp: any;
+let db: any;
+let auth: any;
+
+function initializeFirebaseAdmin() {
+  if (getApps().length === 0) {
+    const isProduction = process.env.NODE_ENV === "production";
+    let credential;
+
+    if (isProduction) {
+      const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+      if (!serviceAccountKey) {
+        throw new Error(
+          "FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set",
+        );
+      }
+      const serviceAccount = JSON.parse(serviceAccountKey);
+      credential = cert({
+        clientEmail: serviceAccount.client_email,
+        privateKey: serviceAccount.private_key,
+        projectId: serviceAccount.project_id,
+      });
+    } else {
+      credential = applicationDefault();
+    }
+
+    adminApp = initializeApp({
+      credential,
+      projectId: PUBLIC_FIREBASE_PROJECT_ID,
+    });
+    db = getFirestore(adminApp);
+    auth = getAuth(adminApp);
+  } else {
+    db = getFirestore();
+    auth = getAuth();
+  }
+}
+
+// GET /api/profile - Get current user profile
+export const GET: RequestHandler = async ({ locals }) => {
+  try {
+    initializeFirebaseAdmin();
+
+    // Get user from locals (set by auth hooks)
+    const user = locals.user;
+    if (!user || !user.uid || !user.email) {
+      throw error(401, "Unauthorized");
+    }
+
+    const userRef = db.collection("users").doc(user.uid);
+    const userSnap = await userRef.get();
+
+    if (!userSnap.exists()) {
+      throw error(404, "User profile not found");
+    }
+
+    const userProfile = userSnap.data() as UserProfile;
+
+    return json({
+      profile: userProfile,
+      validation: validateProfileStructure(userProfile),
+    });
+  } catch (err) {
+    console.error("Error fetching user profile:", err);
+    if (err && typeof err === "object" && "status" in err) {
+      throw err;
+    }
+    throw error(500, "Internal server error");
+  }
+};
+
+// PUT /api/profile - Update user profile
+export const PUT: RequestHandler = async ({ request, locals }) => {
+  try {
+    initializeFirebaseAdmin();
+
+    const user = locals.user;
+    if (!user || !user.uid || !user.email) {
+      throw error(401, "Unauthorized");
+    }
+
+    const updates = await request.json();
+
+    // Validate update fields (prevent updating critical fields)
+    const allowedFields = [
+      "firstName",
+      "lastName",
+      "username",
+      "bio",
+      "phoneNumber",
+      "emailNotifications",
+      "pushNotifications",
+      "theme",
+      "language",
+      "address",
+    ];
+
+    const filteredUpdates: Partial<UserProfile> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (allowedFields.includes(key)) {
+        (filteredUpdates as any)[key] = value;
+      }
+    }
+
+    // Add updated timestamp
+    filteredUpdates.updatedAt = Timestamp.now();
+
+    const userRef = db.collection("users").doc(user.uid);
+    await userRef.update(filteredUpdates);
+
+    // Invalidate cache for this profile
+    invalidateProfileCache(user.uid);
+
+    // Get updated profile
+    const updatedSnap = await userRef.get();
+    const updatedProfile = updatedSnap.data() as UserProfile;
+
+    return json({
+      profile: updatedProfile,
+      validation: validateProfileStructure(updatedProfile),
+    });
+  } catch (err) {
+    console.error("Error updating user profile:", err);
+    if (err && typeof err === "object" && "status" in err) {
+      throw err;
+    }
+    throw error(500, "Internal server error");
+  }
+};
+
+// POST /api/profile - Create user profile (used during onboarding completion)
+export const POST: RequestHandler = async ({ request, locals }) => {
+  try {
+    initializeFirebaseAdmin();
+
+    const user = locals.user;
+    if (!user || !user.uid || !user.email) {
+      throw error(401, "Unauthorized");
+    }
+
+    const profileData = (await request.json()) as Partial<UserProfile>;
+
+    // Ensure required fields are present
+    if (!profileData.role || !profileData.currentCompanyId) {
+      throw error(400, "Role and currentCompanyId are required");
+    }
+
+    // Create complete profile
+    const now = Timestamp.now();
+    const newProfile: UserProfile = {
+      uid: user.uid,
+      email: user.email!,
+      displayName: user.displayName || null,
+      photoURL: user.photoURL || null,
+      isActive: true,
+      lastLoginAt: now,
+      createdAt: now,
+      updatedAt: now,
+      firstName: profileData.firstName || "",
+      lastName: profileData.lastName || "",
+      username: profileData.username,
+      bio: profileData.bio,
+      phoneNumber: profileData.phoneNumber,
+      emailNotifications: profileData.emailNotifications ?? true,
+      pushNotifications: profileData.pushNotifications ?? true,
+      theme: profileData.theme || "system",
+      language: profileData.language || "en",
+      role: profileData.role,
+      permissions: profileData.permissions || [],
+      companyAssociations: profileData.companyAssociations || [
+        {
+          companyId: profileData.currentCompanyId,
+          role: profileData.role === "company" ? "owner" : "member",
+          joinedAt: now,
+        },
+      ],
+      currentCompanyId: profileData.currentCompanyId,
+      address: profileData.address,
+      metadata: {
+        accountStatus: "active",
+        ...profileData.metadata,
+      },
+      onboardingCompleted: true,
+    };
+
+    // Validate the profile
+    const validation = validateProfileStructure(newProfile);
+    if (!validation.isValid) {
+      throw error(400, `Invalid profile: ${validation.errors.join(", ")}`);
+    }
+
+    const userRef = db.collection("users").doc(user.uid);
+    await userRef.set(newProfile);
+
+    // Invalidate cache for this profile
+    invalidateProfileCache(user.uid);
+
+    return json({
+      profile: newProfile,
+      validation,
+    });
+  } catch (err) {
+    console.error("Error creating user profile:", err);
+    if (err && typeof err === "object" && "status" in err) {
+      throw err;
+    }
+    throw error(500, "Internal server error");
+  }
+};

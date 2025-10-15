@@ -58,6 +58,9 @@ export interface UserProfile {
     accountStatus: "invited" | "active" | "inactive" | "added";
   };
 
+  // Onboarding completion tracking
+  onboardingCompleted?: boolean;
+
   // Invitation system for pre-registered clients
   invitationToken?: string;
   invitationExpiresAt?: Timestamp;
