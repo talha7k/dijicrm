@@ -4,6 +4,7 @@
 	import { app } from '$lib/stores/app';
 	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from '$lib/components/ui/sonner';
+	import Loading from '$lib/components/ui/loading/loading.svelte';
 
 	let { children } = $props();
 
@@ -16,11 +17,14 @@
 
 	{#if $app.initializing}
 		<div class="flex h-full w-full items-center justify-center">
-			<p>Loading...</p>
+			<Loading message="Initializing app..." size="lg" />
 		</div>
 	{:else if $app.error}
 		<div class="flex h-full w-full items-center justify-center">
-			<p>Error: {$app.error}</p>
+			<div class="text-center">
+				<p class="text-destructive mb-2">Error loading application</p>
+				<p class="text-sm text-muted-foreground">{$app.error}</p>
+			</div>
 		</div>
 	{:else}
 		{@render children()}

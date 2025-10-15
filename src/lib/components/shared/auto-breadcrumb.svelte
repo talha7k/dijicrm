@@ -1,14 +1,48 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb';
+	import { clientManagementStore } from '$lib/stores/clientManagement';
+	import { get } from 'svelte/store';
+	import type { UserProfile } from '$lib/types/user';
+
 	const path = $derived(page.url.pathname);
 	const segments = $derived(path.split('/').filter(Boolean)); // split path and remove empty segments
+
+	// Get client data for name resolution
+	let clients = $state<UserProfile[]>([]);
+	$effect(() => {
+		clientManagementStore.subscribe(state => {
+			clients = state.clients;
+		});
+	});
+
 	const breadcrumbs = $derived(
 		segments.map((segment, index) => {
 			// Construct the path up to this segment
 			const href = '/' + segments.slice(0, index + 1).join('/');
+
+			// Check if this segment is a client ID and try to resolve it to a name
+			let displayName = segment.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+
+			// If we're in a clients route and this looks like a client ID, try to find the client name
+			if (segments[0] === 'clients' && index === 1 && segment.length > 10) {
+				const client = clients.find(c => c.uid === segment);
+				if (client) {
+					displayName = client.displayName || `${client.firstName} ${client.lastName}`;
+				}
+			}
+
+			// Handle other special cases
+			if (segment === 'create') {
+				displayName = 'Create';
+			} else if (segment === 'edit') {
+				displayName = 'Edit';
+			} else if (segment === 'invoices') {
+				displayName = 'Invoices';
+			}
+
 			return {
-				name: segment.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
+				name: displayName,
 				href
 			};
 		})

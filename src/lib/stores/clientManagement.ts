@@ -1,5 +1,5 @@
 // Store for company-side client management
-import { writable, get } from "svelte/store";
+import { writable, get, derived } from "svelte/store";
 import type { UserProfile } from "$lib/types/user";
 import {
   Timestamp,
@@ -15,12 +15,13 @@ import {
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import { toast } from "svelte-sonner";
-import { activeCompanyId } from "./companyContext";
+import { activeCompanyId, companyContext } from "./companyContext";
 
 interface ClientManagementState {
   clients: UserProfile[];
   loading: boolean;
   error: string | null;
+  invoiceCounts: Record<string, number>;
 }
 
 function createClientManagementStore() {
@@ -28,12 +29,45 @@ function createClientManagementStore() {
     clients: [],
     loading: false,
     error: null,
+    invoiceCounts: {},
   });
 
   let unsubscribe: (() => void) | null = null;
 
   return {
     subscribe: store.subscribe,
+
+    // Load invoice counts for all clients
+    async loadInvoiceCounts() {
+      try {
+        const companyId = get(activeCompanyId);
+        if (!companyId) return;
+
+        // Get all orders for this company
+        const ordersQuery = query(
+          collection(db, "orders"),
+          where("companyId", "==", companyId),
+        );
+
+        const querySnapshot = await getDocs(ordersQuery);
+        const counts: Record<string, number> = {};
+
+        querySnapshot.forEach((doc) => {
+          const order = doc.data();
+          const clientId = order.clientId;
+          if (clientId) {
+            counts[clientId] = (counts[clientId] || 0) + 1;
+          }
+        });
+
+        store.update((state) => ({
+          ...state,
+          invoiceCounts: counts,
+        }));
+      } catch (error) {
+        console.error("Error loading invoice counts:", error);
+      }
+    },
 
     // Load all clients for the current company
     async loadClients() {
@@ -67,6 +101,7 @@ function createClientManagementStore() {
           clientsQuery,
           (querySnapshot) => {
             const clients: UserProfile[] = [];
+            const seenIds = new Set<string>();
 
             querySnapshot.forEach((doc) => {
               const data = doc.data() as UserProfile;
@@ -75,7 +110,8 @@ function createClientManagementStore() {
                 (assoc) => assoc.companyId === companyId,
               );
 
-              if (isAssociated) {
+              if (isAssociated && !seenIds.has(doc.id)) {
+                seenIds.add(doc.id);
                 clients.push({
                   ...data,
                   uid: doc.id, // Override with document ID
@@ -89,6 +125,9 @@ function createClientManagementStore() {
               loading: false,
               error: null,
             }));
+
+            // Load invoice counts for these clients
+            this.loadInvoiceCounts();
           },
           (error) => {
             console.error("Error listening to clients:", error);
@@ -174,43 +213,51 @@ function createClientManagementStore() {
           uid: docRef.id,
         };
 
-        // Update local state
-        store.update((state) => ({
-          ...state,
-          clients: [...state.clients, savedClient],
-        }));
+        // Don't update local state - the Firestore listener will pick up the new document
 
         // Send invitation email
+        let emailSent = false;
+        const invitationUrl = `${window.location.origin}/invite/${invitationToken}`;
+
         try {
-          const invitationUrl = `${window.location.origin}/invite/${invitationToken}`;
-          const emailTemplate = await import("$lib/services/emailService").then(
-            (module) =>
-              module.EmailTemplates.clientInvitation(
-                `${clientData.firstName} ${clientData.lastName}`,
-                "Company Name",
-                invitationUrl,
-              ),
+          const { emailService, EmailTemplates } = await import(
+            "$lib/services/emailService"
           );
 
-          // Mock email sending - replace with actual email service
-          console.log("Sending invitation email:", {
-            to: clientData.email,
-            template: emailTemplate,
+          // Get company name
+          const companyName =
+            get(companyContext).data?.company.name || "Your Company";
+
+          const emailTemplate = EmailTemplates.clientInvitation(
+            savedClient.displayName ||
+              `${savedClient.firstName} ${savedClient.lastName}`,
+            companyName,
+            invitationUrl,
+          );
+
+          await emailService.sendEmail({
+            to: savedClient.email,
+            subject: emailTemplate.subject,
+            htmlBody: emailTemplate.htmlBody,
+            textBody: emailTemplate.textBody,
           });
 
-          // In real implementation:
-          // await emailService.sendEmail({
-          //   to: clientData.email,
-          //   subject: emailTemplate.subject,
-          //   htmlBody: emailTemplate.htmlBody,
-          //   textBody: emailTemplate.textBody
-          // });
+          emailSent = true;
         } catch (emailError) {
           console.error("Failed to send invitation email:", emailError);
+          console.log("Invitation URL for manual sharing:", invitationUrl);
           // Don't fail the whole operation for email issues
         }
 
-        toast.success("Client invitation sent successfully");
+        // Show appropriate message based on email success
+        if (emailSent) {
+          toast.success("Client invitation sent successfully");
+        } else {
+          toast.warning(
+            "Client invitation created, but email could not be sent. You can manually share this link: " +
+              invitationUrl,
+          );
+        }
 
         return savedClient.uid;
       } catch (error) {
@@ -272,11 +319,7 @@ function createClientManagementStore() {
           uid: docRef.id,
         };
 
-        // Update local state
-        store.update((state) => ({
-          ...state,
-          clients: [...state.clients, savedClient],
-        }));
+        // Don't update local state - the Firestore listener will pick up the new document
 
         toast.success("Client added successfully");
 
@@ -335,36 +378,47 @@ function createClientManagementStore() {
         }));
 
         // Send invitation email
+        let emailSent = false;
+        const invitationUrl = `${window.location.origin}/invite/${invitationToken}`;
+
         try {
-          const invitationUrl = `${window.location.origin}/invite/${invitationToken}`;
-          const emailTemplate = await import("$lib/services/emailService").then(
-            (module) =>
-              module.EmailTemplates.clientInvitation(
-                client.displayName || `${client.firstName} ${client.lastName}`,
-                "Company Name",
-                invitationUrl,
-              ),
+          const { emailService, EmailTemplates } = await import(
+            "$lib/services/emailService"
           );
 
-          // Mock email sending - replace with actual email service
-          console.log("Sending invitation email:", {
+          // Get company name
+          const companyName =
+            get(companyContext).data?.company.name || "Your Company";
+
+          const emailTemplate = EmailTemplates.clientInvitation(
+            client.displayName || `${client.firstName} ${client.lastName}`,
+            companyName,
+            invitationUrl,
+          );
+
+          await emailService.sendEmail({
             to: client.email,
-            template: emailTemplate,
+            subject: emailTemplate.subject,
+            htmlBody: emailTemplate.htmlBody,
+            textBody: emailTemplate.textBody,
           });
 
-          // In real implementation:
-          // await emailService.sendEmail({
-          //   to: client.email,
-          //   subject: emailTemplate.subject,
-          //   htmlBody: emailTemplate.htmlBody,
-          //   textBody: emailTemplate.textBody
-          // });
+          emailSent = true;
         } catch (emailError) {
           console.error("Failed to send invitation email:", emailError);
+          console.log("Invitation URL for manual sharing:", invitationUrl);
           // Don't fail the whole operation for email issues
         }
 
-        toast.success("Client invitation sent successfully");
+        // Show appropriate message based on email success
+        if (emailSent) {
+          toast.success("Client invitation sent successfully");
+        } else {
+          toast.warning(
+            "Client invitation created, but email could not be sent. You can manually share this link: " +
+              invitationUrl,
+          );
+        }
 
         return clientId;
       } catch (error) {

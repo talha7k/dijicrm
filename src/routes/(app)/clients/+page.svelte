@@ -5,59 +5,63 @@
   import { clientManagementStore } from '$lib/stores/clientManagement';
   import { clientInvoicesStore } from '$lib/stores/clientInvoices';
   import { userProfile } from '$lib/stores/user';
-   import Button from '$lib/components/ui/button/button.svelte';
-   import { Badge } from '$lib/components/ui/badge';
-   import * as Card from '$lib/components/ui/card';
-   import { Input } from '$lib/components/ui/input/index.js';
-   import * as Select from '$lib/components/ui/select/index.js';
-   import type { UserProfile } from '$lib/types/user';
+    import Button from '$lib/components/ui/button/button.svelte';
+    import { Badge } from '$lib/components/ui/badge';
+    import * as Card from '$lib/components/ui/card';
+    import { Input } from '$lib/components/ui/input/index.js';
+    import * as Select from '$lib/components/ui/select/index.js';
+    import Loading from '$lib/components/ui/loading/loading.svelte';
+    import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+    import type { UserProfile } from '$lib/types/user';
    import type { ClientInvoice } from '$lib/stores/clientInvoices';
    import { toast } from 'svelte-sonner';
 
    // Company access is checked at layout level
 
-  const clientStore = clientManagementStore;
-  const invoiceStore = clientInvoicesStore;
-    let clients = $state<UserProfile[]>([]);
-    let invoices = $state<ClientInvoice[]>([]);
-    let loading = $state(false);
-    let error = $state<string | null>(null);
-    let searchQuery = $state('');
-    let statusFilter = $state('all');
-    let activityFilter = $state('all');
-    let filteredClients = $state<UserProfile[]>([]);
+   const clientStore = clientManagementStore;
+   const invoiceStore = clientInvoicesStore;
+     let clients = $state<UserProfile[]>([]);
+     let invoices = $state<ClientInvoice[]>([]);
+     let loading = $state(false);
+     let error = $state<string | null>(null);
+     let searchQuery = $state('');
+     let statusFilter = $state('all');
+     let activityFilter = $state('all');
+     let invoiceCounts = $state<Record<string, number>>({});
 
-    const statusDisplay = $derived(
-        statusFilter === 'all' ? 'All Status' :
-        statusFilter === 'active' ? 'Active' :
-        statusFilter === 'added' ? 'Added' :
-        statusFilter === 'invited' ? 'Invited' :
-        statusFilter === 'inactive' ? 'Inactive' :
-        'Status'
-    );
+     const statusDisplay = $derived(
+         statusFilter === 'all' ? 'All Status' :
+         statusFilter === 'active' ? 'Active' :
+         statusFilter === 'added' ? 'Added' :
+         statusFilter === 'invited' ? 'Invited' :
+         statusFilter === 'inactive' ? 'Inactive' :
+         'Status'
+     );
 
-    const activityDisplay = $derived(
-        activityFilter === 'all' ? 'All Activity' :
-        activityFilter === 'active' ? 'Active' :
-        activityFilter === 'recent' ? 'Recent' :
-        activityFilter === 'inactive' ? 'Inactive' :
-        'Activity'
-    );
+     const activityDisplay = $derived(
+         activityFilter === 'all' ? 'All Activity' :
+         activityFilter === 'active' ? 'Active' :
+         activityFilter === 'recent' ? 'Recent' :
+         activityFilter === 'inactive' ? 'Inactive' :
+         'Activity'
+     );
 
-   // Subscribe to stores
-   $effect(() => {
-     clientStore.subscribe(state => {
-       clients = state.clients;
-       loading = state.loading;
-       error = state.error;
+     // Subscribe to stores
+     $effect.pre(() => {
+       clientStore.subscribe(state => {
+         clients = state.clients;
+         loading = state.loading;
+         error = state.error;
+         invoiceCounts = state.invoiceCounts || {};
+       });
+
+       invoiceStore.subscribe(state => {
+         invoices = state.data || [];
+       });
      });
 
-     invoiceStore.subscribe(state => {
-       invoices = state.data || [];
-     });
-
-     // Update filtered clients whenever clients, searchQuery, statusFilter, or activityFilter change
-     filteredClients = clients.filter((client: UserProfile) => {
+     // Filter clients based on search and filters
+     const filteredClients = $derived(clients.filter((client: UserProfile) => {
        // Search filter
        const matchesSearch = searchQuery === '' ||
          client.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -73,8 +77,7 @@
          activity.label.toLowerCase() === activityFilter;
 
        return matchesSearch && matchesStatus && matchesActivity;
-     });
-   });
+     }));
 
   onMount(() => {
     // Load clients for current company
@@ -91,10 +94,9 @@
     return { status: status.charAt(0).toUpperCase() + status.slice(1), variant };
   }
 
-  function getClientInvoiceCount(clientId: string) {
-    // For now, return a mock count - in real implementation, this would filter invoices by client
-    return Math.floor(Math.random() * 5) + 1; // Mock: 1-5 invoices per client
-  }
+   function getClientInvoiceCount(clientId: string) {
+     return invoiceCounts[clientId] || 0;
+   }
 
   function getActivityIndicator(client: UserProfile) {
     const daysSinceLogin = client.lastLoginAt
@@ -116,9 +118,14 @@
 
   async function handleInviteClient(clientId: string) {
     try {
-      await clientStore.inviteClient(clientId, 'company-user-1'); // Mock invitedBy
-      // Reload clients to update status
-      clientStore.loadClients();
+      // Get current user ID from user store
+      let currentUserId = '';
+      userProfile.subscribe(profile => {
+        currentUserId = profile.data?.uid || '';
+      })();
+
+      await clientStore.inviteClient(clientId, currentUserId);
+      // No need to reload clients - the store will update via Firestore listener
       toast.success('Invitation sent successfully');
     } catch (error) {
       console.error('Error inviting client:', error);
@@ -190,11 +197,10 @@
     </div>
   {/if}
 
-  {#if loading}
-    <div class="flex items-center justify-center p-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      <span class="ml-2">Loading clients...</span>
-    </div>
+    {#if loading}
+      <div class="flex items-center justify-center p-8">
+        <Loading message="Loading clients..." />
+      </div>
   {:else if clients.length === 0}
     <div class="flex flex-col items-center justify-center p-8 text-center">
       <svg class="h-12 w-12 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,21 +243,55 @@
             }
           }}
         >
-          <Card.Header class="pb-3">
-            <div class="flex items-start justify-between">
-              <div class="flex-1 min-w-0">
-                <Card.Title class="text-lg truncate">{client.displayName}</Card.Title>
-                <Card.Description class="text-sm text-muted-foreground truncate">
-                  {client.email}
-                </Card.Description>
-              </div>
-              <Badge variant={getStatusBadge(client).variant} class="ml-2 shrink-0">
-                {getStatusBadge(client).status}
-              </Badge>
-            </div>
-          </Card.Header>
-          <Card.Content class="pt-0">
-            <div class="space-y-3">
+           <Card.Header class="pb-3">
+             <div class="flex items-start justify-between">
+               <div class="flex-1 min-w-0">
+                 <Card.Title class="text-lg truncate">{client.displayName}</Card.Title>
+                  <Card.Description class="text-sm text-muted-foreground truncate">
+                    {client.email}
+                  </Card.Description>
+                  <div class="mt-2">
+                    <Badge variant={getStatusBadge(client).variant}>
+                      {getStatusBadge(client).status}
+                    </Badge>
+                  </div>
+                </div>
+                <div class="flex items-center shrink-0">
+                  <DropdownMenu.Root>
+                   <DropdownMenu.Trigger>
+                     {#snippet child({ props })}
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         class="h-8 w-8 p-0"
+                         {...props}
+                         onclick={(e) => e.stopPropagation()}
+                       >
+                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                         </svg>
+                       </Button>
+                     {/snippet}
+                   </DropdownMenu.Trigger>
+                   <DropdownMenu.Content align="end" class="w-48">
+                     <DropdownMenu.Item
+                       onclick={(e) => {
+                         e.stopPropagation();
+                         handleInviteClient(client.uid);
+                       }}
+                     >
+                       <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                       </svg>
+                       Send Invite
+                     </DropdownMenu.Item>
+                   </DropdownMenu.Content>
+                 </DropdownMenu.Root>
+               </div>
+             </div>
+           </Card.Header>
+           <Card.Content class="pt-0">
+             <div class="space-y-3">
               <div class="flex items-center justify-between text-sm">
                 <span class="text-muted-foreground">Invoices</span>
                 <span class="font-medium">{getClientInvoiceCount(client.uid)}</span>
@@ -265,29 +305,9 @@
               </div>
             </div>
           </Card.Content>
-           <Card.Footer class="pt-3">
-             <div class="flex items-center justify-between w-full">
-               <span class="text-xs text-muted-foreground">Click to view details</span>
-               <div class="flex items-center space-x-2">
-                 {#if getStatusBadge(client).status === 'Added'}
-                   <Button
-                     size="sm"
-                     variant="outline"
-                     onclick={(e) => {
-                       e.stopPropagation();
-                       handleInviteClient(client.uid);
-                     }}
-                     class="text-xs px-2 py-1 h-6"
-                   >
-                     Invite
-                   </Button>
-                 {/if}
-                 <svg class="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                 </svg>
-               </div>
-             </div>
-           </Card.Footer>
+            <Card.Footer class="pt-3">
+              <span class="text-xs text-muted-foreground">Click to view details</span>
+            </Card.Footer>
         </Card.Root>
       {/each}
     </div>

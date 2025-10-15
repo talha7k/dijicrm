@@ -60,10 +60,20 @@ export async function handlePostAuthentication(user: User): Promise<void> {
   const userSnap = await getDoc(userRef);
 
   if (userSnap.exists()) {
-    userProfile.update(s => ({...s, data: userSnap.data() as UserProfile}));
+    userProfile.update((s) => ({
+      ...s,
+      data: userSnap.data() as UserProfile,
+      loading: false,
+      error: null,
+    }));
   } else {
     const newUserProfile = await createBasicUserProfile(user);
-    userProfile.update(s => ({...s, data: newUserProfile}));
+    userProfile.update((s) => ({
+      ...s,
+      data: newUserProfile,
+      loading: false,
+      error: null,
+    }));
   }
 }
 
