@@ -1,7 +1,11 @@
 import { derived } from "svelte/store";
 import type { UserProfile } from "$lib/types/user";
-import { isProfileComplete, validateProfileStructure, type ValidationResult } from "$lib/services/profileValidationService";
-import { persisted } from 'svelte-persisted-store'
+import {
+  isProfileComplete,
+  validateProfileStructure,
+  type ValidationResult,
+} from "$lib/services/profileValidationService";
+import { persisted } from "svelte-persisted-store";
 
 type UserProfileStore = {
   data: UserProfile | undefined;
@@ -10,7 +14,7 @@ type UserProfileStore = {
   update: (data: Partial<UserProfile>) => Promise<void>;
 };
 
-export const userProfile = persisted<UserProfileStore>('userProfile', {
+export const userProfile = persisted<UserProfileStore>("userProfile", {
   data: undefined,
   loading: true,
   error: null,

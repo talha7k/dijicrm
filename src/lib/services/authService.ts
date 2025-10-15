@@ -57,19 +57,10 @@ export async function handlePostAuthentication(user: User): Promise<void> {
     throw new Error("No user provided to handlePostAuthentication");
   }
 
-  // Check if we have recent cached data
+  // Check if we already have the user data in persisted store
   const currentProfile = get(userProfile);
-  const now = Date.now();
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-  if (
-    currentProfile.data &&
-    currentProfile.data.uid === user.uid &&
-    !currentProfile.loading &&
-    currentProfile.data.updatedAt &&
-    now - currentProfile.data.updatedAt.toMillis() < CACHE_DURATION
-  ) {
-    // Use cached data if it's recent
+  if (currentProfile.data && currentProfile.data.uid === user.uid) {
+    // Update loading state but don't re-fetch
     userProfile.update((s) => ({
       ...s,
       loading: false,
@@ -82,10 +73,9 @@ export async function handlePostAuthentication(user: User): Promise<void> {
   const userSnap = await getDoc(userRef);
 
   if (userSnap.exists()) {
-    const profileData = userSnap.data() as UserProfile;
     userProfile.update((s) => ({
       ...s,
-      data: profileData,
+      data: userSnap.data() as UserProfile,
       loading: false,
       error: null,
     }));

@@ -10,36 +10,38 @@ let initializationPromise: Promise<void> | null = null;
 
 function initialize(): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Check if we already have cached data
-    const cachedProfile = get(userProfile);
-    const cachedCompany = get(companyContext);
+    // Check persisted stores first for instant loading
+    const persistedProfile = get(userProfile);
+    const persistedCompany = get(companyContext);
 
-    // Set initial state based on cached data
-    if (cachedProfile.data && !cachedProfile.loading) {
+    // Set initial state based on persisted data
+    if (persistedProfile.data && persistedCompany.data) {
       app.set({
-        initializing: true,
+        initializing: false, // No need to initialize if we have data
         authenticated: true,
         profileReady: true,
-        companyReady: cachedCompany.data ? true : false,
+        companyReady: true,
         error: null,
       });
-    } else {
-      app.set({
-        initializing: true,
-        authenticated: false,
-        profileReady: false,
-        companyReady: false,
-        error: null,
-      });
+      resolve();
+      return;
     }
+
+    app.set({
+      initializing: true,
+      authenticated: false,
+      profileReady: false,
+      companyReady: false,
+      error: null,
+    });
 
     onAuthStateChanged(auth, async (user) => {
       try {
         if (user) {
           app.update((s) => ({ ...s, authenticated: true }));
 
-          // Only fetch profile if we don't have valid cached data
-          if (!cachedProfile.data || cachedProfile.loading) {
+          // Only fetch if we don't have persisted data
+          if (!persistedProfile.data) {
             await handlePostAuthentication(user);
           }
 
@@ -47,8 +49,8 @@ function initialize(): Promise<void> {
           if (profile.data) {
             app.update((s) => ({ ...s, profileReady: true }));
 
-            // Only initialize company if we don't have valid cached data
-            if (!cachedCompany.data || cachedCompany.loading) {
+            // Only initialize company if we don't have persisted data
+            if (!persistedCompany.data) {
               await initializeFromUser();
             }
 

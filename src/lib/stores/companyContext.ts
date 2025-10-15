@@ -80,9 +80,21 @@ const switchCompany = async (companyId: string) => {
 };
 
 export const initializeFromUser = async () => {
-  companyContextData.update((s) => ({ ...s, loading: true, error: null }));
-
+  // Check if we already have valid company context data
+  const currentContext = get(companyContextData);
   const $userProfile = get(userProfile);
+
+  if (
+    currentContext.data &&
+    $userProfile.data &&
+    currentContext.data.companyId === $userProfile.data.currentCompanyId
+  ) {
+    // We already have valid data, just ensure loading is false
+    companyContextData.update((s) => ({ ...s, loading: false, error: null }));
+    return;
+  }
+
+  companyContextData.update((s) => ({ ...s, loading: true, error: null }));
 
   if ($userProfile.error) {
     companyContextData.update((s) => ({
@@ -184,25 +196,11 @@ export const activeCompanyId = derived(
 );
 
 // Simple cache for company data
-const companyCache = new Map<string, { data: Company; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
 async function fetchCompany(companyId: string): Promise<Company | null> {
   try {
-    // Check cache first
-    const cached = companyCache.get(companyId);
-    const now = Date.now();
-
-    if (cached && now - cached.timestamp < CACHE_DURATION) {
-      return cached.data;
-    }
-
     const companyDoc = await getDoc(doc(db, "companies", companyId));
     if (companyDoc.exists()) {
-      const companyData = companyDoc.data() as Company;
-      // Cache the result
-      companyCache.set(companyId, { data: companyData, timestamp: now });
-      return companyData;
+      return companyDoc.data() as Company;
     }
     return null;
   } catch (error) {
