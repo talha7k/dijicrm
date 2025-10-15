@@ -25,7 +25,7 @@
    import PaymentModal from '$lib/components/app/client/PaymentModal.svelte';
     import EmailHistory from '$lib/components/app/client/EmailHistory.svelte';
     import DocumentHistory from '$lib/components/app/client/DocumentHistory.svelte';
-    import OrderDetailModal from '$lib/components/app/client/OrderDetailModal.svelte';
+    
     import { emailHistoryStore } from '$lib/stores/emailHistory';
     import { companyContext } from '$lib/stores/companyContext';
     import { auth } from '$lib/firebase';
@@ -106,11 +106,9 @@
     let showPDFUploadModal = $state(false);
     let showEmailComposeModal = $state(false);
     let showPaymentModal = $state(false);
-    let showOrderDetailModal = $state(false);
     let showDocumentPreviewModal = $state(false);
     let documentToPreview = $state<any>(null);
    let selectedInvoice = $state<ClientInvoice | null>(null);
-   let selectedOrder = $state<Order | null>(null);
 
   onMount(async () => {
     try {
@@ -222,8 +220,7 @@
    }
 
    function handleOrderClick(order: Order) {
-     selectedOrder = order;
-     showOrderDetailModal = true;
+     goto(`/invoices/${order.id}`);
    }
 
   function handleSendDocument() {
@@ -311,6 +308,12 @@
         <p class="text-muted-foreground">{client.email}</p>
       </div>
         <div class="flex space-x-2">
+          <Button onclick={() => goto(`/invoices/create?clientId=${clientId}`)}>
+            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Create Invoice
+          </Button>
           <Button variant="outline" onclick={() => showEmailComposeModal = true}>
             <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
@@ -353,6 +356,11 @@
               <Label class="text-sm font-medium">Phone</Label>
               <p class="text-sm text-muted-foreground">{client.phoneNumber}</p>
             </div>
+          {:else}
+            <div>
+              <Label class="text-sm font-medium">Phone</Label>
+              <p class="text-sm text-muted-foreground italic">No phone number</p>
+            </div>
           {/if}
           {#if client.address}
             <div>
@@ -363,6 +371,11 @@
                 {client.address.state && `${client.address.state} `}
                 {client.address.postalCode && client.address.postalCode}
               </p>
+            </div>
+          {:else}
+            <div>
+              <Label class="text-sm font-medium">Address</Label>
+              <p class="text-sm text-muted-foreground italic">No address on file</p>
             </div>
           {/if}
         </Card.Content>
@@ -393,26 +406,39 @@
           <Card.Title>Financial Summary</Card.Title>
         </Card.Header>
         <Card.Content>
-          <div class="space-y-2">
-            <div class="flex justify-between">
-              <span class="text-sm">Total Invoiced</span>
-              <span class="text-sm font-medium">
-                {formatCurrency(invoices.reduce((sum, inv) => sum + inv.amount, 0))}
-              </span>
+          {#if invoices.length === 0}
+            <div class="text-center py-4">
+              <lucide:receipt class="h-8 w-8 mx-auto text-muted-foreground mb-2"></lucide:receipt>
+              <p class="text-sm text-muted-foreground">No invoices yet</p>
+              <Button variant="outline" size="sm" onclick={() => goto(`/invoices/create?clientId=${clientId}`)} class="mt-2">
+                <svg class="mr-2 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Create Invoice
+              </Button>
             </div>
-            <div class="flex justify-between">
-              <span class="text-sm">Paid</span>
-              <span class="text-sm font-medium text-green-600">
-                {formatCurrency(invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0))}
-              </span>
+          {:else}
+            <div class="space-y-2">
+              <div class="flex justify-between">
+                <span class="text-sm">Total Invoiced</span>
+                <span class="text-sm font-medium">
+                  {formatCurrency(invoices.reduce((sum, inv) => sum + inv.amount, 0))}
+                </span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-sm">Paid</span>
+                <span class="text-sm font-medium text-green-600">
+                  {formatCurrency(invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0))}
+                </span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-sm">Outstanding</span>
+                <span class="text-sm font-medium text-red-600">
+                  {formatCurrency(invoices.filter(inv => inv.status !== 'paid').reduce((sum, inv) => sum + inv.amount, 0))}
+                </span>
+              </div>
             </div>
-            <div class="flex justify-between">
-              <span class="text-sm">Outstanding</span>
-              <span class="text-sm font-medium text-red-600">
-                {formatCurrency(invoices.filter(inv => inv.status !== 'paid').reduce((sum, inv) => sum + inv.amount, 0))}
-              </span>
-            </div>
-          </div>
+          {/if}
         </Card.Content>
       </Card.Root>
     </div>
@@ -434,22 +460,35 @@
               <Card.Title>Recent Orders</Card.Title>
             </Card.Header>
             <Card.Content>
-              <div class="space-y-3">
-                 {#each clientOrders.slice(0, 3) as order}
-                   <div class="flex items-center justify-between">
-                     <div>
-                       <p class="text-sm font-medium">{order.title}</p>
-                       <p class="text-xs text-muted-foreground">{formatDate(order.createdAt.toDate())}</p>
+              {#if clientOrders.length === 0}
+                <div class="text-center py-6">
+                  <lucide:shopping-cart class="h-8 w-8 mx-auto text-muted-foreground mb-3"></lucide:shopping-cart>
+                  <p class="text-sm text-muted-foreground">No orders yet</p>
+                  <Button variant="outline" size="sm" onclick={handleNewOrder} class="mt-2">
+                    <svg class="mr-2 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Create Order
+                  </Button>
+                </div>
+              {:else}
+                <div class="space-y-3">
+                   {#each clientOrders.slice(0, 3) as order}
+                     <div class="flex items-center justify-between">
+                       <div>
+                         <p class="text-sm font-medium">{order.title}</p>
+                         <p class="text-xs text-muted-foreground">{formatDate(order.createdAt.toDate())}</p>
+                       </div>
+                       <div class="text-right">
+                         <p class="text-sm font-medium">{formatCurrency(order.totalAmount)}</p>
+                         <Badge variant={getStatusBadge(order.status)} class="text-xs">
+                           {order.status.replace('_', ' ')}
+                         </Badge>
+                       </div>
                      </div>
-                     <div class="text-right">
-                       <p class="text-sm font-medium">{formatCurrency(order.totalAmount)}</p>
-                       <Badge variant={getStatusBadge(order.status)} class="text-xs">
-                         {order.status.replace('_', ' ')}
-                       </Badge>
-                     </div>
-                   </div>
-                 {/each}
-              </div>
+                   {/each}
+                </div>
+              {/if}
             </Card.Content>
           </Card.Root>
 
@@ -459,19 +498,32 @@
               <Card.Title>Recent Documents</Card.Title>
             </Card.Header>
             <Card.Content>
-              <div class="space-y-3">
-                {#each clientDocuments.slice(0, 3) as doc}
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <p class="text-sm font-medium">{doc.name}</p>
-                      <p class="text-xs text-muted-foreground">{formatDate(doc.sentDate)}</p>
+              {#if clientDocuments.length === 0}
+                <div class="text-center py-6">
+                  <lucide:file-text class="h-8 w-8 mx-auto text-muted-foreground mb-3"></lucide:file-text>
+                  <p class="text-sm text-muted-foreground">No documents sent</p>
+                  <Button variant="outline" size="sm" onclick={handleSendDocument} class="mt-2">
+                    <svg class="mr-2 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                    </svg>
+                    Send Document
+                  </Button>
+                </div>
+              {:else}
+                <div class="space-y-3">
+                  {#each clientDocuments.slice(0, 3) as doc}
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <p class="text-sm font-medium">{doc.name}</p>
+                        <p class="text-xs text-muted-foreground">{formatDate(doc.sentDate)}</p>
+                      </div>
+                      <Badge variant={getStatusBadge(doc.status)} class="text-xs">
+                        {doc.status}
+                      </Badge>
                     </div>
-                    <Badge variant={getStatusBadge(doc.status)} class="text-xs">
-                      {doc.status}
-                    </Badge>
-                  </div>
-                {/each}
-              </div>
+                  {/each}
+                </div>
+              {/if}
             </Card.Content>
           </Card.Root>
         </div>
@@ -490,45 +542,66 @@
               </Button>
             </div>
           </Card.Header>
-          <Card.Content>
-            <div class="space-y-4">
-               {#each clientOrders as order}
-                  <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors" role="button" tabindex="0" onclick={() => handleOrderClick(order)} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { handleOrderClick(order); e.preventDefault(); } }}>
-                   <div class="flex-1">
-                     <h4 class="font-medium">{order.title}</h4>
-                     <p class="text-sm text-muted-foreground">
-                       Order #{order.id} • {formatDate(order.createdAt.toDate())}
-                     </p>
-                   </div>
-                   <div class="flex items-center space-x-4">
-                     <div class="text-right">
-                       <p class="font-medium">{formatCurrency(order.totalAmount)}</p>
-                       <Select.Root
-                         type="single"
-                         value={order.status}
-                         onValueChange={(value) => handleOrderStatusChange(order.id, value)}
-                       >
-                         <Select.Trigger class="w-32">
-                           <Badge variant={getStatusBadge(order.status)} class="w-full justify-center">
-                             {order.status.replace('_', ' ')}
-                           </Badge>
-                         </Select.Trigger>
-                         <Select.Content>
-                           <Select.Item value="draft">Draft</Select.Item>
-                           <Select.Item value="quote">Quote</Select.Item>
-                           <Select.Item value="generated">Generated</Select.Item>
-                           <Select.Item value="sent">Sent</Select.Item>
-                           <Select.Item value="partially_paid">Partially Paid</Select.Item>
-                           <Select.Item value="paid">Paid</Select.Item>
-                           <Select.Item value="overdue">Overdue</Select.Item>
-                         </Select.Content>
-                       </Select.Root>
+<Card.Content>
+            {#if clientOrders.length === 0}
+              <div class="text-center py-8">
+                <lucide:shopping-cart class="h-12 w-12 mx-auto text-muted-foreground mb-4"></lucide:shopping-cart>
+                <h3 class="text-lg font-medium mb-2">No orders yet</h3>
+                <p class="text-muted-foreground mb-4">
+                  This client hasn't placed any orders yet. Create their first order to get started.
+                </p>
+                <Button onclick={handleNewOrder}>
+                  <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  Create First Order
+                </Button>
+              </div>
+            {:else}
+              <div class="space-y-4">
+                 {#each clientOrders as order}
+                    <div class="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors group" role="button" tabindex="0" onclick={() => handleOrderClick(order)} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { handleOrderClick(order); e.preventDefault(); } }}>
+                     <div class="flex-1">
+                       <div class="flex items-center gap-2">
+                         <h4 class="font-medium text-foreground group-hover:text-primary transition-colors">{order.title}</h4>
+                         <lucide:external-link class="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"></lucide:external-link>
+                       </div>
+                       <p class="text-sm text-muted-foreground">
+                         Order #{order.id} • {formatDate(order.createdAt.toDate())}
+                       </p>
+                     </div>
+                     <div class="flex items-center gap-4">
+                       <div class="text-right">
+                         <p class="font-medium text-foreground">{formatCurrency(order.totalAmount)}</p>
+                         <Select.Root
+                           type="single"
+                           value={order.status}
+                           onValueChange={(value) => handleOrderStatusChange(order.id, value)}
+                         >
+                           <Select.Trigger class="w-32 h-8">
+                             <div class="flex items-center justify-center w-full">
+                               <Badge variant={getStatusBadge(order.status)} class="text-xs">
+                                 {order.status.replace('_', ' ')}
+                               </Badge>
+                             </div>
+                           </Select.Trigger>
+                           <Select.Content>
+                             <Select.Item value="draft">Draft</Select.Item>
+                             <Select.Item value="quote">Quote</Select.Item>
+                             <Select.Item value="generated">Generated</Select.Item>
+                             <Select.Item value="sent">Sent</Select.Item>
+                             <Select.Item value="partially_paid">Partially Paid</Select.Item>
+                             <Select.Item value="paid">Paid</Select.Item>
+                             <Select.Item value="overdue">Overdue</Select.Item>
+                           </Select.Content>
+                         </Select.Root>
+                       </div>
                      </div>
                    </div>
-                 </div>
-               {/each}
-             </div>
-          </Card.Content>
+                 {/each}
+               </div>
+            {/if}
+         </Card.Content>
         </Card.Root>
       </Tabs.Content>
 
@@ -623,12 +696,7 @@ onPreview={(document) => {
        onUploadComplete={handlePDFUploadComplete}
      />
 
-     <!-- Order Detail Modal -->
-     <OrderDetailModal
-       order={selectedOrder}
-       open={showOrderDetailModal}
-       onClose={() => showOrderDetailModal = false}
-     />
+
 
 <!-- Payment Modal -->
      <PaymentModal

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { page } from "$app/stores";
   import DashboardLayout from "$lib/components/shared/dashboard-layout.svelte";
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
@@ -9,17 +10,19 @@
   import { Textarea } from "$lib/components/ui/textarea";
   import { Badge } from "$lib/components/ui/badge";
 
-  import Icon from "@iconify/svelte";
+import Icon from "@iconify/svelte";
    import { requireCompany } from "$lib/utils/auth";
     import { productsStore } from "$lib/stores/products";
 
     import { documentGenerationStore } from "$lib/stores/documentGeneration";
     import { documentDeliveryStore } from "$lib/stores/documentDelivery";
     import { clientManagementStore } from "$lib/stores/clientManagement";
+    import { ordersStore } from "$lib/stores/orders";
    import { Timestamp } from "firebase/firestore";
     import type { Order, GeneratedDocument } from "$lib/types/document";
    import { goto } from "$app/navigation";
    import AlertDialog from "$lib/components/shared/alert-dialog.svelte";
+   import ClientForm from "$lib/components/app/client/ClientForm.svelte";
 
    let mounted = $state(false);
 
@@ -29,16 +32,29 @@
    let alertMessage = $state('');
    let alertType = $state<'info' | 'success' | 'warning' | 'error'>('info');
 
+   // Client dialog state
+   let showClientDialog = $state(false);
+   let editingClient = $state(null);
+
    onMount(() => {
      mounted = true;
      // Company access is checked at layout level
+     
+     // Check if clientId is provided in query params
+     const urlParams = new URLSearchParams($page.url.search);
+     const clientId = urlParams.get('clientId');
+     if (clientId) {
+       selectedClientId = clientId;
+       invoiceData.clientId = clientId;
+     }
    });
 
 
 
-      let generationStore = documentGenerationStore;
-      let deliveryStore = documentDeliveryStore;
-     let clientStore = clientManagementStore;
+let generationStore = documentGenerationStore;
+       let deliveryStore = documentDeliveryStore;
+      let clientStore = clientManagementStore;
+      let orderStore = ordersStore;
 
    // Load data on mount
    $effect(() => {
@@ -50,8 +66,6 @@
 
   let invoiceData = $state({
     clientId: "",
-    clientName: "",
-    clientEmail: "",
     dueDate: "",
     notes: "",
     status: "draft",
@@ -139,82 +153,59 @@
     });
   }
 
-   function handleSaveDraft() {
-     // TODO: Save as draft
-     console.log("Saving draft:", invoiceData);
-     alertTitle = "Success";
-     alertMessage = "Invoice saved as draft";
-     alertType = "success";
-     showAlertDialog = true;
-   }
 
-    async function handleSendInvoice() {
-      if (!invoiceData.clientName || !invoiceData.clientEmail || invoiceData.items.length === 0) {
+
+async function handleCreateInvoice() {
+      if (invoiceData.items.length === 0) {
         alertTitle = "Validation Error";
-        alertMessage = "Please fill in all required fields and add at least one item";
+        alertMessage = "Please add at least one item to the invoice";
         alertType = "error";
         showAlertDialog = true;
         return;
       }
 
-     // Check if selected client is invited
-     const selectedClient = selectedClientId ? $clientStore.clients.find(c => c.uid === selectedClientId) : null;
-     const isInvitedClient = selectedClient && selectedClient.metadata?.accountStatus === 'invited';
+      try {
+        // Get client data if a client is selected
+        const client = selectedClient;
+        const clientName = client ? (client.displayName || `${client.firstName} ${client.lastName}`) : "";
+        const clientEmail = client ? client.email : "";
 
-     try {
-       // Create order
-       const order: Order = {
-         id: `order-${Date.now()}`,
-         companyId: "company-1", // TODO: Get from auth
-         clientId: selectedClientId || "client-1", // Use selected client or default
-         title: `Invoice for ${invoiceData.clientName}`,
-         description: `Invoice created on ${new Date().toLocaleDateString()}`,
-         selectedProducts: invoiceData.items.map(item => item.productId),
-         status: invoiceData.status as any,
-         documents: [],
-         totalAmount: totalAmount(),
-         paidAmount: 0,
-         outstandingAmount: totalAmount(),
-         payments: [],
-         createdAt: Timestamp.now(),
-         updatedAt: Timestamp.now(),
-         createdBy: "user-1", // TODO: Get from auth
-       };
+        // Create order using the ordersStore
+        const order = await orderStore.createOrder({
+          clientId: selectedClientId || "",
+          title: clientName ? `Invoice for ${clientName}` : "Invoice",
+          description: invoiceData.notes || `Invoice created on ${new Date().toLocaleDateString()}`,
+          selectedProducts: invoiceData.items.map(item => item.productId),
+          status: invoiceData.status as any,
+          documents: [],
+          totalAmount: totalAmount(),
+          paidAmount: 0,
+          outstandingAmount: totalAmount(),
+          payments: [],
+          createdBy: "current-user", // TODO: Get from auth
+        });
 
-       console.log("Order created:", {
-         invoice: invoiceData,
-         order,
-         isInvitedClient
-       });
+        alertTitle = "Success";
+        alertMessage = "Invoice created successfully!";
+        alertType = "success";
+        showAlertDialog = true;
 
-       alertTitle = "Success";
-       alertMessage = "Order created successfully!";
-       alertType = "success";
-       showAlertDialog = true;
-
-       // Navigate to invoices page
-       goto("/invoices");
-     } catch (error) {
-       console.error("Failed to send invoice:", error);
-       alertTitle = "Send Failed";
-       alertMessage = "Failed to send invoice. Please try again.";
-       alertType = "error";
-       showAlertDialog = true;
-     }
-   }
+        // Navigate to invoices page after a short delay
+        setTimeout(() => {
+          goto("/invoices");
+        }, 1500);
+      } catch (error) {
+        console.error("Failed to create invoice:", error);
+        alertTitle = "Create Failed";
+        alertMessage = "Failed to create invoice. Please try again.";
+        alertType = "error";
+        showAlertDialog = true;
+      }
+    }
 
   function handleClientSelection(clientId: string) {
     selectedClientId = clientId;
-    if (clientId) {
-      const client = $clientStore.clients.find(c => c.uid === clientId);
-      if (client) {
-        invoiceData.clientId = client.uid;
-        invoiceData.clientName = client.displayName || `${client.firstName} ${client.lastName}`;
-        invoiceData.clientEmail = client.email;
-      }
-    } else {
-      invoiceData.clientId = "";
-    }
+    invoiceData.clientId = clientId || "";
   }
 
   function formatCurrency(amount: number): string {
@@ -223,7 +214,46 @@
       currency: "USD",
     }).format(amount);
   }
+
+  // Client dialog functions
+  function handleClientDialogSave(clientData: any) {
+    showClientDialog = false;
+    editingClient = null;
+    // Refresh clients list
+    clientStore.loadClients();
+  }
+
+  function handleClientDialogCancel() {
+    showClientDialog = false;
+    editingClient = null;
+  }
 </script>
+
+<!-- Client Dialog -->
+{#if showClientDialog}
+  <div class="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+    <div class="bg-card text-card-foreground rounded-lg border p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-lg">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold text-foreground">
+          {editingClient ? 'Edit Client' : 'Add New Client'}
+        </h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          onclick={handleClientDialogCancel}
+        >
+          <Icon icon="lucide:x" class="h-4 w-4" />
+        </Button>
+      </div>
+      
+      <ClientForm
+        client={editingClient}
+        onSave={handleClientDialogSave}
+        onCancel={handleClientDialogCancel}
+      />
+    </div>
+  </div>
+{/if}
 
 {#if mounted}
   <DashboardLayout title="Create Invoice" description="Create a new invoice with product line items">
@@ -234,49 +264,90 @@
         <Card>
           <CardHeader>
             <CardTitle>Client Information</CardTitle>
-            <CardDescription>Select an existing client or enter details manually</CardDescription>
+            <CardDescription>
+              {#if selectedClient}
+                Invoice for: <strong>{selectedClient.displayName || `${selectedClient.firstName} ${selectedClient.lastName}`}</strong>
+              {:else}
+                Select an existing client or create a new one
+              {/if}
+            </CardDescription>
           </CardHeader>
           <CardContent class="space-y-4">
-            <div>
-              <Label for="client-select">Select Client (Optional)</Label>
-              <Select.Root type="single" bind:value={selectedClientId} onValueChange={handleClientSelection}>
-                <Select.Trigger class="w-full">
-                  {$clientStore.clients.find(c => c.uid === selectedClientId)?.displayName || $clientStore.clients.find(c => c.uid === selectedClientId)?.firstName + ' ' + $clientStore.clients.find(c => c.uid === selectedClientId)?.lastName || "Choose from existing clients or enter manually"}
-                </Select.Trigger>
-                <Select.Content>
-                  {#each $clientStore.clients as client (client.uid)}
-                    <Select.Item value={client.uid}>
-                      <div class="flex items-center justify-between w-full">
-                        <span>{client.displayName || `${client.firstName} ${client.lastName}`}</span>
-                        <Badge variant={client.metadata?.accountStatus === 'active' ? 'default' : 'secondary'}>
-                          {client.metadata?.accountStatus === 'active' ? 'Active' : 'Invited'}
-                        </Badge>
-                      </div>
-                    </Select.Item>
-                  {/each}
-                </Select.Content>
-              </Select.Root>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <Label for="client-name">Client Name</Label>
-                <Input
-                  id="client-name"
-                  bind:value={invoiceData.clientName}
-                  placeholder="Enter client name"
-                  required
-                />
+            {#if selectedClient}
+              <!-- Selected Client Display -->
+              <div class="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
+                <div>
+                  <p class="font-medium">{selectedClient.displayName || `${selectedClient.firstName} ${selectedClient.lastName}`}</p>
+                  <p class="text-sm text-muted-foreground">{selectedClient.email}</p>
+                  {#if selectedClient.phoneNumber}
+                    <p class="text-sm text-muted-foreground">{selectedClient.phoneNumber}</p>
+                  {/if}
+                </div>
+                <div class="flex items-center gap-2">
+                  <Badge variant={selectedClient.metadata?.accountStatus === 'active' ? 'default' : 'secondary'}>
+                    {selectedClient.metadata?.accountStatus === 'active' ? 'Active' : 'Invited'}
+                  </Badge>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onclick={() => {
+                      selectedClientId = "";
+                      invoiceData.clientId = "";
+                    }}
+                  >
+                    <Icon icon="lucide:change" class="h-4 w-4 mr-2" />
+                    Change
+                  </Button>
+                </div>
               </div>
+            {:else}
+              <!-- Client Selection -->
               <div>
-                <Label for="client-email">Client Email</Label>
-                <Input
-                  id="client-email"
-                  type="email"
-                  bind:value={invoiceData.clientEmail}
-                  placeholder="Enter client email"
-                  required
-                />
+                <Label for="client-select">Select Client</Label>
+                <Select.Root type="single" bind:value={selectedClientId} onValueChange={handleClientSelection}>
+                  <Select.Trigger class="w-full">
+                    {$clientStore.clients.find(c => c.uid === selectedClientId)?.displayName || $clientStore.clients.find(c => c.uid === selectedClientId)?.firstName + ' ' + $clientStore.clients.find(c => c.uid === selectedClientId)?.lastName || "Choose from existing clients"}
+                  </Select.Trigger>
+                  <Select.Content>
+                    {#each $clientStore.clients as client (client.uid)}
+                      <Select.Item value={client.uid}>
+                        <div class="flex items-center justify-between w-full">
+                          <span>{client.displayName || `${client.firstName} ${client.lastName}`}</span>
+                          <Badge variant={client.metadata?.accountStatus === 'active' ? 'default' : 'secondary'}>
+                            {client.metadata?.accountStatus === 'active' ? 'Active' : 'Invited'}
+                          </Badge>
+                        </div>
+                      </Select.Item>
+                    {/each}
+                  </Select.Content>
+                </Select.Root>
               </div>
+            {/if}
+            <div class="flex items-center gap-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onclick={() => showClientDialog = true}
+              >
+                <Icon icon="lucide:plus" class="h-4 w-4 mr-2" />
+                Add New Client
+              </Button>
+              {#if selectedClient}
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onclick={() => {
+                    editingClient = selectedClient;
+                    showClientDialog = true;
+                  }}
+                >
+                  <Icon icon="lucide:edit" class="h-4 w-4 mr-2" />
+                  Edit Client
+                </Button>
+              {/if}
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
@@ -428,23 +499,23 @@
             <CardTitle>Actions</CardTitle>
           </CardHeader>
           <CardContent class="space-y-2">
-            <Button
-              onclick={handleSaveDraft}
-              variant="outline"
-              class="w-full"
-              disabled={invoiceData.items.length === 0}
-            >
-              <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
-              Save as Draft
-            </Button>
-            <Button
-              onclick={handleSendInvoice}
-              class="w-full"
-              disabled={!invoiceData.clientName || !invoiceData.clientEmail || invoiceData.items.length === 0}
-            >
-              <Icon icon={selectedClient?.metadata?.accountStatus === 'invited' ? 'lucide:clock' : 'lucide:send'} class="h-4 w-4 mr-2" />
-              {selectedClient?.metadata?.accountStatus === 'invited' ? 'Queue Invoice' : 'Send Invoice'}
-            </Button>
+<div class="space-y-3">
+              <!-- Status Badge -->
+              <div class="flex items-center justify-center">
+                <Badge variant={invoiceData.status === 'draft' ? 'secondary' : 'default'}>
+                  Status: {invoiceData.status}
+                </Badge>
+              </div>
+              
+              <Button
+                onclick={handleCreateInvoice}
+                class="w-full"
+                disabled={invoiceData.items.length === 0}
+              >
+                <Icon icon="lucide:plus" class="h-4 w-4 mr-2" />
+                Create Invoice
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -460,7 +531,7 @@
                   <Icon icon="lucide:clock" class="h-4 w-4" />
                   <span class="text-sm">
                     This client has been invited but hasn't activated their account yet.
-                    Documents will be sent automatically when they complete registration.
+                    Documents will be sent to their email when you choose to send them.
                   </span>
                 </div>
               {:else}

@@ -12,11 +12,15 @@
    import { requireCompany } from "$lib/utils/auth";
    import { formatDateShort } from "$lib/utils";
     import { paymentsStore } from "$lib/stores/payments";
+   import { ordersStore } from "$lib/stores/orders";
+   import { clientManagementStore } from "$lib/stores/clientManagement";
    import { updateInvoiceAfterPayment, type InvoiceData } from "$lib/utils/paymentCalculations";
   import PaymentRecordingForm from "$lib/components/shared/payment-recording-form.svelte";
   import PaymentHistory from "$lib/components/shared/payment-history.svelte";
   import type { Payment } from "$lib/types/document";
+  import type { Order } from "$lib/types/document";
   import { goto } from "$app/navigation";
+  import { toast } from "svelte-sonner";
 
    let invoiceId = $derived($page.params.id);
    let mounted = $state(false);
@@ -24,43 +28,93 @@
    let loading = $state(true);
    let error = $state<string | null>(null);
 
-   // Invoice data - will be loaded from Firebase
-   let invoice = $state<InvoiceData | null>(null);
+   // Invoice and client data
+   let order = $state<Order | null>(null);
+   let client = $state<any>(null);
+   let payments = $state<Payment[]>([]);
+
+   const orderStore = ordersStore;
+   const clientStore = clientManagementStore;
 
    onMount(async () => {
      mounted = true;
      // Company access is checked at layout level
 
-     // TODO: Load invoice from Firebase
-     // For now, simulate loading and set to null (not found)
-     setTimeout(() => {
-       loading = false;
-       // If invoice not found, set error
+     try {
        if (!invoiceId) {
          error = "Invalid invoice ID";
-       } else {
-         error = "Invoice not found";
+         return;
        }
-     }, 500);
+
+// Load all orders and find the specific one
+        await orderStore.loadOrders("company-1"); // TODO: Get from auth
+        const orderState = orderStore.getState();
+        const allOrders = orderState?.data || [];
+        order = allOrders.find((o: any) => o.id === invoiceId) || null;
+
+       if (!order) {
+         error = "Invoice not found";
+         return;
+       }
+
+       // Load client data
+       await clientStore.loadClients();
+       const clientState = clientStore.getState();
+       const allClients = clientState?.clients || [];
+       client = allClients.find((c: any) => c.uid === order?.clientId) || null;
+
+       // Load payments for this invoice
+       await paymentsStore.loadPaymentsForInvoice(invoiceId);
+
+     } catch (err) {
+       console.error("Error loading invoice:", err);
+       error = "Failed to load invoice";
+     } finally {
+       loading = false;
+     }
    });
 
-  // Load payments for this invoice
-  $effect(() => {
-    if (mounted && invoiceId) {
-      paymentsStore.loadPaymentsForInvoice(invoiceId);
-    }
-  });
+// Subscribe to payments changes
+   $effect(() => {
+     if (mounted) {
+       paymentsStore.subscribe((state) => {
+         payments = state.data?.filter(p => p.invoiceId === invoiceId) || [];
+       });
+     }
+   });
 
-  function handleRecordPayment(payment: Omit<Payment, "id" | "createdAt" | "updatedAt">) {
-    if (!invoice) return;
-    // Update invoice using utility function
-    invoice = updateInvoiceAfterPayment(invoice, payment.amount);
+async function handleRecordPayment(payment: Omit<Payment, "id" | "createdAt" | "updatedAt">) {
+     if (!order) return;
 
-    // Record the payment
-    paymentsStore.recordPayment(payment);
+     try {
+       // Record the payment
+       await paymentsStore.recordPayment(payment);
 
-    showPaymentDialog = false;
-  }
+       // Calculate new payment totals
+       const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0) + payment.amount;
+       
+       // Update order status based on payment
+       let newStatus = order.status;
+       if (totalPaid >= order.totalAmount) {
+         newStatus = 'paid';
+       } else if (totalPaid > 0) {
+         newStatus = 'partially_paid';
+       }
+
+       // Update order if status changed
+       if (newStatus !== order.status) {
+         await orderStore.updateOrder(order.id, { status: newStatus });
+         toast.success(`Payment recorded and status updated to ${newStatus.replace('_', ' ')}`);
+       } else {
+         toast.success('Payment recorded successfully');
+       }
+
+       showPaymentDialog = false;
+     } catch (error) {
+       console.error('Error recording payment:', error);
+       toast.error('Failed to record payment');
+     }
+   }
 
   function getStatusColor(status: string): string {
     switch (status) {
@@ -94,7 +148,7 @@
             <p class="text-muted-foreground">Loading invoice...</p>
           </CardContent>
         </Card>
-      {:else if error || !invoice}
+      {:else if error || !order}
         <Card>
           <CardContent class="text-center py-8">
             <Icon icon="lucide:file-x" class="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -114,16 +168,16 @@
         <CardHeader>
           <div class="flex items-start justify-between">
             <div>
-              <CardTitle class="text-2xl">{invoice.id}</CardTitle>
+              <CardTitle class="text-2xl">{order.title}</CardTitle>
               <CardDescription class="mt-2">
-                {invoice.clientName} • {invoice.clientEmail}
+                {client ? (client.displayName || `${client.firstName} ${client.lastName}`) : 'Unknown Client'} • {client?.email || 'No email'}
               </CardDescription>
             </div>
             <div class="flex items-center gap-4">
-              <Badge class={getStatusColor(invoice.status)}>
-                {invoice.status.replace("_", " ").toUpperCase()}
+              <Badge class={getStatusColor(order.status)}>
+                {order.status.replace("_", " ").toUpperCase()}
               </Badge>
-              {#if invoice.outstandingAmount > 0}
+              {#if order.outstandingAmount > 0}
                 <Dialog bind:open={showPaymentDialog}>
                   <DialogTrigger>
                     <Button>
@@ -135,13 +189,13 @@
                     <DialogHeader>
                       <DialogTitle>Record Payment</DialogTitle>
                       <DialogDescription>
-                        Record a payment for invoice {invoice.id}
+                        Record a payment for invoice {order.id}
                       </DialogDescription>
                     </DialogHeader>
                      <PaymentRecordingForm
-                       invoiceId={invoice.id}
-                       outstandingAmount={invoice.outstandingAmount}
-                       clientId={invoice.clientId}
+                       invoiceId={order.id}
+                       outstandingAmount={order.outstandingAmount}
+                       clientId={order.clientId}
                        onSave={handleRecordPayment}
                        onCancel={() => showPaymentDialog = false}
                      />
@@ -155,19 +209,19 @@
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <p class="text-sm font-medium text-muted-foreground">Total Amount</p>
-              <p class="text-2xl font-bold">{formatCurrency(invoice.amount)}</p>
+              <p class="text-2xl font-bold">{formatCurrency(order.totalAmount)}</p>
             </div>
             <div>
               <p class="text-sm font-medium text-muted-foreground">Paid Amount</p>
-              <p class="text-2xl font-bold text-green-600">{formatCurrency(invoice.paidAmount)}</p>
+              <p class="text-2xl font-bold text-green-600">{formatCurrency(payments.reduce((sum, p) => sum + p.amount, 0))}</p>
             </div>
             <div>
               <p class="text-sm font-medium text-muted-foreground">Outstanding</p>
-              <p class="text-2xl font-bold text-red-600">{formatCurrency(invoice.outstandingAmount)}</p>
+              <p class="text-2xl font-bold text-red-600">{formatCurrency(order.outstandingAmount)}</p>
             </div>
             <div>
-              <p class="text-sm font-medium text-muted-foreground">Due Date</p>
-              <p class="text-lg font-semibold">{formatDateShort(invoice.dueDate)}</p>
+              <p class="text-sm font-medium text-muted-foreground">Created Date</p>
+              <p class="text-lg font-semibold">{formatDateShort(order.createdAt?.toDate())}</p>
             </div>
           </div>
         </CardContent>
@@ -176,25 +230,25 @@
       <!-- Invoice Items -->
       <Card>
         <CardHeader>
-          <CardTitle>Invoice Items</CardTitle>
+          <CardTitle>Products/Services</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Item</TableHead>
+                <TableHead>Product ID</TableHead>
                 <TableHead class="text-right">Quantity</TableHead>
                 <TableHead class="text-right">Price</TableHead>
                 <TableHead class="text-right">Total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {#each invoice.items as item (item.productName)}
+              {#each order.selectedProducts as productId (productId)}
                 <TableRow>
-                  <TableCell class="font-medium">{item.productName}</TableCell>
-                  <TableCell class="text-right">{item.quantity}</TableCell>
-                  <TableCell class="text-right">{formatCurrency(item.price)}</TableCell>
-                  <TableCell class="text-right">{formatCurrency(item.total)}</TableCell>
+                  <TableCell class="font-medium">{productId}</TableCell>
+                  <TableCell class="text-right">1</TableCell>
+                  <TableCell class="text-right">{formatCurrency(0)}</TableCell>
+                  <TableCell class="text-right">{formatCurrency(0)}</TableCell>
                 </TableRow>
               {/each}
             </TableBody>
@@ -202,19 +256,35 @@
         </CardContent>
       </Card>
 
-       <!-- Payment History -->
-       <Card>
-         <CardHeader>
-           <CardTitle>Payment History</CardTitle>
-           <CardDescription>All payments recorded for this invoice</CardDescription>
-         </CardHeader>
-         <CardContent>
-           <PaymentHistory
-             payments={$paymentsStore.data || []}
-             loading={$paymentsStore.loading}
-           />
-         </CardContent>
-       </Card>
+<!-- Payment History -->
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment History</CardTitle>
+            <CardDescription>All payments recorded for this invoice</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {#if payments.length === 0}
+              <p class="text-muted-foreground text-center py-4">No payments recorded yet</p>
+            {:else}
+              <div class="space-y-3">
+                {#each payments as payment}
+                  <div class="flex items-center justify-between p-3 border border-border rounded-lg">
+                    <div>
+                      <p class="font-medium">{formatCurrency(payment.amount)}</p>
+                      <p class="text-sm text-muted-foreground">
+                        {payment.paymentMethod?.replace('_', ' ') || 'Unknown'} • {formatDateShort(payment.paymentDate?.toDate())}
+                      </p>
+                      {#if payment.notes}
+                        <p class="text-sm text-muted-foreground mt-1">{payment.notes}</p>
+                      {/if}
+                    </div>
+                    <Badge variant="default">Paid</Badge>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+          </CardContent>
+        </Card>
 
         <!-- Actions -->
         <div class="flex justify-end gap-2">
