@@ -75,54 +75,8 @@ function createProductsStore() {
           } as Product);
         });
 
-        // If no products in Firebase, use mock data as fallback
-        if (products.length === 0) {
-          // Mock data
-          const mockProducts: Product[] = [
-            {
-              id: "prod-1",
-              companyId,
-              name: "Web Development Service",
-              description: "Custom web application development",
-              category: "service",
-              price: 5000,
-              isActive: true,
-              createdAt: Timestamp.fromDate(new Date("2024-01-01")),
-              updatedAt: Timestamp.fromDate(new Date("2024-01-01")),
-            },
-            {
-              id: "prod-2",
-              companyId,
-              name: "SEO Package",
-              description: "Search engine optimization services",
-              category: "service",
-              price: 1500,
-              isActive: true,
-              createdAt: Timestamp.fromDate(new Date("2024-01-02")),
-              updatedAt: Timestamp.fromDate(new Date("2024-01-02")),
-            },
-            {
-              id: "prod-3",
-              companyId,
-              name: "Consulting Subscription",
-              description: "Monthly consulting services",
-              category: "subscription",
-              price: 2000,
-              isActive: true,
-              createdAt: Timestamp.fromDate(new Date("2024-01-03")),
-              updatedAt: Timestamp.fromDate(new Date("2024-01-03")),
-            },
-          ];
-
-          // Save mock data to Firebase for future use
-          for (const product of mockProducts) {
-            await setDoc(doc(db, "products", product.id), product);
-          }
-
-          set({ data: mockProducts, loading: false, error: null });
-        } else {
-          set({ data: products, loading: false, error: null });
-        }
+        // Return the actual products from Firebase (empty array if none exist)
+        set({ data: products, loading: false, error: null });
       } catch (error) {
         console.error("Error loading products:", error);
         set({

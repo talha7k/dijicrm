@@ -1,5 +1,13 @@
 import { writable } from "svelte/store";
-import { Timestamp } from "firebase/firestore";
+import {
+  Timestamp,
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+} from "firebase/firestore";
+import { db } from "$lib/firebase";
 import type { GeneratedDocument } from "$lib/types/document";
 
 interface DocumentHistoryState {
@@ -25,65 +33,35 @@ function createDocumentHistoryStore() {
       update((state) => ({ ...state, loading: true, error: null }));
 
       try {
-        // Mock data - replace with Firebase query
-        const mockDocuments: GeneratedDocument[] = [
-          {
-            id: "doc-1",
-            companyId: "company-1",
-            orderId,
-            clientId: "client-1",
-            templateId: "template-1",
-            templateVersion: 1,
-            htmlContent: "<div>Generated document content</div>",
-            pdfUrl: "https://example.com/doc-1.pdf",
-            status: "completed",
-            data: { clientName: "John Doe", amount: 1000 },
-            generatedAt: Timestamp.fromDate(new Date("2024-01-15")),
-            sentAt: Timestamp.fromDate(new Date("2024-01-15")),
-            viewedAt: Timestamp.fromDate(new Date("2024-01-16")),
-            completedAt: Timestamp.fromDate(new Date("2024-01-20")),
-            submittedFiles: [],
-            metadata: {
-              fileSize: 245760,
-              pageCount: 2,
-              checksum: "abc123",
-            },
-            version: 1,
-          },
-          {
-            id: "doc-2",
-            companyId: "company-1",
-            orderId,
-            clientId: "client-1",
-            templateId: "template-1",
-            templateVersion: 2,
-            htmlContent: "<div>Updated document content</div>",
-            pdfUrl: "https://example.com/doc-2.pdf",
-            status: "sent",
-            data: { clientName: "John Doe", amount: 1200 },
-            generatedAt: Timestamp.fromDate(new Date("2024-01-25")),
-            sentAt: Timestamp.fromDate(new Date("2024-01-25")),
-            submittedFiles: [],
-            metadata: {
-              fileSize: 267890,
-              pageCount: 2,
-              checksum: "def456",
-            },
-            version: 2,
-            previousVersionId: "doc-1",
-            changes: [
-              "Updated amount from $1000 to $1200",
-              "Added payment terms",
-            ],
-          },
-        ];
+        // Query Firebase for documents related to this order
+        const documentsQuery = query(
+          collection(db, "documents"),
+          where("orderId", "==", orderId),
+          orderBy("generatedAt", "desc"),
+        );
+
+        const querySnapshot = await getDocs(documentsQuery);
+        const documents: GeneratedDocument[] = [];
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          documents.push({
+            id: doc.id,
+            ...data,
+            generatedAt: data.generatedAt,
+            sentAt: data.sentAt,
+            viewedAt: data.viewedAt,
+            completedAt: data.completedAt,
+          } as GeneratedDocument);
+        });
 
         set({
-          documents: mockDocuments,
+          documents,
           loading: false,
           error: null,
         });
       } catch (error) {
+        console.error("Error loading document history:", error);
         set({
           documents: [],
           loading: false,

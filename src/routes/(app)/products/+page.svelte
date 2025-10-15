@@ -88,12 +88,16 @@
      showConfirmDialog = true;
    }
 
-   function handleConfirmDelete() {
+   async function handleConfirmDelete() {
      if (productToDelete) {
-       // TODO: Delete product
-       console.log("Delete product:", productToDelete);
-       // TODO: Refresh products list when Firebase integration is added
-       productToDelete = null;
+       try {
+         await productsStore.deleteProduct(productToDelete.id);
+         productToDelete = null;
+         showConfirmDialog = false;
+       } catch (error) {
+         console.error("Failed to delete product:", error);
+         // TODO: Show error message to user
+       }
      }
    }
 
