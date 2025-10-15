@@ -309,18 +309,59 @@
     }
   });
 
-  // Initialize company context when user profile is loaded and validated
+  // Keep userProfile store in sync with firekitDoc reactive updates
+  $effect(() => {
+    const user = firekitUser.user;
+    if (user && user.uid) {
+      const doc = firekitDoc<UserProfile>(`users/${user.uid}`);
+
+      // Update userProfile store whenever firekitDoc changes
+      userProfile.update((store) => ({
+        ...store,
+        data: doc.data ?? undefined,
+        loading: doc.loading,
+        error: doc.error,
+      }));
+
+      console.log("Layout: FirekitDoc updated, syncing userProfile store", {
+        hasData: !!doc.data,
+        isLoading: doc.loading,
+        hasError: !!doc.error,
+        currentCompanyId: doc.data?.currentCompanyId,
+        companyAssociationsCount: doc.data?.companyAssociations?.length || 0
+      });
+    }
+  });
+
+  // Initialize company context when user profile data changes
   $effect(() => {
     const profile = get(userProfile);
+
+    // Wait for profile to be fully loaded and validated
     if (profile.data && !profile.loading && !profile.error && !isValidatingProfile) {
-      console.log("Layout: Initializing company context for validated profile");
-      get(companyContext).initializeFromUser();
+      console.log("Layout: Profile data available, initializing company context", {
+        currentCompanyId: profile.data.currentCompanyId,
+        companyAssociationsCount: profile.data.companyAssociations?.length || 0
+      });
+
+      // Add a small delay to ensure all reactive updates are complete
+      setTimeout(async () => {
+        try {
+          console.log("Layout: Calling initializeFromUser");
+          await get(companyContext).initializeFromUser();
+          console.log("Layout: Company context initialized successfully");
+        } catch (error) {
+          console.error("Layout: Failed to initialize company context:", error);
+        }
+      }, 100);
     } else if (profile.error) {
       console.error("Layout: Cannot initialize company context due to profile error:", profile.error);
     } else if (!profile.loading && !profile.data) {
       console.log("Layout: Cannot initialize company context - no profile data");
     } else if (isValidatingProfile) {
       console.log("Layout: Waiting for profile validation before initializing company context");
+    } else if (profile.loading) {
+      console.log("Layout: Waiting for profile to finish loading before initializing company context");
     }
   });
 </script>

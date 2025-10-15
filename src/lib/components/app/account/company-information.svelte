@@ -14,6 +14,14 @@
 	const companyData = $derived($companyContext.data);
 	const completeness = $derived($profileCompleteness);
 
+	// Debug logging
+	$effect(() => {
+		console.log("CompanyInformation: userData:", userData);
+		console.log("CompanyInformation: companyData:", companyData);
+		console.log("CompanyInformation: completeness:", completeness);
+		console.log("CompanyInformation: companyContext loading:", $companyContext.loading);
+	});
+
 	// Helper function to get company name from associations
 	function getCompanyName(companyId: string): string {
 		if (companyData?.companyId === companyId) {
@@ -58,11 +66,11 @@
 			// Import and use the direct read function
 			const { doc, getDoc } = await import('firebase/firestore');
 			const { db } = await import('$lib/firebase');
-			
+
 			if (userData?.uid) {
 				const profileRef = doc(db, "users", userData.uid);
 				const profileDoc = await getDoc(profileRef);
-				
+
 				if (profileDoc.exists()) {
 					const profileData = profileDoc.data() as UserProfile;
 					userProfile.update(store => ({
@@ -72,6 +80,12 @@
 						error: null
 					}));
 					console.log('Profile refreshed successfully');
+
+					// After refreshing profile, try to initialize company context
+					setTimeout(() => {
+						console.log('CompanyInformation: Re-initializing company context after profile refresh');
+						get(companyContext).initializeFromUser();
+					}, 100);
 				} else {
 					userProfile.update(store => ({
 						...store,
@@ -87,6 +101,15 @@
 				loading: false,
 				error: 'Failed to refresh profile'
 			}));
+		}
+	}
+
+	async function forceCompanyInit() {
+		try {
+			console.log('CompanyInformation: Force initializing company context');
+			await get(companyContext).initializeFromUser();
+		} catch (error) {
+			console.error('Error forcing company initialization:', error);
 		}
 	}
 </script>
@@ -321,6 +344,12 @@
 						<Icon icon="lucide:refresh-cw" class="h-4 w-4 mr-2" />
 						Refresh Profile
 					</Button>
+					{#if !companyData && userData?.companyAssociations?.length}
+						<Button onclick={forceCompanyInit} variant="outline" size="sm">
+							<Icon icon="lucide:building-2" class="h-4 w-4 mr-2" />
+							Init Company
+						</Button>
+					{/if}
 				</div>
 			</div>
 		</Card.Content>

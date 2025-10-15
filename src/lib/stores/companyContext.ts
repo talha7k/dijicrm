@@ -79,83 +79,123 @@ function createCompanyContextStore() {
 
   // Implement initializeFromUser
   const initializeFromUser = async () => {
+    console.log("CompanyContext: initializeFromUser called");
+
     const $userProfile = get(userProfile);
-    if ($userProfile.data) {
-      const user = $userProfile.data;
+    console.log("CompanyContext: Current profile state:", {
+      hasData: !!$userProfile.data,
+      loading: $userProfile.loading,
+      error: $userProfile.error,
+      currentCompanyId: $userProfile.data?.currentCompanyId,
+      companyAssociationsCount:
+        $userProfile.data?.companyAssociations?.length || 0,
+    });
 
-      // First try currentCompanyId if it exists and user has access
-      if (
-        user.currentCompanyId &&
-        hasCompanyAccess(user, user.currentCompanyId)
-      ) {
-        console.log(
-          "CompanyContext: Initializing with currentCompanyId:",
-          user.currentCompanyId,
-        );
-        await switchCompany(user.currentCompanyId);
-        return;
-      }
+    if ($userProfile.error) {
+      console.error(
+        "CompanyContext: Profile has error, cannot initialize:",
+        $userProfile.error,
+      );
+      store.update((s) => ({
+        ...s,
+        data: null,
+        loading: false,
+        error: $userProfile.error,
+      }));
+      return;
+    }
 
-      // If no currentCompanyId or no access, try the first available association
-      if (user.companyAssociations && user.companyAssociations.length > 0) {
-        const firstAssociation = user.companyAssociations[0];
-        console.log(
-          "CompanyContext: No valid currentCompanyId, trying first association:",
-          firstAssociation.companyId,
-        );
-
-        // Set the currentCompanyId to the first association if not already set
-        if (!user.currentCompanyId) {
-          console.log(
-            "CompanyContext: Setting currentCompanyId to first association",
-          );
-          try {
-            const { updateDoc, doc } = await import("firebase/firestore");
-            const { db, auth } = await import("$lib/firebase");
-            if (auth.currentUser) {
-              await updateDoc(doc(db, "users", auth.currentUser.uid), {
-                currentCompanyId: firstAssociation.companyId,
-              });
-              console.log(
-                "CompanyContext: Updated user profile with currentCompanyId",
-              );
-
-              // Update the local user profile store to reflect the change
-              userProfile.update((store) => {
-                if (store.data) {
-                  return {
-                    ...store,
-                    data: {
-                      ...store.data,
-                      currentCompanyId: firstAssociation.companyId,
-                    },
-                  };
-                }
-                return store;
-              });
-            }
-          } catch (error) {
-            console.error(
-              "CompanyContext: Failed to update currentCompanyId:",
-              error,
-            );
-          }
-        }
-
-        // Now try to switch to the company
-        if (hasCompanyAccess(user, firstAssociation.companyId)) {
-          await switchCompany(firstAssociation.companyId);
-          return;
-        }
-      }
-
-      // No valid company found
-      console.log("CompanyContext: No valid company found for user");
-      store.update((s) => ({ ...s, data: null, loading: false }));
-    } else {
+    if (!$userProfile.data) {
       console.log("CompanyContext: No user profile data available");
       store.update((s) => ({ ...s, data: null, loading: false }));
+      return;
     }
+
+    const user = $userProfile.data;
+    console.log("CompanyContext: Using user data:", {
+      uid: user.uid,
+      currentCompanyId: user.currentCompanyId,
+      companyAssociationsCount: user.companyAssociations?.length || 0,
+    });
+
+    // First try currentCompanyId if it exists and user has access
+    if (
+      user.currentCompanyId &&
+      hasCompanyAccess(user, user.currentCompanyId)
+    ) {
+      console.log(
+        "CompanyContext: Initializing with currentCompanyId:",
+        user.currentCompanyId,
+      );
+      await switchCompany(user.currentCompanyId);
+      return;
+    }
+
+    // If no currentCompanyId or no access, try the first available association
+    if (user.companyAssociations && user.companyAssociations.length > 0) {
+      const firstAssociation = user.companyAssociations[0];
+      console.log(
+        "CompanyContext: No valid currentCompanyId, trying first association:",
+        firstAssociation.companyId,
+      );
+
+      // Set the currentCompanyId to the first association if not already set
+      if (!user.currentCompanyId) {
+        console.log(
+          "CompanyContext: Setting currentCompanyId to first association",
+        );
+        try {
+          const { updateDoc, doc } = await import("firebase/firestore");
+          const { db, auth } = await import("$lib/firebase");
+          if (auth.currentUser) {
+            await updateDoc(doc(db, "users", auth.currentUser.uid), {
+              currentCompanyId: firstAssociation.companyId,
+            });
+            console.log(
+              "CompanyContext: Updated user profile with currentCompanyId",
+            );
+
+            // Update the local user profile store to reflect the change
+            userProfile.update((store) => {
+              if (store.data) {
+                return {
+                  ...store,
+                  data: {
+                    ...store.data,
+                    currentCompanyId: firstAssociation.companyId,
+                  },
+                };
+              }
+              return store;
+            });
+          }
+        } catch (error) {
+          console.error(
+            "CompanyContext: Failed to update currentCompanyId:",
+            error,
+          );
+        }
+      }
+
+      // Now try to switch to the company
+      if (hasCompanyAccess(user, firstAssociation.companyId)) {
+        console.log(
+          "CompanyContext: Switching to company:",
+          firstAssociation.companyId,
+        );
+        await switchCompany(firstAssociation.companyId);
+        return;
+      } else {
+        console.log(
+          "CompanyContext: User does not have access to company:",
+          firstAssociation.companyId,
+        );
+      }
+    }
+
+    // No valid company found
+    console.log("CompanyContext: No valid company found for user");
+    store.update((s) => ({ ...s, data: null, loading: false }));
   };
 
   store.update((s) => ({
