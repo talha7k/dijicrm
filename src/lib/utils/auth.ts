@@ -1,4 +1,5 @@
 import { userProfile } from "$lib/stores/user";
+import { companyContext, activeCompanyId } from "$lib/stores/companyContext";
 import { get } from "svelte/store";
 import { goto } from "$app/navigation";
 import { isProfileComplete } from "$lib/services/profileValidationService";
@@ -104,4 +105,24 @@ export function getProfileStatus(): {
     isLoading: profile.loading,
     error: profile.error,
   };
+}
+
+/**
+ * Check if user has an active company context
+ */
+export function hasActiveCompany(): boolean {
+  const companyId = get(activeCompanyId);
+  const context = get(companyContext);
+  return !!(companyId && context.data && !context.loading && !context.error);
+}
+
+/**
+ * Guard function for routes that require active company context
+ */
+export function requireActiveCompany(): boolean {
+  if (!hasActiveCompany()) {
+    goto("/account");
+    return false;
+  }
+  return true;
 }

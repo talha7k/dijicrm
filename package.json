@@ -71,6 +71,7 @@
     "nodemailer": "^7.0.9",
     "qrcode": "^1.5.4",
     "svelte-firekit": "^0.1.9",
+    "svelte-persisted-store": "^0.12.0",
     "valibot": "^1.1.0",
     "zod-to-json-schema": "^3.24.6"
   }

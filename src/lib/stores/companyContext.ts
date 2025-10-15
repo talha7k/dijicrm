@@ -1,215 +1,121 @@
-import { writable, derived, get } from "svelte/store";
+import { derived, get } from "svelte/store";
 import type { CompanyContext, Company } from "$lib/types/company";
 import { userProfile } from "./user";
-import {
-  hasCompanyAccess,
-  getCompanyRole,
-} from "$lib/utils/company-validation";
+import { hasCompanyAccess, getCompanyRole } from "$lib/utils/company-validation";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import { auth } from "$lib/firebase";
+import { persisted } from 'svelte-persisted-store'
 
-type CompanyContextStore = {
+type CompanyContextData = {
   data: CompanyContext | null;
   loading: boolean;
   error: any;
-  switchCompany: (companyId: string) => Promise<void>;
-  initializeFromUser: () => Promise<void>;
 };
 
-function createCompanyContextStore() {
-  const store = writable<CompanyContextStore>({
-    data: null,
-    loading: true,
-    error: null,
-    switchCompany: async () => {},
-    initializeFromUser: async () => {},
-  });
+const companyContextData = persisted<CompanyContextData>('companyContext', {
+  data: null,
+  loading: true,
+  error: null,
+});
 
-  // Implement switchCompany
-  const switchCompany = async (companyId: string) => {
-    store.update((s) => ({ ...s, loading: true, error: null }));
+const switchCompany = async (companyId: string) => {
+  companyContextData.update((s) => ({ ...s, loading: true, error: null }));
 
-    const $userProfile = get(userProfile);
-    if (!$userProfile.data) {
-      store.update((s) => ({ ...s, loading: false, error: "No user profile" }));
-      return;
-    }
+  const $userProfile = get(userProfile);
+  if (!$userProfile.data) {
+    companyContextData.update((s) => ({ ...s, loading: false, error: "No user profile" }));
+    return;
+  }
 
-    const user = $userProfile.data;
-    if (!hasCompanyAccess(user, companyId)) {
-      store.update((s) => ({ ...s, loading: false, error: "Access denied" }));
-      return;
-    }
+  const user = $userProfile.data;
+  if (!hasCompanyAccess(user, companyId)) {
+    companyContextData.update((s) => ({ ...s, loading: false, error: "Access denied" }));
+    return;
+  }
 
-    const role = getCompanyRole(user, companyId);
-    if (!role) {
-      store.update((s) => ({ ...s, loading: false, error: "Invalid role" }));
-      return;
-    }
+  const role = getCompanyRole(user, companyId);
+  if (!role) {
+    companyContextData.update((s) => ({ ...s, loading: false, error: "Invalid role" }));
+    return;
+  }
 
-    const company = await fetchCompany(companyId);
-    if (!company) {
-      store.update((s) => ({
-        ...s,
-        loading: false,
-        error: "Company not found",
-      }));
-      return;
-    }
+  const company = await fetchCompany(companyId);
+  if (!company) {
+    companyContextData.update((s) => ({ ...s, loading: false, error: "Company not found" }));
+    return;
+  }
 
-    // Update user profile in Firestore
-    if (auth.currentUser) {
-      await updateDoc(doc(db, "users", auth.currentUser.uid), {
-        currentCompanyId: companyId,
-      });
-    }
+  if (auth.currentUser) {
+    await updateDoc(doc(db, "users", auth.currentUser.uid), { currentCompanyId: companyId });
+  }
 
-    store.update((s) => ({
-      ...s,
-      data: {
-        companyId,
-        company,
-        role,
-        permissions: [], // TODO: Load permissions
-      },
-      loading: false,
-    }));
-  };
-
-  // Implement initializeFromUser
-  const initializeFromUser = async () => {
-    console.log("CompanyContext: initializeFromUser called");
-
-    const $userProfile = get(userProfile);
-    console.log("CompanyContext: Current profile state:", {
-      hasData: !!$userProfile.data,
-      loading: $userProfile.loading,
-      error: $userProfile.error,
-      currentCompanyId: $userProfile.data?.currentCompanyId,
-      companyAssociationsCount:
-        $userProfile.data?.companyAssociations?.length || 0,
-    });
-
-    if ($userProfile.error) {
-      console.error(
-        "CompanyContext: Profile has error, cannot initialize:",
-        $userProfile.error,
-      );
-      store.update((s) => ({
-        ...s,
-        data: null,
-        loading: false,
-        error: $userProfile.error,
-      }));
-      return;
-    }
-
-    if (!$userProfile.data) {
-      console.log("CompanyContext: No user profile data available");
-      store.update((s) => ({ ...s, data: null, loading: false }));
-      return;
-    }
-
-    const user = $userProfile.data;
-    console.log("CompanyContext: Using user data:", {
-      uid: user.uid,
-      currentCompanyId: user.currentCompanyId,
-      companyAssociationsCount: user.companyAssociations?.length || 0,
-    });
-
-    // First try currentCompanyId if it exists and user has access
-    if (
-      user.currentCompanyId &&
-      hasCompanyAccess(user, user.currentCompanyId)
-    ) {
-      console.log(
-        "CompanyContext: Initializing with currentCompanyId:",
-        user.currentCompanyId,
-      );
-      await switchCompany(user.currentCompanyId);
-      return;
-    }
-
-    // If no currentCompanyId or no access, try the first available association
-    if (user.companyAssociations && user.companyAssociations.length > 0) {
-      const firstAssociation = user.companyAssociations[0];
-      console.log(
-        "CompanyContext: No valid currentCompanyId, trying first association:",
-        firstAssociation.companyId,
-      );
-
-      // Set the currentCompanyId to the first association if not already set
-      if (!user.currentCompanyId) {
-        console.log(
-          "CompanyContext: Setting currentCompanyId to first association",
-        );
-        try {
-          const { updateDoc, doc } = await import("firebase/firestore");
-          const { db, auth } = await import("$lib/firebase");
-          if (auth.currentUser) {
-            await updateDoc(doc(db, "users", auth.currentUser.uid), {
-              currentCompanyId: firstAssociation.companyId,
-            });
-            console.log(
-              "CompanyContext: Updated user profile with currentCompanyId",
-            );
-
-            // Update the local user profile store to reflect the change
-            userProfile.update((store) => {
-              if (store.data) {
-                return {
-                  ...store,
-                  data: {
-                    ...store.data,
-                    currentCompanyId: firstAssociation.companyId,
-                  },
-                };
-              }
-              return store;
-            });
-          }
-        } catch (error) {
-          console.error(
-            "CompanyContext: Failed to update currentCompanyId:",
-            error,
-          );
-        }
-      }
-
-      // Now try to switch to the company
-      if (hasCompanyAccess(user, firstAssociation.companyId)) {
-        console.log(
-          "CompanyContext: Switching to company:",
-          firstAssociation.companyId,
-        );
-        await switchCompany(firstAssociation.companyId);
-        return;
-      } else {
-        console.log(
-          "CompanyContext: User does not have access to company:",
-          firstAssociation.companyId,
-        );
-      }
-    }
-
-    // No valid company found
-    console.log("CompanyContext: No valid company found for user");
-    store.update((s) => ({ ...s, data: null, loading: false }));
-  };
-
-  store.update((s) => ({
+  companyContextData.update((s) => ({
     ...s,
-    switchCompany,
-    initializeFromUser,
+    data: { companyId, company, role, permissions: [] },
+    loading: false,
   }));
+};
 
-  return store;
-}
+export const initializeFromUser = async () => {
+  companyContextData.update((s) => ({ ...s, loading: true, error: null }));
 
-export const companyContext = createCompanyContextStore();
+  const $userProfile = get(userProfile);
 
-// Derived store for active company ID
+  if ($userProfile.error) {
+    companyContextData.update((s) => ({ ...s, data: null, loading: false, error: `Profile error: ${$userProfile.error}` }));
+    throw new Error(`Profile error: ${$userProfile.error}`);
+  }
+
+  if (!$userProfile.data) {
+    companyContextData.update((s) => ({ ...s, data: null, loading: false, error: "No user profile data available" }));
+    throw new Error("No user profile data available");
+  }
+
+  const user = $userProfile.data;
+  const validAssociations = user.companyAssociations?.filter(assoc => assoc.companyId && typeof assoc.companyId === 'string' && assoc.companyId.trim().length > 0);
+
+  if (!validAssociations || validAssociations.length === 0) {
+    companyContextData.update((s) => ({ ...s, data: null, loading: false, error: "No company associations found." }));
+    throw new Error("No company associations found.");
+  }
+
+  let companyIdToLoad = user.currentCompanyId;
+
+  if (!companyIdToLoad || !hasCompanyAccess(user, companyIdToLoad)) {
+    companyIdToLoad = validAssociations[0].companyId;
+  }
+
+  try {
+    await switchCompany(companyIdToLoad);
+  } catch (error) {
+    companyContextData.update((s) => ({ ...s, data: null, loading: false, error: `Failed to initialize company context: ${error}` }));
+    throw error;
+  }
+};
+
+const reset = () => {
+  companyContextData.set({ data: null, loading: false, error: null });
+};
+
+const retryInitialization = async () => {
+  companyContextData.update((s) => ({ ...s, error: null, loading: true }));
+  try {
+    await initializeFromUser();
+  } catch (error) {
+    companyContextData.update((s) => ({ ...s, loading: false, error: `Retry failed: ${error}` }));
+    throw error;
+  }
+};
+
+export const companyContext = derived(companyContextData, ($companyContextData) => ({
+  ...$companyContextData,
+  switchCompany,
+  initializeFromUser,
+  reset,
+  retryInitialization,
+}));
+
 export const activeCompanyId = derived(
   companyContext,
   ($context) => $context.data?.companyId || null,

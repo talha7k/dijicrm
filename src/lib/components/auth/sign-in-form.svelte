@@ -7,7 +7,7 @@
 
 	import * as Form from '../ui/form/index.js';
 	import { toast } from 'svelte-sonner';
-	import { goto } from '$app/navigation';
+	import { initializeApp, resetInitialization } from '$lib/services/initService';
 
 	let formData = $state({
 		email: '',
@@ -55,7 +55,8 @@
 			// Sign in
 			await firekitAuth.signInWithEmail(formData.email, formData.password);
 			toast.success('Signed in successfully');
-			goto('/dashboard');
+			resetInitialization();
+			await initializeApp();
 		} catch (error) {
 			if (error instanceof Error) {
 				toast.error(error.message);

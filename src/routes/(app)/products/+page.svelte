@@ -11,7 +11,7 @@
   import { Textarea } from "$lib/components/ui/textarea";
 
    import Icon from "@iconify/svelte";
-   import { requireCompany } from "$lib/utils/auth";
+   import { requireCompany, requireActiveCompany } from "$lib/utils/auth";
     import { productsStore } from "$lib/stores/products";
     import { documentTemplatesStore } from "$lib/stores/documentTemplates";
     import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
@@ -33,7 +33,9 @@
 
    onMount(() => {
      mounted = true;
-     // Company access is checked at layout level
+     // Check both company role and active company context
+     requireCompany();
+     requireActiveCompany();
    });
 
 

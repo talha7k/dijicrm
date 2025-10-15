@@ -104,14 +104,7 @@
 		}
 	}
 
-	async function forceCompanyInit() {
-		try {
-			console.log('CompanyInformation: Force initializing company context');
-			await get(companyContext).initializeFromUser();
-		} catch (error) {
-			console.error('Error forcing company initialization:', error);
-		}
-	}
+
 </script>
 
 <!-- Loading State -->
@@ -235,7 +228,19 @@
 				<!-- Current Active Company -->
 				<div class="space-y-2">
 					<Label class="font-normal text-muted-foreground">Active Company</Label>
-					{#if companyData}
+					{#if $companyContext.loading}
+						<div class="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+							<div class="flex items-center gap-3">
+								<Icon icon="lucide:loader" class="h-5 w-5 animate-spin text-muted-foreground" />
+								<div>
+									<p class="text-muted-foreground">Initializing company...</p>
+									<p class="text-xs text-muted-foreground">
+										Setting up your company context
+									</p>
+								</div>
+							</div>
+						</div>
+					{:else if companyData}
 						<div class="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
 							<div class="flex items-center gap-3">
 								<Icon icon="lucide:building-2" class="h-5 w-5 text-muted-foreground" />
@@ -248,6 +253,28 @@
 							</div>
 							<div class="text-xs text-muted-foreground">
 								{companyData.company.code}
+							</div>
+						</div>
+					{:else if $companyContext.error}
+						<div class="flex items-center justify-between p-3 border rounded-lg border-red-200 bg-red-50">
+							<div class="flex items-center gap-3">
+								<Icon icon="lucide:alert-circle" class="h-5 w-5 text-red-500" />
+								<div>
+									<p class="text-red-700">Company initialization failed</p>
+									<p class="text-xs text-red-600">
+										{$companyContext.error}
+									</p>
+								</div>
+							</div>
+							<div class="flex gap-2">
+								<Button size="sm" variant="outline" onclick={refreshProfile}>
+									<Icon icon="lucide:refresh-cw" class="h-4 w-4 mr-2" />
+									Refresh Profile
+								</Button>
+								<Button size="sm" variant="outline" onclick={() => get(companyContext).retryInitialization()}>
+									<Icon icon="lucide:rotate-cw" class="h-4 w-4 mr-2" />
+									Retry Init
+								</Button>
 							</div>
 						</div>
 					{:else}
@@ -344,12 +371,6 @@
 						<Icon icon="lucide:refresh-cw" class="h-4 w-4 mr-2" />
 						Refresh Profile
 					</Button>
-					{#if !companyData && userData?.companyAssociations?.length}
-						<Button onclick={forceCompanyInit} variant="outline" size="sm">
-							<Icon icon="lucide:building-2" class="h-4 w-4 mr-2" />
-							Init Company
-						</Button>
-					{/if}
 				</div>
 			</div>
 		</Card.Content>
