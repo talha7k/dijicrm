@@ -65,7 +65,16 @@
 
 			// Sign up
 			const displayName = `${formData.firstName} ${formData.lastName}`;
-			await firekitAuth.registerWithEmail(formData.email, formData.password, displayName);
+			const userCredential = await firekitAuth.registerWithEmail(formData.email, formData.password, displayName);
+			
+			// Create basic profile immediately after successful registration
+			if (userCredential?.user) {
+				const { createBasicUserProfile } = await import('$lib/services/authService');
+				const firebaseUser = userCredential.user as any; // Type assertion for Firebase User
+				await createBasicUserProfile(firebaseUser);
+				console.log("Basic profile created during sign-up for:", firebaseUser.uid);
+			}
+			
 			toast.success('Account created successfully');
 			goto('/onboarding');
 		} catch (error) {

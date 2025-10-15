@@ -1,5 +1,5 @@
 import type { User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import { goto } from "$app/navigation";
 import { redirectToDashboard } from "$lib/utils/auth";
@@ -7,8 +7,78 @@ import type { UserProfile } from "$lib/types/user";
 import { isProfileCompleteCached } from "$lib/utils/profile-cache";
 
 /**
- * Handles post-authentication logic after successful Google Sign-In
- * Checks for existing user profile and routes appropriately
+ * Creates a basic user profile document in Firestore
+ */
+export async function createBasicUserProfile(user: User): Promise<UserProfile> {
+  const { Timestamp } = await import("@firebase/firestore");
+
+  const basicProfile: UserProfile = {
+    uid: user.uid,
+    email: user.email || "",
+    displayName: user.displayName || user.email || "",
+    photoURL: user.photoURL || null,
+
+    // Authentication and status
+    isActive: true,
+    lastLoginAt: Timestamp.now(),
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+
+    // Profile information (will be filled during onboarding)
+    firstName: undefined,
+    lastName: undefined,
+    username: undefined,
+    bio: undefined,
+    phoneNumber: undefined,
+
+    // Preferences and settings
+    emailNotifications: true,
+    pushNotifications: true,
+    theme: "system",
+    language: "en",
+
+    // Role-based access control (will be set during onboarding)
+    role: "company", // Default, will be updated during onboarding
+    permissions: [],
+
+    // Company associations (will be set during onboarding)
+    companyAssociations: undefined,
+    currentCompanyId: undefined,
+
+    // Address information
+    address: undefined,
+
+    // Additional metadata
+    metadata: {
+      deviceInfo: {
+        lastDevice: navigator.userAgent || "unknown",
+        platform: navigator.platform || "unknown",
+      },
+      lastIPAddress: undefined, // Will be set by backend if needed
+      accountStatus: "active",
+    },
+
+    // Onboarding completion tracking
+    onboardingCompleted: false,
+
+    // Invitation system
+    invitationToken: undefined,
+    invitationExpiresAt: undefined,
+    invitedBy: undefined,
+    invitationStatus: undefined,
+  };
+
+  // Save to Firestore
+  const userRef = doc(db, "users", user.uid);
+  await setDoc(userRef, basicProfile);
+
+  console.log("Created basic user profile for:", user.uid);
+  return basicProfile;
+}
+
+/**
+ * Handles post-authentication logic after successful authentication
+ * Ensures user profile exists and routes appropriately
  */
 export async function handlePostAuthentication(user: User): Promise<void> {
   if (!user) {
@@ -16,16 +86,20 @@ export async function handlePostAuthentication(user: User): Promise<void> {
   }
 
   try {
+    console.log("Handling post-authentication for user:", user.uid);
+
     // Check if user profile exists in Firestore
     const userRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userRef);
 
     if (userSnap.exists()) {
+      console.log("User profile exists, checking completeness");
       // Existing user - check profile completeness with caching
       const isComplete = await isProfileCompleteCached(user.uid);
       if (isComplete) {
         // Profile is complete - redirect to appropriate dashboard
         const userProfile = userSnap.data() as UserProfile;
+        console.log("Profile is complete, redirecting to dashboard");
         await redirectToAppropriateDashboard(userProfile);
       } else {
         // Profile exists but is incomplete - redirect to onboarding
@@ -35,7 +109,9 @@ export async function handlePostAuthentication(user: User): Promise<void> {
         await goto("/onboarding");
       }
     } else {
-      // New user - redirect to onboarding
+      console.log("No user profile found, creating basic profile");
+      // New user - create basic profile and redirect to onboarding
+      await createBasicUserProfile(user);
       await goto("/onboarding");
     }
   } catch (error) {

@@ -33,6 +33,7 @@
   // Track if we've already handled initial navigation to prevent loops
   let hasHandledInitialNavigation = $state(false);
   let hasInitializedPresence = $state(false);
+  let profileCheckTimeout = $state<NodeJS.Timeout | null>(null);
 
   $effect(() => {
     if (hasHandledInitialNavigation) return;
@@ -46,22 +47,57 @@
     // Check profile completeness for authenticated users
     if (firekitUser.initialized && firekitUser.isAuthenticated) {
       const profile = get(userProfile);
+      
+      console.log("Layout: Checking profile state", {
+        hasData: !!profile.data,
+        isLoading: profile.loading,
+        hasError: !!profile.error,
+        profileData: profile.data
+      });
 
-      if (profile.data && !isProfileComplete(profile.data)) {
-        // User is authenticated but profile is incomplete
+      // If profile is loading, wait a bit and check again
+      if (profile.loading) {
+        if (!profileCheckTimeout) {
+          profileCheckTimeout = setTimeout(() => {
+            console.log("Layout: Profile loading timeout, checking again");
+            // The effect will run again with updated state
+          }, 3000); // 3 second timeout
+        }
+        return;
+      }
+
+      // Clear timeout if we're not loading
+      if (profileCheckTimeout) {
+        clearTimeout(profileCheckTimeout);
+        profileCheckTimeout = null;
+      }
+
+      // Check for profile errors
+      if (profile.error) {
+        console.error("Layout: Profile loading error:", profile.error);
         hasHandledInitialNavigation = true;
         goto("/onboarding");
         return;
       }
 
-      if (profile.data === null && !profile.loading) {
-        // Profile doesn't exist
+      // Check if profile data exists
+      if (!profile.data) {
+        console.log("Layout: No profile data found, redirecting to onboarding");
         hasHandledInitialNavigation = true;
         goto("/onboarding");
         return;
       }
 
-      // Profile exists and is complete, or still loading - allow access
+      // Check profile completeness
+      if (!isProfileComplete(profile.data)) {
+        console.log("Layout: Profile is incomplete, redirecting to onboarding");
+        hasHandledInitialNavigation = true;
+        goto("/onboarding");
+        return;
+      }
+
+      // Profile exists and is complete - allow access
+      console.log("Layout: Profile is complete, allowing access");
     }
   });
 
@@ -103,7 +139,10 @@
   $effect(() => {
     const user = firekitUser.user;
     if (user && user.uid) {
+      console.log("Layout: Initializing profile for user:", user.uid);
       const doc = firekitDoc<UserProfile>(`users/${user.uid}`);
+      
+      // Set up profile store with proper error handling
       userProfile.set({
         data: doc.data ?? undefined,
         loading: doc.loading,
@@ -155,7 +194,16 @@
           }
         },
       });
+
+      // Log profile state changes for debugging
+      console.log("Layout: Profile doc state", {
+        hasData: !!doc.data,
+        isLoading: doc.loading,
+        hasError: !!doc.error,
+        error: doc.error
+      });
     } else {
+      console.log("Layout: No authenticated user, clearing profile");
       userProfile.set({
         data: undefined,
         loading: false,
@@ -169,7 +217,12 @@
   $effect(() => {
     const profile = get(userProfile);
     if (profile.data && !profile.loading && !profile.error) {
+      console.log("Layout: Initializing company context for complete profile");
       get(companyContext).initializeFromUser();
+    } else if (profile.error) {
+      console.error("Layout: Cannot initialize company context due to profile error:", profile.error);
+    } else if (!profile.loading && !profile.data) {
+      console.log("Layout: Cannot initialize company context - no profile data");
     }
   });
 </script>
