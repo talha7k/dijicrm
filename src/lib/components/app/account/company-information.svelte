@@ -3,6 +3,7 @@
 	import { userProfile, profileCompleteness } from '$lib/stores/user';
 	import { companyContext, activeCompanyId } from '$lib/stores/companyContext';
 	import { getCompanyRole } from '$lib/utils/company-validation';
+	import type { UserProfile } from '$lib/types/user';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
 	import * as Card from '$lib/components/ui/card';
@@ -63,7 +64,7 @@
 				const profileDoc = await getDoc(profileRef);
 				
 				if (profileDoc.exists()) {
-					const profileData = profileDoc.data();
+					const profileData = profileDoc.data() as UserProfile;
 					userProfile.update(store => ({
 						...store,
 						data: profileData,

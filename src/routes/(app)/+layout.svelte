@@ -28,7 +28,7 @@
     updateInterval: 60 * 1000, // 1 minute
   };
   import { redirectToDashboard } from "$lib/utils/auth";
-  import { isProfileComplete } from "$lib/services/profileValidationService";
+  import { isProfileCompleteWithCompanyValidation } from "$lib/services/profileValidationService";
   import { doc, getDoc } from "firebase/firestore";
   import { db } from "$lib/firebase";
 
@@ -38,6 +38,7 @@
   let profileCheckTimeout = $state<NodeJS.Timeout | null>(null);
   let profileRetryCount = $state(0);
   let maxProfileRetries = 3;
+  let isValidatingProfile = $state(false);
 
   $effect(() => {
     if (hasHandledInitialNavigation) return;
@@ -128,16 +129,29 @@
         return;
       }
 
-      // Check profile completeness
-      if (!isProfileComplete(profile.data)) {
-        console.log("Layout: Profile is incomplete, redirecting to onboarding");
-        hasHandledInitialNavigation = true;
-        goto("/onboarding");
-        return;
-      }
+      // Check profile completeness with company validation
+      if (!isValidatingProfile) {
+        isValidatingProfile = true;
+        isProfileCompleteWithCompanyValidation(profile.data).then((validation) => {
+          isValidatingProfile = false;
 
-      // Profile exists and is complete - allow access
-      console.log("Layout: Profile is complete, allowing access");
+          if (!validation.isValid) {
+            console.log("Layout: Profile/company validation failed, redirecting to onboarding:", validation.errors);
+            hasHandledInitialNavigation = true;
+            goto("/onboarding");
+            return;
+          }
+
+          // Profile exists and is complete with valid company - allow access
+          console.log("Layout: Profile and company validation passed, allowing access");
+        }).catch((error) => {
+          console.error("Layout: Error during profile validation:", error);
+          isValidatingProfile = false;
+          // On validation error, redirect to onboarding to be safe
+          hasHandledInitialNavigation = true;
+          goto("/onboarding");
+        });
+      }
     }
   });
 
@@ -295,16 +309,18 @@
     }
   });
 
-  // Initialize company context when user profile is loaded
+  // Initialize company context when user profile is loaded and validated
   $effect(() => {
     const profile = get(userProfile);
-    if (profile.data && !profile.loading && !profile.error) {
-      console.log("Layout: Initializing company context for complete profile");
+    if (profile.data && !profile.loading && !profile.error && !isValidatingProfile) {
+      console.log("Layout: Initializing company context for validated profile");
       get(companyContext).initializeFromUser();
     } else if (profile.error) {
       console.error("Layout: Cannot initialize company context due to profile error:", profile.error);
     } else if (!profile.loading && !profile.data) {
       console.log("Layout: Cannot initialize company context - no profile data");
+    } else if (isValidatingProfile) {
+      console.log("Layout: Waiting for profile validation before initializing company context");
     }
   });
 </script>
