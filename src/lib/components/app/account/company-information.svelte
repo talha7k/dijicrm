@@ -71,7 +71,7 @@
 			<div class="text-center py-8">
 				<Icon icon="lucide:alert-circle" class="h-8 w-8 text-red-500 mx-auto mb-4" />
 				<p class="text-sm text-muted-foreground mb-4">
-					There was an error loading your profile. Please try refreshing the page.
+					{$userProfile.error}
 				</p>
 				<Button onclick={() => window.location.reload()}>
 					<Icon icon="lucide:refresh-cw" class="h-4 w-4 mr-2" />

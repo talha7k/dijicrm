@@ -59,9 +59,14 @@
       if (profile.loading) {
         if (!profileCheckTimeout) {
           profileCheckTimeout = setTimeout(() => {
-            console.log("Layout: Profile loading timeout, checking again");
-            // The effect will run again with updated state
-          }, 3000); // 3 second timeout
+            console.log("Layout: Profile loading timeout after 10 seconds, forcing error state");
+            // Force loading to false and set error after timeout
+            userProfile.update((store) => ({
+              ...store,
+              loading: false,
+              error: "Profile loading timed out. Please refresh the page or try again later.",
+            }));
+          }, 10000); // 10 second timeout
         }
         return;
       }
@@ -200,7 +205,8 @@
         hasData: !!doc.data,
         isLoading: doc.loading,
         hasError: !!doc.error,
-        error: doc.error
+        error: doc.error,
+        userId: user.uid
       });
     } else {
       console.log("Layout: No authenticated user, clearing profile");

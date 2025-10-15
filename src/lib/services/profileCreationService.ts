@@ -116,6 +116,9 @@ export async function createUserProfile(
       // Active company context
       currentCompanyId: companyId,
 
+      // Onboarding completion tracking
+      onboardingCompleted: true,
+
       // Metadata
       metadata: {
         accountStatus: "active",

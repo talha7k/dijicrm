@@ -10,7 +10,7 @@ Company users SHALL see key business metrics including total invoices, outstandi
 - **THEN** metrics are calculated from real Firebase collections
 - **AND** they see cards displaying:
   - Total number of clients (from clients collection)
-  - Total invoices created (from invoices collection)  
+  - Total invoices created (from invoices collection)
   - Outstanding payment amount (calculated from invoices and payments)
   - Overdue invoices count (from invoices with past due dates)
 

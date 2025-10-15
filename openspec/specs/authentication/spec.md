@@ -1,8 +1,11 @@
 # authentication Specification
 
 ## Purpose
+
 TBD - created by archiving change add-role-based-signup-flow. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Role-Based User Registration
 
 The system SHALL provide a multi-step registration process that requires users to select their role (Client, Company Member, or Company Creator) before completing account creation.
@@ -109,4 +112,3 @@ The system SHALL support user profiles that can be associated with multiple comp
 - **WHEN** a user joins a company
 - **THEN** the system SHALL assign appropriate role (member, admin, owner)
 - **AND** store role permissions for each company association
-

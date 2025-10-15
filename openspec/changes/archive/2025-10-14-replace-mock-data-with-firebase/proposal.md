@@ -6,7 +6,7 @@ The application currently uses mock/hardcoded data in several stores, preventing
 
 - **BREAKING**: Replace mock data in clientManagement store with Firebase Firestore queries
 - **BREAKING**: Replace mock data in clientInvoices store with Firebase queries
-- **BREAKING**: Replace mock data in clientDocuments store with Firebase queries  
+- **BREAKING**: Replace mock data in clientDocuments store with Firebase queries
 - **BREAKING**: Replace mock data in payments store with Firebase queries
 - **BREAKING**: Replace mock data in documentTemplates store with Firebase queries
 - **BREAKING**: Replace mock data in companyMetrics store with Firebase queries
