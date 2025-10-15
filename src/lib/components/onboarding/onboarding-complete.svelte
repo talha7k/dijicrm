@@ -1,10 +1,14 @@
 <script lang="ts">
- 	import { createEventDispatcher } from 'svelte';
- 	import Button from '$lib/components/ui/button/button.svelte';
- 	import { firekitUser } from 'svelte-firekit';
- 	import { createUserProfile } from '$lib/services/profileCreationService';
- 	import type { User } from 'firebase/auth';
- 	import { toast } from 'svelte-sonner';
+  import { createEventDispatcher } from 'svelte';
+  import Button from '$lib/components/ui/button/button.svelte';
+  import { firekitUser, firekitDoc } from 'svelte-firekit';
+  import { createUserProfile, validateOnboardingData } from '$lib/services/profileCreationService';
+  import { userProfile } from '$lib/stores/user';
+  import type { User } from 'firebase/auth';
+  import type { UserProfile } from '$lib/types/user';
+  import { toast } from 'svelte-sonner';
+  import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
+  import { db } from '$lib/firebase';
 
  	let {
  		selectedRole,
@@ -27,35 +31,77 @@
 
  	let isCreating = $state(false);
 
- 	async function handleComplete() {
- 		if (isCreating) return;
+   async function handleComplete() {
+   		if (isCreating) return;
 
- 		try {
- 			isCreating = true;
+   		try {
+   			isCreating = true;
 
- 			// Create user profile based on selected role
- 			const profileData = {
- 				role: selectedRole === 'create-company' ? 'company' : 'client',
- 				currentCompanyId: onboardingData.company?.id || '',
- 				// Add other profile data as needed
- 			};
+   			// Validate onboarding data before proceeding
+   			const validation = validateOnboardingData({
+   				role: selectedRole!,
+   				invitationCode: onboardingData.invitationCode,
+   				companyCode: onboardingData.companyCode,
+   				companyName: onboardingData.companyName,
+   				companyDescription: onboardingData.companyDescription,
+   			});
 
- 			await createUserProfile(firekitUser.user as User, {
- 				role: selectedRole!,
- 				invitationCode: onboardingData.invitationCode,
- 				companyCode: onboardingData.companyCode,
- 				companyName: onboardingData.companyName,
- 				companyDescription: onboardingData.companyDescription,
- 			});
+   			if (!validation.isValid) {
+   				toast.error(`Validation failed: ${validation.errors.join(', ')}`);
+   				return;
+   			}
 
- 			dispatch('complete');
- 		} catch (error) {
- 			console.error('Error creating profile:', error);
- 			toast.error('Failed to complete setup. Please try again.');
- 		} finally {
- 			isCreating = false;
- 		}
- 	}
+   			console.log('Starting profile creation with validated data');
+
+   			const createdProfile = await createUserProfile(firekitUser.user as User, {
+   				role: selectedRole!,
+   				invitationCode: onboardingData.invitationCode,
+   				companyCode: onboardingData.companyCode,
+   				companyName: onboardingData.companyName,
+   				companyDescription: onboardingData.companyDescription,
+   			});
+
+   			console.log('Profile creation completed successfully');
+
+   			// Immediately update the user profile store with the created data
+   			// This bypasses any firekitDoc listener issues
+   			userProfile.set({
+   				data: createdProfile,
+   				loading: false,
+   				error: null,
+   				update: async (data: Partial<UserProfile>) => {
+   					// This will be overridden by the layout, but provide a basic implementation
+   					console.log('Profile update called from onboarding:', data);
+   				}
+   			});
+
+   			console.log('Profile store updated with created data');
+
+   			// Also verify the profile was actually saved by reading it directly
+   			try {
+   				const profileRef = doc(db, "users", firekitUser.user!.uid);
+   				const profileDoc = await getDoc(profileRef);
+   				
+   				if (profileDoc.exists()) {
+   					console.log('Profile verified in Firestore:', profileDoc.data());
+   				} else {
+   					console.error('Profile not found in Firestore after creation!');
+   				}
+   			} catch (verifyError) {
+   				console.error('Error verifying profile in Firestore:', verifyError);
+   			}
+
+   			// Wait a moment for everything to sync, then dispatch complete
+   			setTimeout(() => {
+   				dispatch('complete');
+   			}, 1000);
+   		} catch (error) {
+   			console.error('Error creating profile:', error);
+   			toast.error(`Failed to complete setup: ${error instanceof Error ? error.message : 'Unknown error'}`);
+   		} finally {
+   			isCreating = false;
+   		}
+   	}
 
 	function getRoleDisplayName(): string {
 		switch (selectedRole) {

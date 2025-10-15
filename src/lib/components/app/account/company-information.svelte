@@ -44,6 +44,50 @@
 	function goToOnboarding() {
 		goto('/onboarding');
 	}
+
+	async function refreshProfile() {
+		try {
+			// Force a profile refresh by clearing the current store
+			userProfile.update(store => ({
+				...store,
+				loading: true,
+				error: null
+			}));
+
+			// Import and use the direct read function
+			const { doc, getDoc } = await import('firebase/firestore');
+			const { db } = await import('$lib/firebase');
+			
+			if (userData?.uid) {
+				const profileRef = doc(db, "users", userData.uid);
+				const profileDoc = await getDoc(profileRef);
+				
+				if (profileDoc.exists()) {
+					const profileData = profileDoc.data();
+					userProfile.update(store => ({
+						...store,
+						data: profileData,
+						loading: false,
+						error: null
+					}));
+					console.log('Profile refreshed successfully');
+				} else {
+					userProfile.update(store => ({
+						...store,
+						loading: false,
+						error: 'No profile found'
+					}));
+				}
+			}
+		} catch (error) {
+			console.error('Error refreshing profile:', error);
+			userProfile.update(store => ({
+				...store,
+				loading: false,
+				error: 'Failed to refresh profile'
+			}));
+		}
+	}
 </script>
 
 <!-- Loading State -->
@@ -272,6 +316,10 @@
 							Complete Profile Setup
 						</Button>
 					{/if}
+					<Button onclick={refreshProfile} variant="outline" size="sm">
+						<Icon icon="lucide:refresh-cw" class="h-4 w-4 mr-2" />
+						Refresh Profile
+					</Button>
 				</div>
 			</div>
 		</Card.Content>

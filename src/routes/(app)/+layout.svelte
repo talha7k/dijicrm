@@ -29,11 +29,15 @@
   };
   import { redirectToDashboard } from "$lib/utils/auth";
   import { isProfileComplete } from "$lib/services/profileValidationService";
+  import { doc, getDoc } from "firebase/firestore";
+  import { db } from "$lib/firebase";
 
   // Track if we've already handled initial navigation to prevent loops
   let hasHandledInitialNavigation = $state(false);
   let hasInitializedPresence = $state(false);
   let profileCheckTimeout = $state<NodeJS.Timeout | null>(null);
+  let profileRetryCount = $state(0);
+  let maxProfileRetries = 3;
 
   $effect(() => {
     if (hasHandledInitialNavigation) return;
@@ -59,13 +63,28 @@
       if (profile.loading) {
         if (!profileCheckTimeout) {
           profileCheckTimeout = setTimeout(() => {
-            console.log("Layout: Profile loading timeout after 10 seconds, forcing error state");
-            // Force loading to false and set error after timeout
-            userProfile.update((store) => ({
-              ...store,
-              loading: false,
-              error: "Profile loading timed out. Please refresh the page or try again later.",
-            }));
+            console.log(`Layout: Profile loading timeout after 10 seconds (attempt ${profileRetryCount + 1}/${maxProfileRetries})`);
+            
+            if (profileRetryCount < maxProfileRetries) {
+              // Retry by clearing the timeout and letting the effect run again
+              profileRetryCount++;
+              profileCheckTimeout = null;
+              console.log("Layout: Retrying profile load...");
+              
+              // Force a refresh of the firekitDoc by clearing and recreating
+              if (firekitUser.user) {
+                console.log("Layout: Forcing profile refresh for user:", firekitUser.user.uid);
+                // The effect will re-run and recreate the firekitDoc
+              }
+            } else {
+              console.log("Layout: Max retries reached, forcing error state");
+              // Force loading to false and set error after max retries
+              userProfile.update((store) => ({
+                ...store,
+                loading: false,
+                error: "Profile loading failed after multiple attempts. Please refresh the page or try again later.",
+              }));
+            }
           }, 10000); // 10 second timeout
         }
         return;
@@ -80,6 +99,14 @@
       // Check for profile errors
       if (profile.error) {
         console.error("Layout: Profile loading error:", profile.error);
+        
+        // Try fallback: direct Firestore read
+        if (firekitUser.user && profileRetryCount < maxProfileRetries) {
+          console.log("Layout: Trying fallback direct Firestore read");
+          tryDirectProfileRead();
+          return;
+        }
+        
         hasHandledInitialNavigation = true;
         goto("/onboarding");
         return;
@@ -87,7 +114,15 @@
 
       // Check if profile data exists
       if (!profile.data) {
-        console.log("Layout: No profile data found, redirecting to onboarding");
+        console.log("Layout: No profile data found, trying fallback read");
+        
+        // Try fallback: direct Firestore read
+        if (firekitUser.user && profileRetryCount < maxProfileRetries) {
+          tryDirectProfileRead();
+          return;
+        }
+        
+        console.log("Layout: No profile data found and fallback failed, redirecting to onboarding");
         hasHandledInitialNavigation = true;
         goto("/onboarding");
         return;
@@ -122,6 +157,47 @@
       }, 100);
     }
   });
+
+  // Fallback function to directly read profile from Firestore
+  async function tryDirectProfileRead() {
+    if (!firekitUser.user) return;
+    
+    try {
+      console.log("Layout: Attempting direct profile read for user:", firekitUser.user.uid);
+      const profileRef = doc(db, "users", firekitUser.user.uid);
+      const profileDoc = await getDoc(profileRef);
+      
+      if (profileDoc.exists()) {
+        const profileData = profileDoc.data() as UserProfile;
+        console.log("Layout: Direct profile read successful:", profileData);
+        
+        // Update the user profile store with the directly fetched data
+        userProfile.set({
+          data: profileData,
+          loading: false,
+          error: null,
+          update: async (data: Partial<UserProfile>) => {
+            // This will be overridden by the main effect, but provide basic implementation
+            console.log("Profile update called from fallback:", data);
+          }
+        });
+        
+        // Clear any pending timeout
+        if (profileCheckTimeout) {
+          clearTimeout(profileCheckTimeout);
+          profileCheckTimeout = null;
+        }
+        
+        profileRetryCount = 0; // Reset retry count on success
+      } else {
+        console.log("Layout: No profile found in direct read");
+        profileRetryCount++;
+      }
+    } catch (error) {
+      console.error("Layout: Error in direct profile read:", error);
+      profileRetryCount++;
+    }
+  }
 
   // Redirect to appropriate dashboard based on role after authentication
   $effect(() => {

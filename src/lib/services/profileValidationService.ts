@@ -1,9 +1,16 @@
 import type { UserProfile } from "$lib/types/user";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "$lib/firebase";
+import { hasCompanyAccess } from "$lib/utils/company-validation";
 
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];
+}
+
+export interface AsyncValidationResult extends ValidationResult {
+  companyExists?: boolean;
 }
 
 /**
@@ -177,4 +184,90 @@ export function getValidationSummary(validation: ValidationResult): string {
   }
 
   return summary;
+}
+
+/**
+ * Asynchronously validates if a user profile is complete and company exists
+ */
+export async function isProfileCompleteWithCompanyValidation(
+  userProfile: UserProfile | null | undefined,
+): Promise<AsyncValidationResult> {
+  if (!userProfile) {
+    return {
+      isValid: false,
+      errors: ["User profile is missing"],
+      warnings: [],
+    };
+  }
+
+  // First do basic validation
+  const basicValidation = validateProfileStructure(userProfile);
+  if (!basicValidation.isValid) {
+    return {
+      ...basicValidation,
+      companyExists: false,
+    };
+  }
+
+  // Check if company exists in Firestore
+  if (!userProfile.currentCompanyId) {
+    return {
+      isValid: false,
+      errors: ["Current company ID is missing"],
+      warnings: basicValidation.warnings,
+      companyExists: false,
+    };
+  }
+
+  const companyExists = await validateCompanyExists(
+    userProfile.currentCompanyId,
+  );
+  if (!companyExists) {
+    return {
+      isValid: false,
+      errors: ["Current company does not exist or is inaccessible"],
+      warnings: basicValidation.warnings,
+      companyExists: false,
+    };
+  }
+
+  // Verify user has access to the company
+  if (!hasCompanyAccess(userProfile, userProfile.currentCompanyId)) {
+    return {
+      isValid: false,
+      errors: ["User does not have access to the current company"],
+      warnings: basicValidation.warnings,
+      companyExists: true,
+    };
+  }
+
+  // Verify user has access to the company
+  if (!hasCompanyAccess(userProfile, userProfile.currentCompanyId)) {
+    return {
+      isValid: false,
+      errors: ["User does not have access to the current company"],
+      warnings: basicValidation.warnings,
+      companyExists: true,
+    };
+  }
+
+  return {
+    ...basicValidation,
+    companyExists: true,
+  };
+}
+
+/**
+ * Validates if a company exists in Firestore
+ */
+async function validateCompanyExists(companyId: string): Promise<boolean> {
+  if (!companyId) return false;
+
+  try {
+    const companyDoc = await getDoc(doc(db, "companies", companyId));
+    return companyDoc.exists();
+  } catch (error) {
+    console.error("Error validating company existence:", error);
+    return false;
+  }
 }

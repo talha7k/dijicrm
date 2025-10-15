@@ -18,13 +18,20 @@ export interface OnboardingData {
 }
 
 export interface CompanyData {
-  companyName: string;
+  name: string;
   description?: string;
-  ownerUid: string;
-  companyCode: string;
+  ownerId: string;
+  code: string;
   createdAt: any;
   updatedAt: any;
   isActive: boolean;
+  settings?: {
+    timezone: string;
+    currency: string;
+    language: string;
+    emailNotifications: boolean;
+  };
+  memberCount?: number;
 }
 
 /**
@@ -34,6 +41,8 @@ export async function createUserProfile(
   user: User,
   onboardingData: OnboardingData,
 ): Promise<UserProfile> {
+  console.log("Creating user profile:", { userId: user.uid, onboardingData });
+
   // Use a transaction to ensure data consistency
   return await runTransaction(db, async (transaction) => {
     let companyId: string;
@@ -44,20 +53,33 @@ export async function createUserProfile(
         throw new Error("Company name is required for company creation");
       }
 
+      console.log("Creating new company:", onboardingData.companyName);
+
       // Create new company
       const companyData: CompanyData = {
-        companyName: onboardingData.companyName,
+        name: onboardingData.companyName,
         description: onboardingData.companyDescription || "",
-        ownerUid: user.uid,
-        companyCode: generateCompanyCode(),
+        ownerId: user.uid,
+        code: generateCompanyCode(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         isActive: true,
+        settings: {
+          timezone: "UTC",
+          currency: "USD",
+          language: "en",
+          emailNotifications: true,
+        },
+        memberCount: 1,
       };
+
+      console.log("Company data to be saved:", companyData);
 
       const companyRef = doc(collection(db, "companies"));
       transaction.set(companyRef, companyData);
       companyId = companyRef.id;
+
+      console.log("Company created with ID:", companyId);
     } else {
       // For clients and company members, companyId should be determined by validation
       // This would be passed in from the validation step
@@ -74,6 +96,7 @@ export async function createUserProfile(
       // For now, we'll need to implement company lookup based on codes
       // This is a placeholder - actual implementation would validate codes and get companyId
       companyId = await resolveCompanyId(onboardingData);
+      console.log("Resolved company ID:", companyId);
     }
 
     // Create user profile
@@ -125,10 +148,17 @@ export async function createUserProfile(
       },
     };
 
+    console.log("User profile to be saved:", {
+      uid: user.uid,
+      companyId,
+      role: userProfile.role,
+    });
+
     // Save user profile
     const userRef = doc(db, "users", user.uid);
     transaction.set(userRef, userProfile);
 
+    console.log("User profile saved successfully");
     return userProfile;
   });
 }
