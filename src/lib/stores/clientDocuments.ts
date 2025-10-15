@@ -1,15 +1,15 @@
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
 import {
   Timestamp,
   collection,
   query,
   where,
-  getDocs,
   updateDoc,
   doc,
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
+import { userProfile } from "$lib/stores/user";
 import type { GeneratedDocument, DocumentDelivery } from "$lib/types/document";
 
 interface ClientDocumentsState {
@@ -20,116 +20,174 @@ interface ClientDocumentsState {
 }
 
 function createClientDocumentsStore() {
-  const { subscribe, set, update } = writable<ClientDocumentsState>({
+  const store = writable<ClientDocumentsState>({
     documents: [],
     deliveries: [],
     loading: false,
     error: null,
   });
 
+  let unsubscribeDocuments: (() => void) | null = null;
+  let unsubscribeDeliveries: (() => void) | null = null;
+
+  // Subscribe to user profile changes
+  const unsubscribeUser = userProfile.subscribe(($userProfile) => {
+    if ($userProfile.data && $userProfile.data.role === "client") {
+      loadClientDocuments($userProfile.data.uid);
+    } else {
+      // Clean up listeners and clear data
+      if (unsubscribeDocuments) {
+        unsubscribeDocuments();
+        unsubscribeDocuments = null;
+      }
+      if (unsubscribeDeliveries) {
+        unsubscribeDeliveries();
+        unsubscribeDeliveries = null;
+      }
+      store.set({ documents: [], deliveries: [], loading: false, error: null });
+    }
+  });
+
+  function loadClientDocuments(clientId: string) {
+    store.update((state) => ({ ...state, loading: true, error: null }));
+
+    try {
+      // Clean up previous listeners
+      if (unsubscribeDocuments) {
+        unsubscribeDocuments();
+      }
+      if (unsubscribeDeliveries) {
+        unsubscribeDeliveries();
+      }
+
+      // Set up real-time listener for documents
+      const documentsQuery = query(
+        collection(db, "generatedDocuments"),
+        where("clientId", "==", clientId),
+      );
+
+      unsubscribeDocuments = onSnapshot(
+        documentsQuery,
+        (querySnapshot) => {
+          const documents: GeneratedDocument[] = [];
+
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            documents.push({
+              id: doc.id,
+              ...data,
+              generatedAt: data.generatedAt,
+              sentAt: data.sentAt,
+              viewedAt: data.viewedAt,
+              completedAt: data.completedAt,
+            } as GeneratedDocument);
+          });
+
+          store.update((state) => ({
+            ...state,
+            documents,
+            loading: false,
+          }));
+        },
+        (error) => {
+          console.error("Error loading client documents:", error);
+          store.update((state) => ({
+            ...state,
+            error: error.message,
+            loading: false,
+          }));
+        },
+      );
+
+      // Set up real-time listener for deliveries (if needed)
+      // Note: This would need to be based on actual client email or other identifier
+      const deliveriesQuery = query(
+        collection(db, "documentDeliveries"),
+        where("recipientId", "==", clientId), // Assuming recipientId field exists
+      );
+
+      unsubscribeDeliveries = onSnapshot(
+        deliveriesQuery,
+        (querySnapshot) => {
+          const deliveries: DocumentDelivery[] = [];
+
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            deliveries.push({
+              id: doc.id,
+              ...data,
+              sentAt: data.sentAt,
+              deliveredAt: data.deliveredAt,
+              lastRetryAt: data.lastRetryAt,
+            } as DocumentDelivery);
+          });
+
+          store.update((state) => ({
+            ...state,
+            deliveries,
+          }));
+        },
+        (error) => {
+          console.error("Error loading document deliveries:", error);
+        },
+      );
+    } catch (error) {
+      console.error("Error setting up document listeners:", error);
+      store.update((state) => ({
+        ...state,
+        error:
+          error instanceof Error ? error.message : "Failed to load documents",
+        loading: false,
+      }));
+    }
+  }
+
+  // Mark document as viewed
+  async function markAsViewed(documentId: string): Promise<void> {
+    try {
+      await updateDoc(doc(db, "generatedDocuments", documentId), {
+        status: "viewed",
+        viewedAt: Timestamp.now(),
+      });
+
+      // Update local state
+      store.update((state) => ({
+        ...state,
+        documents: state.documents.map((doc: GeneratedDocument) =>
+          doc.id === documentId
+            ? { ...doc, status: "viewed", viewedAt: Timestamp.now() }
+            : doc,
+        ),
+      }));
+    } catch (error) {
+      console.error("Error marking document as viewed:", error);
+    }
+  }
+
+  // Get documents by status
+  function getDocumentsByStatus(
+    status: GeneratedDocument["status"],
+  ): GeneratedDocument[] {
+    const currentState = get(store);
+    return currentState.documents.filter((doc) => doc.status === status);
+  }
+
+  // Get delivery status for a document
+  function getDocumentDelivery(
+    documentId: string,
+  ): DocumentDelivery | undefined {
+    const currentState = get(store);
+    return currentState.deliveries.find(
+      (delivery) => delivery.documentId === documentId,
+    );
+  }
+
   return {
-    subscribe,
-    set,
-    update,
-
-    // Load documents for the current client
-    async loadClientDocuments(clientId: string): Promise<void> {
-      update((state) => ({ ...state, loading: true, error: null }));
-
-      try {
-        // Query Firebase for documents
-        const documentsQuery = query(
-          collection(db, "generatedDocuments"),
-          where("clientId", "==", clientId),
-        );
-
-        const documentsSnapshot = await getDocs(documentsQuery);
-        const documents: GeneratedDocument[] = [];
-
-        documentsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          documents.push({
-            id: doc.id,
-            ...data,
-            generatedAt: data.generatedAt,
-            sentAt: data.sentAt,
-            viewedAt: data.viewedAt,
-            completedAt: data.completedAt,
-          } as GeneratedDocument);
-        });
-
-        // Query Firebase for deliveries
-        const deliveriesQuery = query(
-          collection(db, "documentDeliveries"),
-          where("recipientEmail", "==", "placeholder"), // This would need to be based on client email
-        );
-
-        const deliveriesSnapshot = await getDocs(deliveriesQuery);
-        const deliveries: DocumentDelivery[] = [];
-
-        deliveriesSnapshot.forEach((doc) => {
-          const data = doc.data();
-          deliveries.push({
-            id: doc.id,
-            ...data,
-            sentAt: data.sentAt,
-            deliveredAt: data.deliveredAt,
-            lastRetryAt: data.lastRetryAt,
-          } as DocumentDelivery);
-        });
-
-        update((state) => ({
-          ...state,
-          documents,
-          deliveries,
-          loading: false,
-        }));
-      } catch (error) {
-        console.error("Error loading client documents:", error);
-        update((state) => ({
-          ...state,
-          loading: false,
-          error:
-            error instanceof Error ? error.message : "Failed to load documents",
-        }));
-      }
-    },
-
-    // Mark document as viewed
-    async markAsViewed(documentId: string): Promise<void> {
-      try {
-        await updateDoc(doc(db, "generatedDocuments", documentId), {
-          status: "viewed",
-          viewedAt: Timestamp.now(),
-        });
-
-        // Update local state
-        update((state) => ({
-          ...state,
-          documents: state.documents.map((doc: GeneratedDocument) =>
-            doc.id === documentId
-              ? { ...doc, status: "viewed", viewedAt: Timestamp.now() }
-              : doc,
-          ),
-        }));
-      } catch (error) {
-        console.error("Error marking document as viewed:", error);
-      }
-    },
-
-    // Get documents by status
-    getDocumentsByStatus(
-      status: GeneratedDocument["status"],
-    ): GeneratedDocument[] {
-      // This would need to be implemented with proper state access
-      return [];
-    },
-
-    // Get delivery status for a document
-    getDocumentDelivery(documentId: string): DocumentDelivery | undefined {
-      // This would need to be implemented with proper state access
-      return undefined;
-    },
+    subscribe: store.subscribe,
+    loadClientDocuments,
+    markAsViewed,
+    getDocumentsByStatus,
+    getDocumentDelivery,
   };
 }
 

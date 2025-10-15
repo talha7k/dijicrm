@@ -138,12 +138,13 @@
                         Record a payment for invoice {invoice.id}
                       </DialogDescription>
                     </DialogHeader>
-                    <PaymentRecordingForm
-                      invoiceId={invoice.id}
-                      outstandingAmount={invoice.outstandingAmount}
-                      onSave={handleRecordPayment}
-                      onCancel={() => showPaymentDialog = false}
-                    />
+                     <PaymentRecordingForm
+                       invoiceId={invoice.id}
+                       outstandingAmount={invoice.outstandingAmount}
+                       clientId={invoice.clientId}
+                       onSave={handleRecordPayment}
+                       onCancel={() => showPaymentDialog = false}
+                     />
                   </DialogContent>
                 </Dialog>
               {/if}

@@ -53,15 +53,8 @@
 				return;
 			}
 
-			// Check if this is an invited client
-			// In real implementation, query database for invitation
-			const isInvitedClient = formData.email === 'jane.smith@client.com' && invitationToken === 'mock-token-123';
-
-			if (isInvitedClient) {
-				// Redirect to invitation acceptance flow
-				goto(`/invite/${invitationToken}`);
-				return;
-			}
+			// TODO: Check if this is an invited client by querying database for invitation
+			// For now, skip this check
 
 			// Sign up
 			const displayName = `${formData.firstName} ${formData.lastName}`;

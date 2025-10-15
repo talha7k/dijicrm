@@ -271,10 +271,10 @@
     goto('/templates');
   }
 
-  function handleTemplatePreview(template: DocumentTemplate) {
-    // TODO: Show preview modal
-    console.log('Preview template:', template);
-  }
+function handleTemplatePreview(template: DocumentTemplate) {
+     // Preview is handled internally by TemplateEditor component
+     console.log('Preview template:', template);
+   }
 
   function handleCancel() {
     if (showEditor) {

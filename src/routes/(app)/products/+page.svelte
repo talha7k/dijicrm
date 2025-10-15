@@ -24,6 +24,8 @@
    let searchQuery = $state("");
    let selectedCategory = $state("all");
    let showCreateDialog = $state(false);
+   let showEditDialog = $state(false);
+   let productToEdit = $state<Product | null>(null);
 
    // Dialog state
    let showConfirmDialog = $state(false);
@@ -66,20 +68,33 @@
     showCreateDialog = true;
   }
 
-  async function handleProductSave(product: Partial<Product>) {
-    try {
-      await productsStore.createProduct(product as Omit<Product, "id" | "createdAt" | "updatedAt">);
-      showCreateDialog = false;
-    } catch (error) {
-      console.error("Failed to save product:", error);
-      // TODO: Show error message to user
-    }
-  }
+async function handleProductSave(product: Partial<Product>) {
+     try {
+       await productsStore.createProduct(product as Omit<Product, "id" | "createdAt" | "updatedAt">);
+       showCreateDialog = false;
+     } catch (error) {
+       console.error("Failed to save product:", error);
+       // TODO: Show error message to user
+     }
+   }
 
-  function handleEditProduct(product: Product) {
-    // TODO: Open edit dialog
-    console.log("Edit product:", product);
-  }
+   async function handleProductEdit(product: Partial<Product>) {
+     if (!productToEdit) return;
+     
+     try {
+       await productsStore.updateProduct(productToEdit.id, product);
+       showEditDialog = false;
+       productToEdit = null;
+     } catch (error) {
+       console.error("Failed to update product:", error);
+       // TODO: Show error message to user
+     }
+   }
+
+function handleEditProduct(product: Product) {
+     productToEdit = product;
+     showEditDialog = true;
+   }
 
    function handleDeleteProduct(product: Product) {
      productToDelete = product;
@@ -160,6 +175,28 @@
             on:save={(e) => handleProductSave(e.detail)}
             on:cancel={() => showCreateDialog = false}
           />
+        </DialogContent>
+      </Dialog>
+
+      <!-- Edit Product Dialog -->
+      <Dialog bind:open={showEditDialog}>
+        <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Product/Service</DialogTitle>
+            <DialogDescription>
+              Update the details of this product or service.
+            </DialogDescription>
+          </DialogHeader>
+          {#if productToEdit}
+            <ProductForm
+              product={productToEdit}
+              on:save={(e) => handleProductEdit(e.detail)}
+              on:cancel={() => {
+                showEditDialog = false;
+                productToEdit = null;
+              }}
+            />
+          {/if}
         </DialogContent>
       </Dialog>
     </div>

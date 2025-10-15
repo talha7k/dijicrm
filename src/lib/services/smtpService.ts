@@ -86,9 +86,11 @@ export class SMTPService {
       const data = docSnap.data() as StoredSMTPConfig;
 
       // Decrypt password
+      console.log("Encrypted password found:", !!data.encryptedPassword);
       const decryptedPassword = this.decryptPassword(
         data.encryptedPassword || "",
       );
+      console.log("Password decrypted successfully:", !!decryptedPassword);
 
       const config: SMTPConfig = {
         enabled: data.enabled,
@@ -102,6 +104,11 @@ export class SMTPService {
         fromEmail: data.fromEmail,
         fromName: data.fromName,
       };
+
+      console.log("Final SMTP config:", {
+        ...config,
+        auth: { ...config.auth, pass: config.auth.pass ? "***" : "EMPTY" },
+      });
 
       return { success: true, config };
     } catch (error) {
@@ -197,7 +204,17 @@ export class SMTPService {
    */
   private decryptPassword(encryptedPassword: string): string {
     try {
-      return atob(encryptedPassword);
+      if (!encryptedPassword) {
+        console.log("No encrypted password provided");
+        return "";
+      }
+      console.log(
+        "Attempting to decrypt password of length:",
+        encryptedPassword.length,
+      );
+      const decrypted = atob(encryptedPassword);
+      console.log("Password decrypted successfully");
+      return decrypted;
     } catch (error) {
       console.error("Error decrypting password:", error);
       return "";

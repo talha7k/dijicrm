@@ -15,6 +15,9 @@
   import type { Order, Payment } from '$lib/types/document';
   import { Timestamp } from 'firebase/firestore';
   import { toast } from 'svelte-sonner';
+  import { companyContext } from '$lib/stores/companyContext';
+  import { auth } from '$lib/firebase';
+  import { get } from 'svelte/store';
 
   interface Props {
     order: Order | null;
@@ -87,6 +90,15 @@
       return;
     }
 
+    // Get auth and company context
+    const companyContextValue = get(companyContext);
+    const userId = auth.currentUser?.uid;
+    
+    if (!companyContextValue.data || !userId) {
+      toast.error('Authentication or company context required');
+      return;
+    }
+
     try {
       await paymentsStore.recordPayment({
         invoiceId: order.id,
@@ -95,7 +107,7 @@
         paymentDate: Timestamp.now(),
         paymentMethod,
         notes: paymentNotes,
-        recordedBy: 'user-1', // TODO: Get from auth
+        recordedBy: userId,
       });
 
       toast.success('Payment recorded successfully');
@@ -120,6 +132,13 @@
   async function handleGenerateInvoice() {
     if (!order) return;
 
+    // Get auth and company context
+    const companyContextValue = get(companyContext);
+    if (!companyContextValue.data) {
+      toast.error('Company context required');
+      return;
+    }
+
     generatingInvoice = true;
     try {
       // Generate invoice PDF using document generation
@@ -139,7 +158,7 @@
           dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
         },
         'pdf',
-        order.companyId
+        companyContextValue.data.companyId
       );
 
       if (result.success) {

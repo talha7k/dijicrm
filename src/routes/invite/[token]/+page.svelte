@@ -29,21 +29,65 @@
     general: ''
   });
 
-  onMount(async () => {
-    try {
-      // Validate invitation token
-      // TODO: Query database for invitation token
-      // For now, mark as invalid since no invitation system is implemented
-      invitationValid = false;
-      errors.general = 'Invitation system not yet implemented. Please contact support.';
-    } catch (error) {
-      console.error('Error validating invitation:', error);
-      invitationValid = false;
-      errors.general = 'Failed to validate invitation.';
-    } finally {
-      loading = false;
-    }
-  });
+onMount(async () => {
+     try {
+       // Validate invitation token with the API
+       const response = await fetch('/api/invitations/validate', {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({ code: token }),
+       });
+
+       if (!response.ok) {
+         const errorData = await response.json();
+         throw new Error(errorData.message || 'Invalid invitation');
+       }
+
+       const data = await response.json();
+       
+       // Set client data from invitation
+       clientData = {
+         uid: '', // Will be set when account is created
+         email: data.invitation.email,
+         displayName: data.invitation.email.split('@')[0], // Default name from email
+         firstName: data.invitation.email.split('@')[0],
+         lastName: '',
+         photoURL: null,
+         isActive: true,
+         lastLoginAt: Timestamp.now(),
+         createdAt: Timestamp.now(),
+         updatedAt: Timestamp.now(),
+         emailNotifications: true,
+         pushNotifications: true,
+         theme: 'system',
+         language: 'en',
+         role: 'client',
+         permissions: [],
+         companyAssociations: [{
+           companyId: data.company.id,
+           role: 'member',
+           joinedAt: Timestamp.now(),
+         }],
+         currentCompanyId: data.company.id,
+         metadata: {
+           accountStatus: 'invited',
+         },
+         onboardingCompleted: false,
+         invitationToken: token,
+         invitationStatus: 'accepted',
+       };
+
+       invitationValid = true;
+     } catch (error) {
+       console.error('Error validating invitation:', error);
+       invitationValid = false;
+       errors.general = error instanceof Error ? error.message : 'Failed to validate invitation.';
+     } finally {
+       loading = false;
+     }
+   });
 
   async function handleAcceptInvitation(event: Event) {
     event.preventDefault();
@@ -70,21 +114,58 @@
       return;
     }
 
-    try {
-      if (!clientData) {
-        throw new Error('Client data not available');
-      }
+try {
+       if (!clientData) {
+         throw new Error('Client data not available');
+       }
 
-      // Create Firebase Auth account
-      await firekitAuth.registerWithEmail(clientData.email, formData.password, clientData.displayName || '');
+       // Create Firebase Auth account
+       const userCredential = await firekitAuth.registerWithEmail(clientData.email, formData.password, clientData.displayName || '');
+       
+       // Update client data with the new UID
+       clientData.uid = userCredential.user.uid;
+       clientData.invitedBy = clientData.invitedBy; // This should be set from invitation data
+       clientData.invitationStatus = 'accepted';
 
-      // Update client status to active
-      // In real implementation, update the database
-      console.log('Activating client account:', clientData.uid);
+       // Create user profile in Firestore
+       const profileResponse = await fetch('/api/profile', {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+           uid: clientData.uid,
+           email: clientData.email,
+           displayName: clientData.displayName,
+           firstName: clientData.firstName,
+           lastName: clientData.lastName,
+           role: 'client',
+           companyAssociations: clientData.companyAssociations,
+           currentCompanyId: clientData.currentCompanyId,
+           invitationToken: token,
+           invitationStatus: 'accepted',
+         }),
+       });
 
-      toast.success('Account activated successfully! Welcome to the client portal.');
-      goto('/client-dashboard');
-    } catch (error) {
+       if (!profileResponse.ok) {
+         throw new Error('Failed to create user profile');
+       }
+
+       // Mark invitation as used
+       await fetch('/api/invitations/use', {
+         method: 'POST',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+           token: token,
+           usedBy: clientData.uid,
+         }),
+       });
+
+       toast.success('Account activated successfully! Welcome to the client portal.');
+       goto('/client-dashboard');
+     } catch (error) {
       console.error('Error accepting invitation:', error);
       if (error instanceof Error) {
         if (error.message.includes('email-already-in-use')) {

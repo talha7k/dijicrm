@@ -6,6 +6,12 @@
   import { Textarea } from '$lib/components/ui/textarea/index.js';
   import * as Select from '$lib/components/ui/select/index.js';
   import { toast } from 'svelte-sonner';
+  import { uploadFile } from '$lib/services/firebaseStorage';
+  import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+  import { db } from '$lib/firebase';
+  import { companyContext } from '$lib/stores/companyContext';
+  import { auth } from '$lib/firebase';
+  import { get } from 'svelte/store';
 
   interface Props {
     clientId: string;
@@ -67,34 +73,60 @@
     loading = true;
 
     try {
-      // Mock upload process - in real implementation, this would:
-      // 1. Upload file to Firebase Storage
-      // 2. Save document metadata to Firestore
-      // 3. Generate preview/thumbnail if needed
+      // Get current company context
+      const companyContextValue = get(companyContext);
+      if (!companyContextValue.data) {
+        toast.error('Company context not available');
+        return;
+      }
 
-      console.log('Uploading PDF:', {
-        clientId,
-        fileName: selectedFile.name,
-        fileSize: selectedFile.size,
+      const companyId = companyContextValue.data.companyId;
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        toast.error('User not authenticated');
+        return;
+      }
+
+      // Upload file to Firebase Storage
+      const uploadResult = await uploadFile(
+        selectedFile,
         documentName,
-        documentCategory,
-        description,
-      });
+        {
+          maxSize: 10 * 1024 * 1024, // 10MB
+          allowedTypes: ['application/pdf'],
+          path: `companies/${companyId}/clients/${clientId}/documents`
+        }
+      );
 
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!uploadResult.success) {
+        toast.error(uploadResult.error || 'Failed to upload file');
+        return;
+      }
 
-      const uploadedDocument = {
-        id: `doc-${Date.now()}`,
+      // Save document metadata to Firestore
+      const documentData = {
+        companyId,
         clientId,
-        name: documentName,
+        name: documentName.trim(),
         originalFileName: selectedFile.name,
-        category: documentCategory,
-        description: description.trim(),
+        category: documentCategory || null,
+        description: description.trim() || null,
         fileSize: selectedFile.size,
-        uploadedAt: new Date(),
+        fileUrl: uploadResult.url,
+        filePath: uploadResult.path,
+        fileType: selectedFile.type,
+        uploadedAt: serverTimestamp(),
+        uploadedBy: userId,
         type: 'custom',
         status: 'uploaded',
+      };
+
+      const docRef = await addDoc(collection(db, 'clientDocuments'), documentData);
+
+      const uploadedDocument = {
+        id: docRef.id,
+        ...documentData,
+        uploadedAt: new Date(), // For local state
       };
 
       toast.success('PDF uploaded successfully');

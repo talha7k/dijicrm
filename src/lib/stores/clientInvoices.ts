@@ -12,6 +12,7 @@ export interface ClientInvoice {
   dueDate: Date;
   createdAt: Date;
   description: string;
+  clientId: string;
 }
 
 interface ClientInvoicesState {
@@ -37,6 +38,7 @@ function orderToClientInvoice(order: Order): ClientInvoice {
     dueDate: new Date("2024-01-15"), // This should come from order data
     createdAt: order.createdAt.toDate(),
     description: order.title || order.description || "Service order",
+    clientId: order.clientId,
   };
 }
 

@@ -5,9 +5,10 @@
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
   import { Textarea } from '$lib/components/ui/textarea/index.js';
-  import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-  import { documentTemplatesStore } from '$lib/stores/documentTemplates';
-  import { toast } from 'svelte-sonner';
+   import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+   import { documentTemplatesStore } from '$lib/stores/documentTemplates';
+   import { clientDocumentsStore } from '$lib/stores/clientDocuments';
+   import { toast } from 'svelte-sonner';
 
   interface Props {
     clientId: string;
@@ -19,38 +20,48 @@
 
   let { clientId, clientEmail, clientName, open = $bindable(false), onSendComplete }: Props = $props();
 
-  let selectedTemplates = $state<string[]>([]);
-  let selectedCustomDocs = $state<string[]>([]);
-  let emailSubject = $state('');
-  let emailMessage = $state('');
-  let loading = $state(false);
+   let selectedTemplates = $state<string[]>([]);
+   let selectedCustomDocs = $state<string[]>([]);
+   let emailSubject = $state('');
+   let emailMessage = $state('');
+   let loading = $state(false);
 
-  // Mock data for now - replace with actual stores
-  let availableTemplates = $state([
-    { id: 'template-1', name: 'Service Agreement', description: 'Standard service agreement template' },
-    { id: 'template-2', name: 'Invoice Template', description: 'Professional invoice template' },
-    { id: 'template-3', name: 'Contract', description: 'Legal contract template' },
-  ]);
+   // Template data from store
+   let availableTemplates = $state<{ id: string; name: string; description: string }[]>([]);
 
-  let customDocuments = $state([
-    { id: 'custom-1', name: 'Custom Proposal.pdf', uploadedAt: new Date('2024-01-15') },
-    { id: 'custom-2', name: 'Special Terms.pdf', uploadedAt: new Date('2024-01-20') },
-  ]);
+   // Custom documents from store
+   let customDocuments = $state<{ id: string; name: string; uploadedAt: Date }[]>([]);
 
-  // Load templates on mount
-  $effect(() => {
-    if (open) {
-      // Subscribe to templates store
-      const unsubscribe = documentTemplatesStore.subscribe((state) => {
-        availableTemplates = state.data.map(template => ({
-          id: template.id,
-          name: template.name,
-          description: template.description || '',
-        }));
-      });
-      return unsubscribe;
-    }
-  });
+   // Load data when modal opens
+   $effect(() => {
+     if (open) {
+       // Subscribe to templates store
+       const unsubscribeTemplates = documentTemplatesStore.subscribe((state) => {
+         availableTemplates = state.data.map(template => ({
+           id: template.id,
+           name: template.name,
+           description: template.description || '',
+         }));
+       });
+
+       // Subscribe to client documents store
+       const unsubscribeDocuments = clientDocumentsStore.subscribe((state) => {
+         customDocuments = state.documents.map(doc => ({
+           id: doc.id,
+           name: doc.data?.documentName || doc.data?.title || `Document ${doc.id.slice(-6)}`,
+           uploadedAt: doc.generatedAt?.toDate() || new Date(),
+         }));
+       });
+
+       // Load client documents
+       clientDocumentsStore.loadClientDocuments(clientId);
+
+       return () => {
+         unsubscribeTemplates();
+         unsubscribeDocuments();
+       };
+     }
+   });
 
   function handleTemplateToggle(templateId: string, checked: boolean) {
     if (checked) {
@@ -142,28 +153,30 @@
     </Dialog.Header>
 
     <div class="space-y-6">
-      <!-- Template Documents -->
-      <div class="space-y-3">
-        <Label class="text-base font-medium">Template Documents</Label>
-        <div class="space-y-2">
-          {#each availableTemplates as template}
-            {@const isSelected = selectedTemplates.includes(template.id)}
-            <div class="flex items-center space-x-3 p-3 border rounded-lg">
-              <Checkbox
-                id="template-{template.id}"
-                checked={isSelected}
-                onchange={() => handleTemplateToggle(template.id, !isSelected)}
-              />
-              <div class="flex-1">
-                <Label for="template-{template.id}" class="font-medium cursor-pointer">
-                  {template.name}
-                </Label>
-                <p class="text-sm text-muted-foreground">{template.description}</p>
-              </div>
-            </div>
-          {/each}
-        </div>
-      </div>
+       <!-- Template Documents -->
+       {#if availableTemplates.length > 0}
+         <div class="space-y-3">
+           <Label class="text-base font-medium">Template Documents</Label>
+           <div class="space-y-2">
+             {#each availableTemplates as template}
+               {@const isSelected = selectedTemplates.includes(template.id)}
+               <div class="flex items-center space-x-3 p-3 border rounded-lg">
+                 <Checkbox
+                   id="template-{template.id}"
+                   checked={isSelected}
+                   onchange={() => handleTemplateToggle(template.id, !isSelected)}
+                 />
+                 <div class="flex-1">
+                   <Label for="template-{template.id}" class="font-medium cursor-pointer">
+                     {template.name}
+                   </Label>
+                   <p class="text-sm text-muted-foreground">{template.description}</p>
+                 </div>
+               </div>
+             {/each}
+           </div>
+         </div>
+       {/if}
 
       <!-- Custom Documents -->
       <div class="space-y-3">

@@ -11,10 +11,13 @@
     import { clientInvoicesStore, type ClientInvoice } from '$lib/stores/clientInvoices';
     import { clientDocumentsStore } from '$lib/stores/clientDocuments';
    import type { GeneratedDocument } from '$lib/types/document';
+   import { userProfile } from '$lib/stores/user';
+   import { get } from 'svelte/store';
 
    let mounted = $state(false);
     let invoices = clientInvoicesStore;
     let documents = clientDocumentsStore;
+    let currentClientId = $state<string | null>(null);
 
    onMount(() => {
      mounted = true;
@@ -23,8 +26,12 @@
        return; // Will redirect
      }
 
-     // Load client documents
-     documents.loadClientDocuments("client-1"); // TODO: Get from auth context
+     // Get current client ID from user profile
+     const $userProfile = get(userProfile);
+     if ($userProfile.data?.uid) {
+       currentClientId = $userProfile.data.uid;
+       // Documents are loaded automatically by the store when user profile changes
+     }
    });
 
    function getStatusColor(status: ClientInvoice['status']) {

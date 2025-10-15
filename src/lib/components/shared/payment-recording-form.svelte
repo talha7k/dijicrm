@@ -6,18 +6,22 @@ import { Input } from "$lib/components/ui/input";
 import { Label } from "$lib/components/ui/label";
 import { Textarea } from "$lib/components/ui/textarea";
 import Icon from "@iconify/svelte";
-import type { Payment, DocumentFile } from "$lib/types/document";
-import { Timestamp } from "firebase/firestore";
-import { uploadMultipleFiles } from "$lib/services/firebaseStorage";
+ import type { Payment, DocumentFile } from "$lib/types/document";
+ import { Timestamp } from "firebase/firestore";
+ import { uploadMultipleFiles } from "$lib/services/firebaseStorage";
+ import { companyContext } from "$lib/stores/companyContext";
+ import { auth } from "$lib/firebase";
+ import { get } from "svelte/store";
 
   interface Props {
     invoiceId: string;
     outstandingAmount: number;
+    clientId: string;
     onSave: (payment: Omit<Payment, "id" | "createdAt" | "updatedAt">) => void;
     onCancel: () => void;
   }
 
-  let { invoiceId, outstandingAmount, onSave, onCancel }: Props = $props();
+  let { invoiceId, outstandingAmount, clientId, onSave, onCancel }: Props = $props();
 
   let formData = $state({
     amount: outstandingAmount,
@@ -81,55 +85,64 @@ import { uploadMultipleFiles } from "$lib/services/firebaseStorage";
     return isValid;
   }
 
-  async function handleSave() {
-    if (!validateForm()) {
-      return;
-    }
+   async function handleSave() {
+     if (!validateForm()) {
+       return;
+     }
 
-    let proofFilesData: DocumentFile[] | undefined;
+     // Get auth and company context
+     const companyContextValue = get(companyContext);
+     const userId = auth.currentUser?.uid;
+     
+     if (!companyContextValue.data || !userId) {
+       console.error("Authentication or company context required");
+       return;
+     }
 
-    // Upload proof files if any
-    if (fileInput && fileInput.length > 0) {
-      try {
-        const uploadResults = await uploadMultipleFiles(
-          Array.from(fileInput),
-          `payment-proof-${invoiceId}`,
-          { path: "payments/proof" }
-        );
+     let proofFilesData: DocumentFile[] | undefined;
 
-        proofFilesData = uploadResults
-          .filter(result => result.success)
-          .map((result, index) => ({
-            id: `proof-${Date.now()}-${index}`,
-            companyId: "company-1", // TODO: Get from context
-            fileName: fileInput![index].name,
-            fileUrl: result.url!,
-            fileType: fileInput![index].type,
-            fileSize: fileInput![index].size,
-            uploadedAt: Timestamp.now(),
-            uploadedBy: "user-1", // TODO: Get from auth context
-          }));
-      } catch (error) {
-        console.error("Failed to upload proof files:", error);
-        // Continue without proof files, or show error
-      }
-    }
+     // Upload proof files if any
+     if (fileInput && fileInput.length > 0) {
+       try {
+         const uploadResults = await uploadMultipleFiles(
+           Array.from(fileInput),
+           `payment-proof-${invoiceId}`,
+           { path: `companies/${companyContextValue.data.companyId}/payments/proof` }
+         );
 
-    const payment: Omit<Payment, "id" | "createdAt" | "updatedAt"> = {
-      invoiceId,
-      companyId: "company-1", // TODO: Get from auth context
-      clientId: "client-1", // TODO: Get from invoice context
-      amount: formData.amount,
-      paymentDate: Timestamp.fromDate(new Date(formData.paymentDate)),
-      paymentMethod: formData.paymentMethod,
-      reference: formData.reference || undefined,
-      notes: formData.notes || undefined,
-      proofFiles: proofFilesData,
-      recordedBy: "user-1", // TODO: Get from auth context
-    };
+         proofFilesData = uploadResults
+           .filter(result => result.success)
+           .map((result, index) => ({
+             id: `proof-${Date.now()}-${index}`,
+             companyId: companyContextValue.data!.companyId,
+             fileName: fileInput![index].name,
+             fileUrl: result.url!,
+             fileType: fileInput![index].type,
+             fileSize: fileInput![index].size,
+             uploadedAt: Timestamp.now(),
+             uploadedBy: userId,
+           }));
+       } catch (error) {
+         console.error("Failed to upload proof files:", error);
+         // Continue without proof files, or show error
+       }
+     }
 
-    onSave(payment);
-  }
+     const payment: Omit<Payment, "id" | "createdAt" | "updatedAt"> = {
+       invoiceId,
+       companyId: companyContextValue.data!.companyId,
+       clientId,
+       amount: formData.amount,
+       paymentDate: Timestamp.fromDate(new Date(formData.paymentDate)),
+       paymentMethod: formData.paymentMethod,
+       reference: formData.reference || undefined,
+       notes: formData.notes || undefined,
+       proofFiles: proofFilesData,
+       recordedBy: userId,
+     };
+
+     onSave(payment);
+   }
 
   function formatCurrency(amount: number): string {
     return new Intl.NumberFormat("en-US", {

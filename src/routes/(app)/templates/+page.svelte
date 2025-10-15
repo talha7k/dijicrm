@@ -21,6 +21,11 @@
    let searchQuery = $state('');
    let selectedType = $state('all');
    let showSampleDialog = $state(false);
+   let showEditDialog = $state(false);
+   let showPreviewDialog = $state(false);
+   let templateToEdit = $state<DocumentTemplate | null>(null);
+   let templateToPreview = $state<DocumentTemplate | null>(null);
+   let previewHtml = $state('');
 
    // Dialog state
    let showConfirmDialog = $state(false);
@@ -269,15 +274,27 @@
 
 
 
-  function handleTemplatePreview(template: DocumentTemplate) {
-    // TODO: Show preview modal
-    console.log('Preview template:', template);
-  }
+async function handleTemplatePreview(template: DocumentTemplate) {
+     templateToPreview = template;
+     await generatePreviewHtml(template);
+     showPreviewDialog = true;
+   }
 
-  function handleEditTemplate(template: DocumentTemplate) {
-    // TODO: Open edit dialog
-    console.log('Edit template:', template);
-  }
+   async function generatePreviewHtml(template: DocumentTemplate) {
+     try {
+       const { generatePreviewData, renderTemplate } = await import('$lib/utils/template-validation');
+       const previewData = await generatePreviewData(template);
+       previewHtml = renderTemplate(template, previewData);
+     } catch (error) {
+       console.error('Error generating preview:', error);
+       previewHtml = '<div class="text-red-500 p-4">Error generating preview</div>';
+     }
+   }
+
+function handleEditTemplate(template: DocumentTemplate) {
+     templateToEdit = template;
+     showEditDialog = true;
+   }
 
    function handleDeleteTemplate(template: any) {
      templateToDelete = template;
@@ -293,6 +310,19 @@
        // Refresh templates list
        templates = documentTemplatesStore;
        templateToDelete = null;
+     }
+   }
+
+   async function handleTemplateEdit(templateData: DocumentTemplate) {
+     if (!templateToEdit) return;
+     
+     try {
+       await documentTemplatesStore.updateTemplate(templateToEdit.id, templateData);
+       showEditDialog = false;
+       templateToEdit = null;
+     } catch (error) {
+       console.error("Failed to update template:", error);
+       toast.error("Failed to update template");
      }
    }
 
@@ -497,6 +527,60 @@
         {/each}
       </div>
     {/if}
+
+    <!-- Edit Template Dialog -->
+    <Dialog bind:open={showEditDialog}>
+      <DialogContent class="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Template</DialogTitle>
+          <DialogDescription>
+            Update the document template content and settings.
+          </DialogDescription>
+        </DialogHeader>
+        {#if templateToEdit}
+          <TemplateEditor
+            template={templateToEdit}
+            on:save={(e) => handleTemplateEdit(e.detail)}
+            on:cancel={() => {
+              showEditDialog = false;
+              templateToEdit = null;
+            }}
+          />
+        {/if}
+      </DialogContent>
+    </Dialog>
+
+    <!-- Preview Template Dialog -->
+    <Dialog bind:open={showPreviewDialog}>
+      <DialogContent class="max-w-4xl max-h-[80vh] overflow-auto">
+        <DialogHeader>
+          <DialogTitle>Template Preview</DialogTitle>
+          <DialogDescription>
+            Preview of how the document will appear when generated
+          </DialogDescription>
+        </DialogHeader>
+        <div class="mt-4">
+          <div class="border rounded-lg p-6 bg-white shadow-sm min-h-[600px] relative">
+            <style>
+              .invoice-container { max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif; }
+              .invoice-header { margin-bottom: 30px; }
+              .company-info h2 { margin: 0 0 10px 0; font-size: 18px; }
+              .company-info p { margin: 5px 0; }
+              .billing-info { margin-bottom: 30px; }
+              .bill-to h3 { margin: 0 0 10px 0; font-size: 16px; }
+              .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+              .invoice-table th, .invoice-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              .invoice-table th { background-color: #f5f5f5; font-weight: bold; }
+              .totals { text-align: right; margin-bottom: 30px; }
+              .total-row { margin-bottom: 5px; }
+              .total-row.total { font-weight: bold; font-size: 18px; }
+              .invoice-footer { margin-top: 40px; text-align: center; }
+            </style>
+            {@html previewHtml}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
 
     <!-- Confirm Dialog -->
     <ConfirmDialog

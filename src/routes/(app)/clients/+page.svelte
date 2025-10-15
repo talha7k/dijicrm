@@ -126,9 +126,10 @@
 
       await clientStore.inviteClient(clientId, currentUserId);
       // No need to reload clients - the store will update via Firestore listener
-      toast.success('Invitation sent successfully');
+      // No need to show toast here - the store already shows appropriate notifications
     } catch (error) {
       console.error('Error inviting client:', error);
+      // Error toast is already shown by the store, but we'll show one here for UI consistency
       toast.error('Failed to send invitation');
     }
   }

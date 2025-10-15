@@ -1,6 +1,11 @@
 <!--
 	Loading Component - Standardized loading indicator for the app
 
+	Features:
+		- Uses theme colors (primary + muted-foreground) for better contrast
+		- Full circular border with animated top segment
+		- Consistent sizing across the application
+
 	Usage:
 		<Loading /> - Default loading with spinner and "Loading..." text
 		<Loading message="Loading clients..." /> - Custom message
@@ -30,7 +35,7 @@
 </script>
 
 <div class={cn("flex items-center justify-center gap-2", className)}>
-	<div class={cn("animate-spin rounded-full border-b-2 border-primary", sizeClasses[size])}></div>
+	<div class={cn("animate-spin rounded-full border-2 border-muted-foreground/20 border-t-primary", sizeClasses[size])}></div>
 	{#if message}
 		<span class="text-sm text-muted-foreground">{message}</span>
 	{/if}

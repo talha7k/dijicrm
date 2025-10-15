@@ -1,11 +1,15 @@
 import { derived, get } from "svelte/store";
 import type { CompanyContext, Company } from "$lib/types/company";
 import { userProfile } from "./user";
-import { hasCompanyAccess, getCompanyRole } from "$lib/utils/company-validation";
+import {
+  hasCompanyAccess,
+  getCompanyRole,
+} from "$lib/utils/company-validation";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import { auth } from "$lib/firebase";
-import { persisted } from 'svelte-persisted-store'
+import { persisted } from "svelte-persisted-store";
+import { smtpConfigStore } from "./smtpConfig";
 
 type CompanyContextData = {
   data: CompanyContext | null;
@@ -13,7 +17,7 @@ type CompanyContextData = {
   error: any;
 };
 
-const companyContextData = persisted<CompanyContextData>('companyContext', {
+const companyContextData = persisted<CompanyContextData>("companyContext", {
   data: null,
   loading: true,
   error: null,
@@ -24,30 +28,48 @@ const switchCompany = async (companyId: string) => {
 
   const $userProfile = get(userProfile);
   if (!$userProfile.data) {
-    companyContextData.update((s) => ({ ...s, loading: false, error: "No user profile" }));
+    companyContextData.update((s) => ({
+      ...s,
+      loading: false,
+      error: "No user profile",
+    }));
     return;
   }
 
   const user = $userProfile.data;
   if (!hasCompanyAccess(user, companyId)) {
-    companyContextData.update((s) => ({ ...s, loading: false, error: "Access denied" }));
+    companyContextData.update((s) => ({
+      ...s,
+      loading: false,
+      error: "Access denied",
+    }));
     return;
   }
 
   const role = getCompanyRole(user, companyId);
   if (!role) {
-    companyContextData.update((s) => ({ ...s, loading: false, error: "Invalid role" }));
+    companyContextData.update((s) => ({
+      ...s,
+      loading: false,
+      error: "Invalid role",
+    }));
     return;
   }
 
   const company = await fetchCompany(companyId);
   if (!company) {
-    companyContextData.update((s) => ({ ...s, loading: false, error: "Company not found" }));
+    companyContextData.update((s) => ({
+      ...s,
+      loading: false,
+      error: "Company not found",
+    }));
     return;
   }
 
   if (auth.currentUser) {
-    await updateDoc(doc(db, "users", auth.currentUser.uid), { currentCompanyId: companyId });
+    await updateDoc(doc(db, "users", auth.currentUser.uid), {
+      currentCompanyId: companyId,
+    });
   }
 
   companyContextData.update((s) => ({
@@ -63,20 +85,40 @@ export const initializeFromUser = async () => {
   const $userProfile = get(userProfile);
 
   if ($userProfile.error) {
-    companyContextData.update((s) => ({ ...s, data: null, loading: false, error: `Profile error: ${$userProfile.error}` }));
+    companyContextData.update((s) => ({
+      ...s,
+      data: null,
+      loading: false,
+      error: `Profile error: ${$userProfile.error}`,
+    }));
     throw new Error(`Profile error: ${$userProfile.error}`);
   }
 
   if (!$userProfile.data) {
-    companyContextData.update((s) => ({ ...s, data: null, loading: false, error: "No user profile data available" }));
+    companyContextData.update((s) => ({
+      ...s,
+      data: null,
+      loading: false,
+      error: "No user profile data available",
+    }));
     throw new Error("No user profile data available");
   }
 
   const user = $userProfile.data;
-  const validAssociations = user.companyAssociations?.filter(assoc => assoc.companyId && typeof assoc.companyId === 'string' && assoc.companyId.trim().length > 0);
+  const validAssociations = user.companyAssociations?.filter(
+    (assoc) =>
+      assoc.companyId &&
+      typeof assoc.companyId === "string" &&
+      assoc.companyId.trim().length > 0,
+  );
 
   if (!validAssociations || validAssociations.length === 0) {
-    companyContextData.update((s) => ({ ...s, data: null, loading: false, error: "No company associations found." }));
+    companyContextData.update((s) => ({
+      ...s,
+      data: null,
+      loading: false,
+      error: "No company associations found.",
+    }));
     throw new Error("No company associations found.");
   }
 
@@ -88,8 +130,21 @@ export const initializeFromUser = async () => {
 
   try {
     await switchCompany(companyIdToLoad);
+
+    // Initialize SMTP configuration for the company
+    try {
+      await smtpConfigStore.initialize();
+    } catch (smtpError) {
+      console.warn("Failed to initialize SMTP configuration:", smtpError);
+      // Don't fail the whole initialization for SMTP issues
+    }
   } catch (error) {
-    companyContextData.update((s) => ({ ...s, data: null, loading: false, error: `Failed to initialize company context: ${error}` }));
+    companyContextData.update((s) => ({
+      ...s,
+      data: null,
+      loading: false,
+      error: `Failed to initialize company context: ${error}`,
+    }));
     throw error;
   }
 };
@@ -103,18 +158,25 @@ const retryInitialization = async () => {
   try {
     await initializeFromUser();
   } catch (error) {
-    companyContextData.update((s) => ({ ...s, loading: false, error: `Retry failed: ${error}` }));
+    companyContextData.update((s) => ({
+      ...s,
+      loading: false,
+      error: `Retry failed: ${error}`,
+    }));
     throw error;
   }
 };
 
-export const companyContext = derived(companyContextData, ($companyContextData) => ({
-  ...$companyContextData,
-  switchCompany,
-  initializeFromUser,
-  reset,
-  retryInitialization,
-}));
+export const companyContext = derived(
+  companyContextData,
+  ($companyContextData) => ({
+    ...$companyContextData,
+    switchCompany,
+    initializeFromUser,
+    reset,
+    retryInitialization,
+  }),
+);
 
 export const activeCompanyId = derived(
   companyContext,

@@ -32,13 +32,14 @@
       </Dialog.Description>
     </Dialog.Header>
 
-    {#if invoice}
-      <PaymentRecordingForm
-        invoiceId={invoice.id}
-        outstandingAmount={invoice.amount}
-        onSave={handlePaymentSave}
-        onCancel={handleCancel}
-      />
-    {/if}
+     {#if invoice}
+       <PaymentRecordingForm
+         invoiceId={invoice.id}
+         outstandingAmount={invoice.amount}
+         clientId={invoice.clientId}
+         onSave={handlePaymentSave}
+         onCancel={handleCancel}
+       />
+     {/if}
   </Dialog.Content>
 </Dialog.Root>

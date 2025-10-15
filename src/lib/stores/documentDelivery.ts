@@ -39,7 +39,7 @@ function createDocumentDeliveryStore() {
         const template = EmailTemplates.documentDelivery(
           clientName,
           companyName,
-          `Document: ${document.id}`, // TODO: Get actual document name
+          document.data?.documentName || `Document: ${document.id}`,
           1,
         );
 
@@ -53,7 +53,7 @@ function createDocumentDeliveryStore() {
             ? [
                 {
                   filename: `document-${document.id}.pdf`,
-                  content: "mock-pdf-content-base64", // TODO: Get actual PDF content
+                  content: document.pdfUrl, // In real implementation, fetch PDF content from storage
                   type: "application/pdf",
                 },
               ]
@@ -133,7 +133,7 @@ function createDocumentDeliveryStore() {
           .filter((doc) => doc.pdfUrl)
           .map((doc) => ({
             filename: `document-${doc.id}.pdf`,
-            content: "mock-pdf-content-base64", // TODO: Get actual PDF content
+            content: doc.pdfUrl || "", // In real implementation, fetch PDF content from storage
             type: "application/pdf" as const,
           }));
 
@@ -376,7 +376,7 @@ function createDocumentDeliveryStore() {
         const template = EmailTemplates.documentReminder(
           clientName,
           companyName,
-          `Document: ${document.id}`, // TODO: Get actual document name
+          document.data?.documentName || `Document: ${document.id}`,
           daysOverdue,
         );
 
@@ -410,7 +410,7 @@ function createDocumentDeliveryStore() {
         const template = EmailTemplates.documentCompleted(
           clientName,
           companyName,
-          `Document: ${document.id}`, // TODO: Get actual document name
+          document.data?.documentName || `Document: ${document.id}`,
         );
 
         const emailOptions: EmailOptions = {

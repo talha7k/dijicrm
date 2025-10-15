@@ -26,6 +26,9 @@
     import DocumentHistory from '$lib/components/app/client/DocumentHistory.svelte';
     import OrderDetailModal from '$lib/components/app/client/OrderDetailModal.svelte';
     import { emailHistoryStore } from '$lib/stores/emailHistory';
+    import { companyContext } from '$lib/stores/companyContext';
+    import { auth } from '$lib/firebase';
+    import { get } from 'svelte/store';
      import type { UserProfile } from '$lib/types/user';
      import type { Product } from '$lib/stores/products';
      import type { ClientInvoice } from '$lib/stores/clientInvoices';
@@ -58,8 +61,7 @@
   let loading = $state(true);
   let activeTab = $state('overview');
 
-  // Mock client orders and products for now
-   let clientOrders = $state<Order[]>([]);
+  let clientOrders = $state<Order[]>([]);
 
    let clientDocuments = $state<DocumentRecord[]>([]);
 
@@ -104,6 +106,8 @@
     let showEmailComposeModal = $state(false);
     let showPaymentModal = $state(false);
     let showOrderDetailModal = $state(false);
+    let showDocumentPreviewModal = $state(false);
+    let documentToPreview = $state<any>(null);
    let selectedInvoice = $state<ClientInvoice | null>(null);
    let selectedOrder = $state<Order | null>(null);
 
@@ -182,6 +186,14 @@
 
    async function handleCreateOrder(order: any) {
      try {
+        const companyContextValue = get(companyContext);
+        const userId = auth.currentUser?.uid;
+        
+        if (!companyContextValue.data || !userId) {
+          toast.error('Authentication or company context required');
+          return;
+        }
+
         await orderStore.createOrder({
           clientId,
          title: order.title,
@@ -193,7 +205,8 @@
          paidAmount: 0,
          outstandingAmount: order.totalAmount,
          payments: [],
-         createdBy: "user-1", // TODO: Get from auth
+         companyId: companyContextValue.data.companyId,
+         createdBy: userId,
        });
        showOrderModal = false;
        toast.success('Order created successfully');
@@ -241,19 +254,26 @@
     toast.success('Payment recorded successfully');
   }
 
-  async function handleInviteClient() {
-    if (!client) return;
+   async function handleInviteClient() {
+     if (!client) return;
 
-    try {
-      await clientStore.inviteClient(client.uid, 'company-user-1'); // Mock invitedBy
-      // Update local client state
-      client = { ...client, metadata: { ...client.metadata, accountStatus: 'invited' } };
-      toast.success('Invitation sent successfully');
-    } catch (error) {
-      console.error('Error inviting client:', error);
-      toast.error('Failed to send invitation');
-    }
-  }
+     try {
+       const userId = auth.currentUser?.uid;
+       if (!userId) {
+         toast.error('User not authenticated');
+         return;
+       }
+
+       await clientStore.inviteClient(client.uid, userId);
+       // Update local client state
+       client = { ...client, metadata: { ...client.metadata, accountStatus: 'invited' } };
+       // No need to show toast here - the store already shows appropriate notifications
+     } catch (error) {
+       console.error('Error inviting client:', error);
+       // Error toast is already shown by the store, but we'll show one here for UI consistency
+       toast.error('Failed to send invitation');
+     }
+   }
 
    async function handleOrderStatusChange(orderId: string, newStatus: string) {
      try {
@@ -554,10 +574,10 @@
             console.log('Download document:', document);
             toast.success('Download started');
           }}
-          onPreview={(document) => {
-            // TODO: Implement preview functionality
-            console.log('Preview document:', document);
-          }}
+onPreview={(document) => {
+             documentToPreview = document;
+             showDocumentPreviewModal = true;
+           }}
           onResend={(documentId) => {
             // TODO: Implement resend functionality
             console.log('Resend document:', documentId);
@@ -609,11 +629,69 @@
        onClose={() => showOrderDetailModal = false}
      />
 
-     <!-- Payment Modal -->
-    <PaymentModal
-      invoice={selectedInvoice}
-      open={showPaymentModal}
-      onPaymentComplete={handlePaymentComplete}
-    />
-  </div>
-{/if}
+<!-- Payment Modal -->
+     <PaymentModal
+       invoice={selectedInvoice}
+       open={showPaymentModal}
+       onPaymentComplete={handlePaymentComplete}
+     />
+
+     <!-- Document Preview Modal -->
+     <Dialog bind:open={showDocumentPreviewModal}>
+       <DialogContent class="max-w-4xl max-h-[80vh] overflow-auto">
+         <DialogHeader>
+           <DialogTitle>Document Preview</DialogTitle>
+           <DialogDescription>
+             Preview of the document sent to the client
+           </DialogDescription>
+         </DialogHeader>
+         {#if documentToPreview}
+           <div class="mt-4 space-y-4">
+             <div class="grid grid-cols-2 gap-4 text-sm">
+               <div>
+                 <span class="font-medium">Document Name:</span>
+                 <p class="text-muted-foreground">{documentToPreview.name}</p>
+               </div>
+               <div>
+                 <span class="font-medium">Type:</span>
+                 <p class="text-muted-foreground">{documentToPreview.type}</p>
+               </div>
+               <div>
+                 <span class="font-medium">Status:</span>
+                 <p class="text-muted-foreground">{documentToPreview.status}</p>
+               </div>
+               <div>
+                 <span class="font-medium">Sent Date:</span>
+                 <p class="text-muted-foreground">{formatDate(documentToPreview.sentDate)}</p>
+               </div>
+             </div>
+             
+             <div class="border rounded-lg p-6 bg-muted/50">
+               <h4 class="font-medium mb-2">Document Content</h4>
+               <p class="text-sm text-muted-foreground">
+                 This is a preview of the document that was sent to the client. 
+                 The actual document content would be displayed here based on the document type.
+               </p>
+               {#if documentToPreview.type === 'generated'}
+                 <div class="mt-4 p-4 bg-white rounded border">
+                   <p class="text-sm">Generated document content would appear here...</p>
+                 </div>
+               {:else if documentToPreview.type === 'uploaded'}
+                 <div class="mt-4 p-4 bg-white rounded border text-center">
+                   <svg class="h-12 w-12 mx-auto mb-2 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                   </svg>
+                   <p class="text-sm">Uploaded PDF document</p>
+                 </div>
+               {:else}
+                 <div class="mt-4 p-4 bg-white rounded border">
+                   <p class="text-sm">Template-based document content would appear here...</p>
+                 </div>
+               {/if}
+             </div>
+           </div>
+         {/if}
+       </DialogContent>
+     </Dialog>
+   </div>
+ {/if}

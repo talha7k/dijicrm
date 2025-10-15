@@ -16,6 +16,32 @@
   import type { UserProfile } from '$lib/types/user';
   import type { ClientInvoice } from '$lib/stores/clientInvoices';
 
+  // Define missing types until proper stores are implemented
+  interface PaymentRecord {
+    id: string;
+    amount: number;
+    method: string;
+    date: Date;
+    reference: string;
+    status: string;
+  }
+
+  interface DocumentRecord {
+    id: string;
+    name: string;
+    type: string;
+    sentDate: Date;
+    status: string;
+  }
+
+  interface EmailRecord {
+    id: string;
+    subject: string;
+    sentDate: Date;
+    status: string;
+    opened: boolean;
+  }
+
   // Company access is checked at layout level
 
   const clientStore = clientManagementStore;
@@ -29,53 +55,10 @@
   let activeTab = $state('details');
   let showPaymentModal = $state(false);
 
-  // Mock payment data for this invoice
-  let payments = $state([
-    {
-      id: 'pay-001',
-      amount: 750.00,
-      method: 'Credit Card',
-      date: new Date('2024-12-15'),
-      reference: 'TXN-12345',
-      status: 'completed'
-    },
-    {
-      id: 'pay-002',
-      amount: 500.25,
-      method: 'Bank Transfer',
-      date: new Date('2025-01-10'),
-      reference: 'TXN-67890',
-      status: 'completed'
-    }
-  ]);
+  let payments = $state<PaymentRecord[]>([]);
 
-  // Mock related documents and emails
-  let relatedDocuments = $state([
-    {
-      id: 'doc-001',
-      name: 'Invoice-2024-001.pdf',
-      type: 'invoice',
-      sentDate: new Date('2024-12-01'),
-      status: 'delivered'
-    }
-  ]);
-
-  let relatedEmails = $state([
-    {
-      id: 'email-001',
-      subject: 'Invoice INV-2024-001 - Payment Due',
-      sentDate: new Date('2024-12-01'),
-      status: 'delivered',
-      opened: true
-    },
-    {
-      id: 'email-002',
-      subject: 'Payment Reminder - Invoice INV-2024-001',
-      sentDate: new Date('2024-12-20'),
-      status: 'opened',
-      opened: true
-    }
-  ]);
+  let relatedDocuments = $state<DocumentRecord[]>([]);
+  let relatedEmails = $state<EmailRecord[]>([]);
 
   onMount(async () => {
     try {
@@ -87,17 +70,9 @@
         return;
       }
 
-      // Load invoice data - for now, mock data
-      // In real implementation, this would fetch from the store
-      invoice = {
-        id: invoiceId,
-        number: 'INV-2024-001',
-        amount: 1250.00,
-        status: 'partially_paid',
-        dueDate: new Date('2024-12-31'),
-        createdAt: new Date('2024-12-01'),
-        description: 'Web Development Services - Phase 1'
-      };
+      // TODO: Load invoice data from store
+      // For now, show empty state until invoice store is implemented
+      invoice = undefined;
 
     } catch (error) {
       console.error('Error loading invoice data:', error);

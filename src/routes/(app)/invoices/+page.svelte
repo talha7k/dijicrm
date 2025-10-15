@@ -59,10 +59,9 @@
     goto(`/invoices/${invoice.id}`);
   }
 
-  function handleEditInvoice(invoice: any) {
-    // TODO: Navigate to edit page
-    console.log("Edit invoice:", invoice);
-  }
+function handleEditInvoice(invoice: any) {
+     goto(`/invoices/${invoice.id}/edit`);
+   }
 
    function handleDeleteInvoice(invoice: any) {
      invoiceToDelete = invoice;

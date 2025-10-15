@@ -13,6 +13,8 @@
   import { brandingService } from "$lib/services/brandingService";
   import type { CompanyBranding } from "$lib/types/branding";
   import { smtpConfigStore } from "$lib/stores/smtpConfig";
+  import { companyContext } from "$lib/stores/companyContext";
+  import { get } from "svelte/store";
   import AlertDialog from "$lib/components/shared/alert-dialog.svelte";
   import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
 
@@ -69,6 +71,9 @@
    let isTesting = $state(false);
    let testResult = $state<{ success: boolean; message: string } | null>(null);
 
+   // Password visibility
+   let showPassword = $state(false);
+
    // Sample data generation
    let isGeneratingSampleData = $state(false);
    let sampleDataResult = $state<{ success: boolean; message: string; data?: any } | null>(null);
@@ -97,24 +102,40 @@
    // SMTP hook
   const smtpStore = smtpConfigStore;
 
+   // Load SMTP config when mounted and company is ready
+  $effect(async () => {
+    if (!mounted) return;
+    
+    const companyContextValue = get(companyContext);
+    if (!companyContextValue.data) return;
+    
+    try {
+      await smtpStore.initialize();
+      const loadedConfig = smtpStore.getCurrentConfig();
+      if (loadedConfig) {
+        smtpConfig = {
+          ...loadedConfig,
+          port: loadedConfig.port.toString(),
+        };
+        console.log('Updated smtpConfig from store:', { ...smtpConfig, auth: { ...smtpConfig.auth, pass: smtpConfig.auth.pass ? '***' : 'EMPTY' } });
+      }
+    } catch (error) {
+      console.error('Failed to load SMTP config:', error);
+    }
+  });
+
   onMount(async () => {
     mounted = true;
 
-    // Load existing configurations
-    // TODO: Get companyId from auth context
-    const companyId = "company-1";
+    // Get company context
+    const companyContextValue = get(companyContext);
+    if (!companyContextValue.data) {
+      showAlert("Authentication Error", "Company context not available. Please refresh the page.", "error");
+      return;
+    }
+    const companyId = companyContextValue.data.companyId;
 
     try {
-      // Load SMTP config
-      await smtpStore.initialize();
-      const loadedSMTPConfig = smtpStore.getCurrentConfig();
-      if (loadedSMTPConfig) {
-        smtpConfig = {
-          ...loadedSMTPConfig,
-          port: loadedSMTPConfig.port.toString(), // Convert to string for Select component
-        };
-      }
-
        // Load branding config
        const brandingResult = await brandingService.loadBranding(companyId);
        if (brandingResult.success && brandingResult.branding) {
@@ -137,8 +158,13 @@
   });
 
   async function handleSaveSMTP() {
-    // TODO: Get companyId from auth context
-    const companyId = "company-1";
+    // Get company context
+    const companyContextValue = get(companyContext);
+    if (!companyContextValue.data) {
+      showAlert("Authentication Error", "Company context not available.", "error");
+      return;
+    }
+    const companyId = companyContextValue.data.companyId;
 
     // Basic validation
     if (smtpConfig.enabled) {
@@ -238,7 +264,13 @@
       return;
     }
 
-    const companyId = "company-1"; // TODO: Get from auth context
+    // Get company context
+    const companyContextValue = get(companyContext);
+    if (!companyContextValue.data) {
+      showAlert("Authentication Error", "Company context not available.", "error");
+      return;
+    }
+    const companyId = companyContextValue.data.companyId;
     isUploadingLogo = true;
 
     try {
@@ -343,7 +375,13 @@
       return;
     }
 
-    const companyId = "company-1"; // TODO: Get from auth context
+    // Get company context
+    const companyContextValue = get(companyContext);
+    if (!companyContextValue.data) {
+      showAlert("Authentication Error", "Company context not available.", "error");
+      return;
+    }
+    const companyId = companyContextValue.data.companyId;
     isUploadingStamp = true;
 
     try {
@@ -422,7 +460,13 @@
   }
 
   async function handleSaveBranding() {
-    const companyId = "company-1"; // TODO: Get from auth context
+    // Get company context
+    const companyContextValue = get(companyContext);
+    if (!companyContextValue.data) {
+      showAlert("Authentication Error", "Company context not available.", "error");
+      return;
+    }
+    const companyId = companyContextValue.data.companyId;
 
     // Validation
     if (branding.companyName && branding.companyName.trim().length === 0) {
@@ -567,13 +611,37 @@
               </div>
               <div>
                 <Label for="smtp-pass">Password/App Password</Label>
-                <Input
-                  id="smtp-pass"
-                  type="password"
-                  bind:value={smtpConfig.auth.pass}
-                  placeholder="your-password"
-                  required
-                />
+                <div class="relative">
+                  <Input
+                    id="smtp-pass"
+                    type={showPassword ? "text" : "password"}
+                    bind:value={smtpConfig.auth.pass}
+                    placeholder="your-password"
+                    required
+                    class="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    class="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onclick={() => showPassword = !showPassword}
+                  >
+                    <Icon 
+                      icon={showPassword ? "mdi:eye-off" : "mdi:eye"} 
+                      class="h-4 w-4 text-muted-foreground" 
+                    />
+                  </Button>
+                </div>
+                {#if smtpConfig.auth.pass}
+                  <p class="text-xs text-muted-foreground mt-1">
+                    Password loaded (click eye icon to view)
+                  </p>
+                {:else}
+                  <p class="text-xs text-muted-foreground mt-1">
+                    No password saved
+                  </p>
+                {/if}
               </div>
             </div>
           </div>

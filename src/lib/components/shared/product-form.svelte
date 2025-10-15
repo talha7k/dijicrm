@@ -8,6 +8,8 @@
   import { Checkbox } from "$lib/components/ui/checkbox";
   import Icon from "@iconify/svelte";
   import type { Product } from "$lib/stores/products";
+  import { companyContext } from "$lib/stores/companyContext";
+  import { get } from "svelte/store";
 
   import AlertDialog from "./alert-dialog.svelte";
 
@@ -47,9 +49,18 @@
       return;
     }
 
+    // Get company context
+    const companyContextValue = get(companyContext);
+    if (!companyContextValue.data) {
+      alertTitle = "Error";
+      alertMessage = "Company context not available";
+      showAlertDialog = true;
+      return;
+    }
+
     const productData: Partial<Product> = {
       ...formData,
-      companyId: "company-1", // TODO: Get from auth context
+      companyId: companyContextValue.data.companyId,
     };
 
     dispatch("save", productData);
