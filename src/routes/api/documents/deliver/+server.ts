@@ -1,6 +1,6 @@
 import { json, error, type RequestEvent } from "@sveltejs/kit";
 import { emailService, EmailTemplates } from "$lib/services/emailService";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp } from "firebase-admin/firestore";
 import type { DocumentDelivery } from "$lib/types/document";
 import { getDb, getAuthAdmin } from "$lib/firebase-admin";
 import { requireCompanyAccess } from "$lib/utils/server-company-validation";
@@ -117,7 +117,7 @@ export const POST = async ({ request, locals }: RequestEvent) => {
       documentId,
       recipientEmail,
       status: emailResult.success ? "sent" : "bounced",
-      sentAt: Timestamp.now(),
+      sentAt: Timestamp.now() as any, // Admin SDK Timestamp compatible with client types
       errorMessage: emailResult.error,
       retryCount: 0,
       maxRetries: 3,

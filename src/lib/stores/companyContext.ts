@@ -1,14 +1,13 @@
-import { derived, get } from "svelte/store";
+import { derived, get, writable } from "svelte/store";
 import type { CompanyContext, Company } from "$lib/types/company";
 import { userProfile } from "./user";
 import {
   hasCompanyAccess,
   getCompanyRole,
 } from "$lib/utils/company-validation";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import { auth } from "$lib/firebase";
-import { persisted } from "svelte-persisted-store";
 import { smtpConfigStore } from "./smtpConfig";
 
 type CompanyContextData = {
@@ -17,14 +16,13 @@ type CompanyContextData = {
   error: any;
 };
 
-export const companyContextData = persisted<CompanyContextData>(
-  "companyContext",
-  {
-    data: null,
-    loading: true,
-    error: null,
-  },
-);
+export const companyContextData = writable<CompanyContextData>({
+  data: null,
+  loading: true,
+  error: null,
+});
+
+let companyUnsubscribe: (() => void) | null = null;
 
 const switchCompany = async (companyId: string) => {
   companyContextData.update((s) => ({ ...s, loading: true, error: null }));
@@ -59,41 +57,70 @@ const switchCompany = async (companyId: string) => {
     return;
   }
 
-  const company = await fetchCompany(companyId);
-  if (!company) {
-    companyContextData.update((s) => ({
-      ...s,
-      loading: false,
-      error: "Company not found",
-    }));
-    return;
+  // Clean up previous listener
+  if (companyUnsubscribe) {
+    companyUnsubscribe();
   }
 
+  // Set up real-time listener for company data
+  const companyDocRef = doc(db, "companies", companyId);
+  companyUnsubscribe = onSnapshot(
+    companyDocRef,
+    (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const company = docSnapshot.data() as Company;
+
+        companyContextData.update((s) => ({
+          ...s,
+          data: { companyId, company, role, permissions: [] },
+          loading: false,
+          error: null,
+        }));
+      } else {
+        companyContextData.update((s) => ({
+          ...s,
+          data: null,
+          loading: false,
+          error: "Company not found",
+        }));
+      }
+    },
+    (error) => {
+      console.error("Error listening to company data:", error);
+      companyContextData.update((s) => ({
+        ...s,
+        data: null,
+        loading: false,
+        error: `Failed to listen to company data: ${error.message}`,
+      }));
+    },
+  );
+
+  // Update user's current company
   if (auth.currentUser) {
     await updateDoc(doc(db, "users", auth.currentUser.uid), {
       currentCompanyId: companyId,
     });
   }
-
-  companyContextData.update((s) => ({
-    ...s,
-    data: { companyId, company, role, permissions: [] },
-    loading: false,
-  }));
 };
 
 export const initializeFromUser = async () => {
-  // Check if we already have valid company context data
-  const currentContext = get(companyContextData);
   const $userProfile = get(userProfile);
+  const currentContext = get(companyContextData);
 
+  // If we already have valid context for the same company, just ensure SMTP is initialized
   if (
     currentContext.data &&
     $userProfile.data &&
-    currentContext.data.companyId === $userProfile.data.currentCompanyId
+    currentContext.data.companyId === $userProfile.data.currentCompanyId &&
+    companyUnsubscribe // Listener is active
   ) {
-    // We already have valid data, just ensure loading is false
-    companyContextData.update((s) => ({ ...s, loading: false, error: null }));
+    // Initialize SMTP configuration if not already done
+    try {
+      await smtpConfigStore.initialize();
+    } catch (smtpError) {
+      console.warn("Failed to initialize SMTP configuration:", smtpError);
+    }
     return;
   }
 
@@ -165,6 +192,12 @@ export const initializeFromUser = async () => {
 };
 
 const reset = () => {
+  // Clean up listener
+  if (companyUnsubscribe) {
+    companyUnsubscribe();
+    companyUnsubscribe = null;
+  }
+
   companyContextData.set({ data: null, loading: false, error: null });
 };
 

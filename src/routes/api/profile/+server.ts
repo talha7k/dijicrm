@@ -1,7 +1,7 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { getDb, getAuthAdmin } from "$lib/firebase-admin";
-import { Timestamp } from "@firebase/firestore";
+import { Timestamp } from "firebase-admin/firestore";
 import type { UserProfile } from "$lib/types/user";
 import { validateProfileStructure } from "$lib/services/profileValidationService";
 import { invalidateProfileCache } from "$lib/utils/profile-cache";
@@ -75,7 +75,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     }
 
     // Add updated timestamp
-    filteredUpdates.updatedAt = Timestamp.now();
+    filteredUpdates.updatedAt = Timestamp.now() as any;
 
     const userRef = db.collection("users").doc(user.uid);
     await userRef.update(filteredUpdates);
@@ -119,7 +119,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     // Create complete profile
-    const now = Timestamp.now();
+    const now = Timestamp.now() as any;
     const newProfile: UserProfile = {
       uid: user.uid,
       email: user.email!,

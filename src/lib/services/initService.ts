@@ -6,28 +6,12 @@ import { companyContext, initializeFromUser } from "$lib/stores/companyContext";
 import { handlePostAuthentication } from "$lib/services/authService";
 import { app } from "$lib/stores/app";
 import { goto } from "$app/navigation";
+import { smtpConfigStore } from "$lib/stores/smtpConfig";
 
 let initializationPromise: Promise<void> | null = null;
 
 function initialize(): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Check persisted stores first for instant loading
-    const persistedProfile = get(userProfile);
-    const persistedCompany = get(companyContext);
-
-    // Set initial state based on persisted data
-    if (persistedProfile.data && persistedCompany.data) {
-      app.set({
-        initializing: false, // No need to initialize if we have data
-        authenticated: true,
-        profileReady: true,
-        companyReady: true,
-        error: null,
-      });
-      resolve();
-      return;
-    }
-
     app.set({
       initializing: true,
       authenticated: false,
@@ -41,10 +25,8 @@ function initialize(): Promise<void> {
         if (user) {
           app.update((s) => ({ ...s, authenticated: true }));
 
-          // Only fetch if we don't have persisted data
-          if (!persistedProfile.data) {
-            await handlePostAuthentication(user);
-          }
+          // Always fetch fresh profile data
+          await handlePostAuthentication(user);
 
           const profile = get(userProfile);
           if (profile.data) {
@@ -61,10 +43,8 @@ function initialize(): Promise<void> {
               return;
             }
 
-            // Only initialize company if we don't have persisted data
-            if (!persistedCompany.data) {
-              await initializeFromUser();
-            }
+            // Always initialize company context fresh
+            await initializeFromUser();
 
             const company = get(companyContext);
             if (company.data) {

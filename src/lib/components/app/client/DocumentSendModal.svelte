@@ -9,11 +9,13 @@
   import { documentTemplatesStore } from "$lib/stores/documentTemplates";
   import { clientDocumentsStore } from "$lib/stores/clientDocuments";
   import { documentGenerationStore } from "$lib/stores/documentGeneration";
-import { clientManagementStore } from "$lib/stores/clientManagement";
-import { companyContext } from "$lib/stores/companyContext";
-import { get } from "svelte/store";
-import { mapClientDataToTemplate } from "$lib/utils/client-data-mapping";
-import { authenticatedFetch } from "$lib/utils/api";
+ import { clientManagementStore } from "$lib/stores/clientManagement";
+ import { companyContext } from "$lib/stores/companyContext";
+ import { smtpConfigStore } from "$lib/stores/smtpConfig";
+ import { get } from "svelte/store";
+ import { mapClientDataToTemplate } from "$lib/utils/client-data-mapping";
+ import { authenticatedFetch } from "$lib/utils/api";
+ import { downloadFileAsBase64 } from "$lib/services/firebaseStorage";
   import type { UserProfile } from "$lib/types/user";
   import { toast } from "svelte-sonner";
 
@@ -38,6 +40,11 @@ import { authenticatedFetch } from "$lib/utils/api";
   let emailSubject = $state("");
   let emailMessage = $state("");
   let loading = $state(false);
+  let generationProgress = $state({
+    current: 0,
+    total: 0,
+    currentDocument: "",
+  });
 
   // Client data and generated documents
   let client = $state<UserProfile | null>(null);
@@ -59,12 +66,21 @@ import { authenticatedFetch } from "$lib/utils/api";
 
   // Custom documents from store
   let customDocuments = $state<
-    { id: string; name: string; uploadedAt: Date }[]
+    { id: string; name: string; uploadedAt: Date; pdfUrl?: string; fileType?: string }[]
   >([]);
 
   // Load data when modal opens
   $effect(() => {
     if (open) {
+      console.log("📧 [DOCUMENT SEND MODAL] Modal opened, checking SMTP config...");
+
+      // Check SMTP config availability from store
+      const smtpState = get(smtpConfigStore);
+      console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available on modal open:", !!smtpState.config);
+      console.log("📧 [DOCUMENT SEND MODAL] SMTP Config initialized:", smtpState.initialized);
+      console.log("📧 [DOCUMENT SEND MODAL] SMTP Config loading:", smtpState.loading);
+      console.log("📧 [DOCUMENT SEND MODAL] SMTP Config error:", smtpState.error);
+
       // Subscribe to templates store
       const unsubscribeTemplates = documentTemplatesStore.subscribe((state) => {
         availableTemplates = state.data.map((template) => ({
@@ -83,6 +99,8 @@ import { authenticatedFetch } from "$lib/utils/api";
             doc.data?.title ||
             `Document ${doc.id.slice(-6)}`,
           uploadedAt: doc.generatedAt?.toDate() || new Date(),
+          pdfUrl: doc.pdfUrl,
+          fileType: "application/pdf",
         }));
       });
 
@@ -248,6 +266,22 @@ import { authenticatedFetch } from "$lib/utils/api";
     return new Blob([byteArray], { type: mimeType });
   }
 
+  function extractStoragePathFromUrl(url: string): string | null {
+    try {
+      // Firebase Storage URLs look like:
+      // https://firebasestorage.googleapis.com/v0/b/bucket-name.appspot.com/o/path%2Fto%2Ffile.pdf?alt=media&token=...
+      const urlObj = new URL(url);
+      const pathMatch = urlObj.pathname.match(/^\/v0\/b\/[^\/]+\/o\/(.+)$/);
+      if (pathMatch) {
+        // Decode URL-encoded path
+        return decodeURIComponent(pathMatch[1]);
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   async function handleSend() {
     if (selectedTemplates.length === 0 && selectedCustomDocs.length === 0) {
       toast.error("Please select at least one document to send");
@@ -277,9 +311,19 @@ import { authenticatedFetch } from "$lib/utils/api";
         get(companyContext).data?.company?.name || "Your Company";
 
       // Generate documents from selected templates
-      for (const templateId of selectedTemplates) {
+      generationProgress = {
+        current: 0,
+        total: selectedTemplates.length,
+        currentDocument: "",
+      };
+
+      for (let i = 0; i < selectedTemplates.length; i++) {
+        const templateId = selectedTemplates[i];
         const template = availableTemplates.find((t) => t.id === templateId);
         if (!template) continue;
+
+        generationProgress.current = i + 1;
+        generationProgress.currentDocument = template.name;
 
         try {
           // Map client data to template variables
@@ -319,19 +363,54 @@ import { authenticatedFetch } from "$lib/utils/api";
           type: "application/pdf",
           encoding: "base64" as const,
         })),
-        // Custom documents would need to be fetched and attached here
-        // For now, we'll just reference them by ID
       ];
 
-      // Send email with attachments
-      const { emailService } = await import("$lib/services/emailService");
+      // Add custom documents
+      for (const customDocId of selectedCustomDocs) {
+        const customDoc = customDocuments.find(doc => doc.id === customDocId);
+        if (customDoc?.pdfUrl) {
+          const storagePath = extractStoragePathFromUrl(customDoc.pdfUrl);
+          if (storagePath) {
+            try {
+              const base64Content = await downloadFileAsBase64(storagePath);
+              if (base64Content) {
+                attachments.push({
+                  filename: customDoc.name,
+                  content: base64Content,
+                  type: customDoc.fileType || "application/pdf",
+                  encoding: "base64" as const,
+                });
+              }
+            } catch (error) {
+              console.error(`Failed to download custom document ${customDocId}:`, error);
+              toast.error(`Failed to attach ${customDoc.name}`);
+            }
+          }
+        }
+      }
 
+      // Send email with attachments
+      console.log("📧 [DOCUMENT SEND MODAL] About to send email");
+      console.log("📧 [DOCUMENT SEND MODAL] Attachments count:", attachments.length);
+      console.log("📧 [DOCUMENT SEND MODAL] To:", clientEmail);
+      console.log("📧 [DOCUMENT SEND MODAL] Subject:", emailSubject);
+      
+      const { emailService } = await import("$lib/services/emailService");
+      
+      // Check SMTP config before sending
+      const smtpConfig = emailService.getSMTPConfig();
+      console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available:", !!smtpConfig);
+      console.log("📧 [DOCUMENT SEND MODAL] SMTP Config:", smtpConfig);
+
+      console.log("📧 [DOCUMENT SEND MODAL] Calling emailService.sendEmail...");
       await emailService.sendEmail({
         to: clientEmail,
         subject: emailSubject,
         htmlBody: emailMessage,
         attachments: attachments.length > 0 ? attachments : undefined,
       });
+      
+      console.log("📧 [DOCUMENT SEND MODAL] Email sent successfully");
 
       const totalDocuments =
         generatedDocuments.length + selectedCustomDocs.length;
@@ -345,6 +424,7 @@ import { authenticatedFetch } from "$lib/utils/api";
       emailSubject = "";
       emailMessage = "";
       generatedDocuments = [];
+      generationProgress = { current: 0, total: 0, currentDocument: "" };
       open = false;
 
       onSendComplete?.();
@@ -362,6 +442,7 @@ import { authenticatedFetch } from "$lib/utils/api";
     emailSubject = "";
     emailMessage = "";
     generatedDocuments = [];
+    generationProgress = { current: 0, total: 0, currentDocument: "" };
     closePreview();
     open = false;
   }
@@ -399,12 +480,12 @@ import { authenticatedFetch } from "$lib/utils/api";
             {#each availableTemplates as template}
               {@const isSelected = selectedTemplates.includes(template.id)}
               <div class="flex items-center space-x-3 p-3 border rounded-lg">
-                <Checkbox
-                  id="template-{template.id}"
-                  checked={isSelected}
-                  onchange={() =>
-                    handleTemplateToggle(template.id, !isSelected)}
-                />
+                 <Checkbox
+                   id="template-{template.id}"
+                   checked={isSelected}
+                   onCheckedChange={(checked) =>
+                     handleTemplateToggle(template.id, checked)}
+                 />
                 <div class="flex-1">
                   <Label
                     for="template-{template.id}"
@@ -461,7 +542,7 @@ import { authenticatedFetch } from "$lib/utils/api";
               <Checkbox
                 id="custom-{doc.id}"
                 checked={isSelected}
-                onchange={() => handleCustomDocToggle(doc.id, !isSelected)}
+                onCheckedChange={(checked) => handleCustomDocToggle(doc.id, checked)}
               />
               <div class="flex-1">
                 <Label for="custom-{doc.id}" class="font-medium cursor-pointer">
@@ -583,6 +664,28 @@ import { authenticatedFetch } from "$lib/utils/api";
         </Card.Root>
       {/if}
     </div>
+
+    {#if loading && generationProgress.total > 0}
+      <div class="px-6 py-4 border-t">
+        <div class="space-y-2">
+          <div class="flex justify-between text-sm">
+            <span>Generating documents...</span>
+            <span>{generationProgress.current} of {generationProgress.total}</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div
+              class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style="width: {(generationProgress.current / generationProgress.total) * 100}%"
+            ></div>
+          </div>
+          {#if generationProgress.currentDocument}
+            <p class="text-xs text-muted-foreground">
+              Generating: {generationProgress.currentDocument}
+            </p>
+          {/if}
+        </div>
+      </div>
+    {/if}
 
     <Dialog.Footer>
       <Button variant="outline" onclick={handleCancel} disabled={loading}>

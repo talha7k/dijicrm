@@ -4,6 +4,7 @@ import {
   uploadBytes,
   getDownloadURL,
   deleteObject,
+  getBlob,
 } from "firebase/storage";
 import app from "$lib/firebase";
 
@@ -138,6 +139,31 @@ export async function getSignedUrl(
     return await getDownloadURL(storageRef);
   } catch (error) {
     console.error("Error getting signed URL:", error);
+    return null;
+  }
+}
+
+/**
+ * Download a file as base64 string for email attachments
+ */
+export async function downloadFileAsBase64(
+  filePath: string,
+): Promise<string | null> {
+  try {
+    const storageRef = ref(storage, filePath);
+    const blob = await getBlob(storageRef);
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1]; // Remove data URL prefix
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error("Failed to read file as base64"));
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error("Error downloading file as base64:", error);
     return null;
   }
 }

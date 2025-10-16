@@ -1,6 +1,8 @@
 import type { GeneratedDocument, DocumentDelivery } from "$lib/types/document";
 import { db } from "$lib/firebase";
 import { authenticatedFetch } from "$lib/utils/api";
+import { get } from "svelte/store";
+import { companyContext } from "$lib/stores/companyContext";
 import {
   collection,
   addDoc,
@@ -71,38 +73,79 @@ class EmailService {
   }
 
   async sendEmail(options: EmailOptions): Promise<EmailResult> {
+    console.log("📧 [EMAIL SERVICE] sendEmail called");
+    console.log("📧 [EMAIL SERVICE] To:", options.to);
+    console.log("📧 [EMAIL SERVICE] Subject:", options.subject);
+    console.log("📧 [EMAIL SERVICE] Has SMTP config:", !!this.smtpConfig);
+    console.log(
+      "📧 [EMAIL SERVICE] Attachments:",
+      options.attachments?.length || 0,
+    );
+
     try {
       let result: EmailResult;
 
       if (this.smtpConfig) {
+        console.log("📧 [EMAIL SERVICE] Using SMTP configuration");
+        console.log("📧 [EMAIL SERVICE] SMTP Host:", this.smtpConfig.host);
+        console.log(
+          "📧 [EMAIL SERVICE] SMTP Enabled:",
+          this.smtpConfig.enabled,
+        );
+
         // Use SMTP via API endpoint
         // Get auth token - wait for user to be available
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
         };
 
+        const companyData = get(companyContext);
+        const companyId = companyData.data?.companyId;
+
+        if (!companyId) {
+          throw new Error("No active company found");
+        }
+
+        const requestBody = {
+          smtpConfig: this.smtpConfig,
+          emailOptions: options,
+          companyId,
+        };
+
+        console.log("📧 [EMAIL SERVICE] Sending request to API endpoint");
+        console.log(
+          "📧 [EMAIL SERVICE] Request body keys:",
+          Object.keys(requestBody),
+        );
+
         const response = await authenticatedFetch("/api/email/send", {
           method: "POST",
-          body: JSON.stringify({
-            smtpConfig: this.smtpConfig,
-            emailOptions: options,
-          }),
+          body: JSON.stringify(requestBody),
         });
 
+        console.log("📧 [EMAIL SERVICE] API response status:", response.status);
+        console.log("📧 [EMAIL SERVICE] API response ok:", response.ok);
+
         if (!response.ok) {
+          console.log(
+            "📧 [EMAIL SERVICE] API response not ok, parsing error...",
+          );
           const errorData = await response.json();
+          console.log("📧 [EMAIL SERVICE] API error response:", errorData);
           throw new Error(errorData.error || "Failed to send email via SMTP");
         }
 
         const responseData = await response.json();
+        console.log("📧 [EMAIL SERVICE] API success response:", responseData);
         result = {
           success: true,
           messageId: responseData.messageId,
           deliveryId: responseData.deliveryId,
         };
       } else {
+        console.log("📧 [EMAIL SERVICE] Using mock implementation");
         // Mock implementation for development
-        console.log("Sending email (mock):", {
+        console.log("📧 [EMAIL SERVICE] Sending email (mock):", {
           to: options.to,
           subject: options.subject,
           hasAttachments: options.attachments?.length || 0,
@@ -112,6 +155,7 @@ class EmailService {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // Mock success response
+        console.log("📧 [EMAIL SERVICE] Mock email sent successfully");
         result = {
           success: true,
           messageId: `mock-${Date.now()}`,
@@ -119,18 +163,28 @@ class EmailService {
         };
       }
 
+      console.log("📧 [EMAIL SERVICE] Email send result:", result);
+
       // Store email record in Firebase if successful
       if (result.success) {
+        console.log("📧 [EMAIL SERVICE] Storing email record in Firebase...");
         await this.storeEmailRecord(options, result);
+        console.log("📧 [EMAIL SERVICE] Email record stored successfully");
       }
 
       return result;
     } catch (error) {
-      console.error("Email send error:", error);
-      return {
+      console.error("📧 [EMAIL SERVICE] ERROR:", error);
+      console.error(
+        "📧 [EMAIL SERVICE] Error stack:",
+        error instanceof Error ? error.stack : "No stack trace",
+      );
+      const errorResult = {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
       };
+      console.log("📧 [EMAIL SERVICE] Returning error result:", errorResult);
+      return errorResult;
     }
   }
 

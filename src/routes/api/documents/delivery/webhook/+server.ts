@@ -1,5 +1,5 @@
 import { json, error } from "@sveltejs/kit";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp } from "firebase-admin/firestore";
 import type { DocumentDelivery } from "$lib/types/document";
 import { documentDeliveryStore } from "$lib/stores/documentDelivery";
 
@@ -119,7 +119,9 @@ export const GET = async ({ url }: any) => {
         mockStatus.status as DocumentDelivery["status"],
         {
           deliveredAt:
-            mockStatus.status === "delivered" ? Timestamp.now() : undefined,
+            mockStatus.status === "delivered"
+              ? (Timestamp.now() as any)
+              : undefined,
         },
       );
     }
