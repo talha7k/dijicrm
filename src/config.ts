@@ -14,20 +14,6 @@ export const marketingNavItems: NavItem[] = [
     title: "Home",
     url: "/",
   },
-
-  {
-    title: "Features",
-    url: "/features",
-  },
-  {
-    title: "Pricing",
-    url: "/pricing",
-  },
-
-  {
-    title: "Blog",
-    url: "/blog",
-  },
   {
     title: "Contact",
     url: "/contact",
@@ -116,11 +102,6 @@ export const companyNavItems: SidebarNav[] = [
         title: "Company Settings",
         url: "/settings",
         icon: "lucide:settings",
-      },
-      {
-        title: "Notifications",
-        url: "/notifications",
-        icon: "lucide:bell",
       },
     ],
   },

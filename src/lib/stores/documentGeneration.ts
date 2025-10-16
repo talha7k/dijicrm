@@ -74,8 +74,12 @@ function createDocumentGenerationStore() {
       }
     },
 
-    async previewDocument(templateId: string, data: Record<string, any>) {
-      return this.generateDocument(templateId, data, "html");
+    async previewDocument(
+      templateId: string,
+      data: Record<string, any>,
+      companyId?: string,
+    ) {
+      return this.generateDocument(templateId, data, "html", companyId);
     },
 
     clearResult() {
