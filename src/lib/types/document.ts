@@ -125,6 +125,15 @@ export interface Order {
   createdBy: string;
 }
 
+// ZATCA QR Code specific interfaces
+export interface ZATCAQRCodeData {
+  sellerName: string;
+  vatNumber: string;
+  timestamp: string;
+  totalAmount: number;
+  vatAmount: number;
+}
+
 // Standard placeholder definitions
 export const STANDARD_PLACEHOLDERS: TemplatePlaceholder[] = [
   {
@@ -164,6 +173,31 @@ export const STANDARD_PLACEHOLDERS: TemplatePlaceholder[] = [
     key: "dueDate",
     label: "Due Date",
     type: "date",
+    required: false,
+  },
+  {
+    key: "zatcaQRCode",
+    label: "ZATCA QR Code",
+    type: "image",
+    required: false,
+    description: "ZATCA compliant QR code for electronic invoicing",
+  },
+  {
+    key: "vatAmount",
+    label: "VAT Amount",
+    type: "currency",
+    required: false,
+  },
+  {
+    key: "vatNumber",
+    label: "VAT Registration Number",
+    type: "text",
+    required: false,
+  },
+  {
+    key: "invoiceTimestamp",
+    label: "Invoice Timestamp",
+    type: "text",
     required: false,
   },
 ];

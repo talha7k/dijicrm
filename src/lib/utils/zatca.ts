@@ -3,80 +3,164 @@
  * Implements TLV (Tag-Length-Value) encoding for Saudi e-invoicing compliance
  */
 
+import QRCode from "qrcode";
+
 export interface ZATCAInvoiceData {
   sellerName: string;
   vatNumber: string;
-  invoiceDate: string; // ISO date string
+  timestamp: string; // ISO 8601 timestamp (e.g., 2022-04-25T15:30:00Z)
   totalAmount: number;
   vatAmount: number;
 }
 
-/**
- * Encodes data in TLV (Tag-Length-Value) format
- * @param tag - Tag identifier (1 byte)
- * @param value - String value to encode
- * @returns TLV encoded bytes
- */
-function encodeTLV(tag: number, value: string): Uint8Array {
-  const valueBytes = new TextEncoder().encode(value);
-  const length = valueBytes.length;
-
-  const buffer = new Uint8Array(2 + length);
-  buffer[0] = tag;
-  buffer[1] = length;
-  buffer.set(valueBytes, 2);
-
-  return buffer;
+export interface ZATCAQROptions {
+  errorCorrectionLevel?: "L" | "M" | "Q" | "H";
+  margin?: number;
+  color?: {
+    dark?: string;
+    light?: string;
+  };
+  width?: number;
 }
 
 /**
- * Generates ZATCA-compliant QR code data
- * @param data - Invoice data for QR code
- * @returns Base64 encoded TLV data (max 500 characters)
+ * Encodes string to UTF-8 and returns as hex string
  */
-export function generateZATCAQRCode(data: ZATCAInvoiceData): string {
-  // ZATCA TLV tags:
-  // 1: Seller name
-  // 2: VAT number
-  // 3: Invoice date (timestamp)
-  // 4: Total amount
-  // 5: VAT amount
+function stringToHex(str: string): string {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
 
-  const tlvParts: Uint8Array[] = [
-    encodeTLV(1, data.sellerName),
-    encodeTLV(2, data.vatNumber),
-    encodeTLV(3, data.invoiceDate),
-    encodeTLV(4, data.totalAmount.toFixed(2)),
-    encodeTLV(5, data.vatAmount.toFixed(2)),
-  ];
+/**
+ * Creates TLV (Tag-Length-Value) hex string for ZATCA QR code
+ * Tag: 1 byte (hex)
+ * Length: 1 byte (hex)
+ * Value: UTF-8 encoded string (hex)
+ */
+function createTLVHex(tag: number, value: string): string {
+  const valueBytes = new TextEncoder().encode(value);
 
-  // Combine all TLV parts
-  const totalLength = tlvParts.reduce((sum, part) => sum + part.length, 0);
-  const combinedBuffer = new Uint8Array(totalLength);
-  let offset = 0;
-
-  for (const part of tlvParts) {
-    combinedBuffer.set(part, offset);
-    offset += part.length;
-  }
-
-  // Convert to Base64
-  const base64String = btoa(String.fromCharCode(...combinedBuffer));
-
-  // Ensure max 500 characters as per ZATCA spec
-  if (base64String.length > 500) {
+  if (valueBytes.length > 255) {
     throw new Error(
-      `QR code data exceeds 500 characters: ${base64String.length}`,
+      `Value for tag ${tag} exceeds maximum length of 255 characters`,
     );
   }
 
-  return base64String;
+  const hexTag = tag.toString(16).padStart(2, "0");
+  const hexLength = valueBytes.length.toString(16).padStart(2, "0");
+  const hexValue = stringToHex(value);
+
+  return hexTag + hexLength + hexValue;
+}
+
+/**
+ * Generates ZATCA-compliant TLV hex data
+ * Tags 1-5 as specified by ZATCA requirements
+ */
+export function generateZATCATLV(data: ZATCAInvoiceData): string {
+  // Validate required fields
+  if (!data.sellerName) throw new Error("Seller name is required");
+  if (!data.vatNumber) throw new Error("VAT number is required");
+  if (!data.timestamp) throw new Error("Timestamp is required");
+  if (data.totalAmount < 0)
+    throw new Error("Total amount must be non-negative");
+  if (data.vatAmount < 0) throw new Error("VAT amount must be non-negative");
+
+  // Validate timestamp format (ISO 8601)
+  if (!isValidISO8601(data.timestamp)) {
+    throw new Error(
+      "Timestamp must be in ISO 8601 format (e.g., 2022-04-25T15:30:00Z)",
+    );
+  }
+
+  // Create TLV hex structures for each tag
+  const tlvParts = [
+    createTLVHex(1, data.sellerName),
+    createTLVHex(2, data.vatNumber),
+    createTLVHex(3, data.timestamp),
+    createTLVHex(4, data.totalAmount.toFixed(2)),
+    createTLVHex(5, data.vatAmount.toFixed(2)),
+  ];
+
+  return tlvParts.join("");
+}
+
+/**
+ * Validates ISO 8601 timestamp format
+ */
+function isValidISO8601(timestamp: string): boolean {
+  const iso8601Regex =
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/;
+  return iso8601Regex.test(timestamp);
+}
+
+/**
+ * Generates ZATCA-compliant QR code as base64 data URL
+ */
+export async function generateZATCAQRCode(
+  data: ZATCAInvoiceData,
+  options: ZATCAQROptions = {},
+): Promise<string> {
+  try {
+    // Generate TLV hex data
+    const tlvHex = generateZATCATLV(data);
+
+    // Generate QR code using the hex string with proper options
+    const qrCodeDataUrl = await QRCode.toDataURL(tlvHex, {
+      errorCorrectionLevel: options.errorCorrectionLevel || "M",
+      type: "image/png",
+      margin: options.margin || 1,
+      color: options.color || {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+      width: options.width || 256,
+    });
+
+    return qrCodeDataUrl;
+  } catch (error) {
+    throw new Error(
+      `Failed to generate ZATCA QR code: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+/**
+ * Generates ZATCA QR code as buffer
+ */
+export async function generateZATCAQRCodeBuffer(
+  data: ZATCAInvoiceData,
+  options: ZATCAQROptions = {},
+): Promise<Buffer> {
+  try {
+    // Generate TLV hex data
+    const tlvHex = generateZATCATLV(data);
+
+    // Generate QR code buffer using the hex string with proper options
+    const qrCodeBuffer = await QRCode.toBuffer(tlvHex, {
+      errorCorrectionLevel: options.errorCorrectionLevel || "M",
+      type: "png",
+      margin: options.margin || 1,
+      color: options.color || {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+      width: options.width || 256,
+    });
+
+    return qrCodeBuffer;
+  } catch (error) {
+    throw new Error(
+      `Failed to generate ZATCA QR code buffer: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
 }
 
 /**
  * Validates ZATCA invoice data
- * @param data - Invoice data to validate
- * @returns Validation result
  */
 export function validateZATCAData(data: ZATCAInvoiceData): {
   valid: boolean;
@@ -92,8 +176,8 @@ export function validateZATCAData(data: ZATCAInvoiceData): {
     errors.push("VAT number must be exactly 15 digits");
   }
 
-  if (!data.invoiceDate || isNaN(Date.parse(data.invoiceDate))) {
-    errors.push("Valid invoice date is required");
+  if (!data.timestamp || !isValidISO8601(data.timestamp)) {
+    errors.push("Valid ISO 8601 timestamp is required");
   }
 
   if (typeof data.totalAmount !== "number" || data.totalAmount < 0) {
@@ -111,5 +195,31 @@ export function validateZATCAData(data: ZATCAInvoiceData): {
   return {
     valid: errors.length === 0,
     errors,
+  };
+}
+
+/**
+ * Creates ZATCA QR data from order and company information
+ */
+export function createZATCADataFromOrder(
+  order: {
+    totalAmount: number;
+    vatAmount?: number;
+    createdAt: Date;
+  },
+  company: {
+    name: string;
+    vatRegistrationNumber: string;
+  },
+): ZATCAInvoiceData {
+  // Calculate VAT if not provided (assuming 15% standard rate)
+  const vatAmount = order.vatAmount || order.totalAmount * 0.15;
+
+  return {
+    sellerName: company.name,
+    vatNumber: company.vatRegistrationNumber,
+    timestamp: order.createdAt.toISOString(),
+    totalAmount: order.totalAmount,
+    vatAmount: vatAmount,
   };
 }

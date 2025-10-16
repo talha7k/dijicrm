@@ -327,32 +327,42 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     }
 
     // Generate ZATCA QR code if company has required data
-    if (companyData?.name && companyData?.vatNumber && data.total) {
+    if (
+      companyData?.name &&
+      companyData?.vatRegistrationNumber &&
+      (data.total || data.totalAmount)
+    ) {
       try {
+        const totalAmount = data.total || data.totalAmount || 0;
+        const vatAmount =
+          data.vatAmount ||
+          data.taxAmount ||
+          (totalAmount * (data.taxRate || 0.15)) / 100 ||
+          0;
+
         const zatcaData = {
           sellerName: companyData.name,
-          vatNumber: companyData.vatNumber,
-          invoiceDate: data.date || new Date().toISOString(),
-          totalAmount: data.total || data.totalAmount || 0,
-          vatAmount:
-            data.taxAmount || (data.total * (data.taxRate || 0)) / 100 || 0,
+          vatNumber: companyData.vatRegistrationNumber,
+          timestamp: data.date || new Date().toISOString(),
+          totalAmount: totalAmount,
+          vatAmount: vatAmount,
         };
         console.log("Generating ZATCA QR with data:", zatcaData);
-        const qrCodeData = generateZATCAQRCode(zatcaData);
-        console.log("ZATCA QR code data generated, length:", qrCodeData.length);
-        data.zatcaQRCode = await generateQRCodeImage(qrCodeData);
+        const qrCodeDataUrl = await generateZATCAQRCode(zatcaData);
         console.log(
-          "ZATCA QR code image generated, data URL length:",
-          data.zatcaQRCode.length,
+          "ZATCA QR code generated, data URL length:",
+          qrCodeDataUrl.length,
         );
+        data.zatcaQRCode = qrCodeDataUrl;
+        console.log("ZATCA QR code added to template data");
       } catch (zatcaError) {
         console.warn("Failed to generate ZATCA QR code:", zatcaError);
       }
     } else {
       console.log("ZATCA QR conditions not met:", {
         hasCompanyName: !!companyData?.name,
-        hasVatNumber: !!companyData?.vatNumber,
-        hasTotal: !!data.total,
+        hasVatNumber: !!companyData?.vatRegistrationNumber,
+        hasTotal: !!(data.total || data.totalAmount),
       });
     }
 
