@@ -44,9 +44,9 @@
     <!-- Metrics Cards -->
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
       <MetricCard
-        title="Total Invoices"
+        title="Total Orders"
         value={$metrics.data?.totalInvoices || 0}
-        icon="lucide:file-text"
+        icon="lucide:shopping-cart"
       />
       <MetricCard
         title="Outstanding Amount"
@@ -64,7 +64,7 @@
         icon="lucide:mail"
       />
       <MetricCard
-        title="Overdue Invoices"
+        title="Overdue Orders"
         value={$metrics.data?.overdueInvoices || 0}
         icon="lucide:alert-triangle"
       />
@@ -80,19 +80,19 @@
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Button onclick={() => goto('/orders')} class="h-20 flex-col">
             <Icon icon="lucide:plus" class="h-6 w-6 mb-2" />
-            Create Invoice
+            Create Order
           </Button>
           <Button onclick={() => goto('/clients')} variant="outline" class="h-20 flex-col">
             <Icon icon="lucide:users" class="h-6 w-6 mb-2" />
             Manage Clients
           </Button>
           <Button onclick={() => goto('/orders')} variant="outline" class="h-20 flex-col">
-            <Icon icon="lucide:file-text" class="h-6 w-6 mb-2" />
-            View Invoices
+            <Icon icon="lucide:shopping-cart" class="h-6 w-6 mb-2" />
+            View Orders
           </Button>
-          <Button onclick={() => goto('/billing')} variant="outline" class="h-20 flex-col">
+          <Button onclick={() => goto('/settings')} variant="outline" class="h-20 flex-col">
             <Icon icon="lucide:settings" class="h-6 w-6 mb-2" />
-            Billing Settings
+            Settings
           </Button>
         </div>
       </CardContent>

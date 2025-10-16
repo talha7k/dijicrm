@@ -21,13 +21,19 @@
   });
 </script>
 
-{#if $app.initializing || ($app.authenticated && $app.profileReady && !$app.companyReady)}
+{#if $app.initializing}
   <div class="flex h-full w-full items-center justify-center">
     <div class="text-center">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
       <p class="text-muted-foreground">Setting up your workspace...</p>
     </div>
   </div>
+{:else if !$app.authenticated}
+  <!-- Will redirect to sign-in via effect -->
+{:else if !$app.profileReady}
+  <!-- Will redirect to onboarding via effect -->
+{:else if !$app.companyReady}
+  <!-- Will redirect to onboarding via effect -->
 {:else}
   <Sidebar.Provider bind:open={$isSidebarOpen}>
     <AppSidebar variant="inset" />

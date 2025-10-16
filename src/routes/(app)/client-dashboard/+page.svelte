@@ -68,12 +68,12 @@
     <!-- Metrics Cards -->
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <MetricCard
-        title="Total Invoices"
+        title="Total Orders"
         value={$orders.data?.length || 0}
-        icon="lucide:file-text"
+        icon="lucide:shopping-cart"
       />
       <MetricCard
-        title="Paid Invoices"
+        title="Paid Orders"
         value={$orders.data?.filter(ord => ord.status === 'paid').length || 0}
         icon="lucide:check-circle"
       />
@@ -89,10 +89,10 @@
       />
     </div>
 
-    <!-- Recent Invoices -->
+    <!-- Recent Orders -->
     <Card>
       <CardHeader>
-        <CardTitle>Recent Invoices</CardTitle>
+        <CardTitle>Recent Orders</CardTitle>
         <CardDescription>Your latest order activity</CardDescription>
       </CardHeader>
       <CardContent>

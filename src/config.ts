@@ -65,28 +65,17 @@ export const companyNavItems: SidebarNav[] = [
       {
         title: "Templates",
         url: "/templates",
-        icon: "lucide:file-text",
+        icon: "lucide:layout-template",
       },
-
       {
         title: "Orders",
         url: "/orders",
-        icon: "lucide:file-text",
-      },
-      {
-        title: "Create Invoice",
-        url: "/orders/create",
-        icon: "lucide:plus-circle",
+        icon: "lucide:shopping-cart",
       },
       {
         title: "Clients",
         url: "/clients",
         icon: "lucide:users",
-      },
-      {
-        title: "Billing",
-        url: "/billing",
-        icon: "lucide:credit-card",
       },
     ],
   },

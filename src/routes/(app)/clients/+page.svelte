@@ -403,10 +403,10 @@ let deleteDataCounts = $state<{
            </Card.Header>
            <Card.Content class="pt-0">
              <div class="space-y-3">
-              <div class="flex items-center justify-between text-sm">
-                <span class="text-muted-foreground">Invoices</span>
-                <span class="font-medium">{getClientInvoiceCount(client.uid)}</span>
-              </div>
+               <div class="flex items-center justify-between text-sm">
+                 <span class="text-muted-foreground">Orders</span>
+                 <span class="font-medium">{getClientInvoiceCount(client.uid)}</span>
+               </div>
               <div class="flex items-center justify-between text-sm">
                 <span class="text-muted-foreground">Activity</span>
                 <div class="flex items-center space-x-1">
@@ -462,10 +462,10 @@ let deleteDataCounts = $state<{
                 <span class="text-sm text-gray-600">📋 Orders</span>
                 <span class="text-sm font-medium text-gray-900">{deleteDataCounts.orders} items</span>
               </div>
-              <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-600">🧾 Invoices</span>
-                <span class="text-sm font-medium text-gray-900">{deleteDataCounts.orders} items</span>
-              </div>
+               <div class="flex justify-between items-center">
+                 <span class="text-sm text-gray-600">🛒 Orders</span>
+                 <span class="text-sm font-medium text-gray-900">{deleteDataCounts.orders} items</span>
+               </div>
               <div class="flex justify-between items-center">
                 <span class="text-sm text-gray-600">📄 Documents</span>
                 <span class="text-sm font-medium text-gray-900">{deleteDataCounts.documents} items</span>

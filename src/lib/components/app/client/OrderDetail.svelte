@@ -295,108 +295,81 @@
           </div>
         </div>
 
-          <!-- Payment Details Toggle -->
-          {#if order.payments && order.payments.length > 0}
-            <div class="border rounded-xl overflow-hidden shadow-sm">
-              <button
-                class="w-full bg-muted/60 px-5 py-4 border-b flex items-center justify-between hover:bg-muted/80 transition-colors"
-               onclick={() => showPaymentDetails = !showPaymentDetails}
-             >
-                <div class="flex items-center space-x-2">
-                  <svg class="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
-                  </svg>
-                  <h5 class="text-sm font-semibold text-foreground">Payment History</h5>
-                  <Badge variant="secondary" class="text-xs">
-                    {order.payments.length} payment{order.payments.length > 1 ? 's' : ''}
-                  </Badge>
-                </div>
-                <svg
-                  class="h-4 w-4 text-muted-foreground transition-transform duration-200"
-                  class:rotate-180={showPaymentDetails}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        <!-- Payment Details -->
+        {#if paymentDetails.length > 0}
+          <div class="border rounded-xl overflow-hidden shadow-sm">
+            <div class="bg-muted/60 px-5 py-4 border-b">
+              <h5 class="text-sm font-semibold text-foreground">Payment History</h5>
+            </div>
+            <div class="p-5">
+              <div class="space-y-3">
+                {#each paymentDetails as payment}
+                  <div class="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                      <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p class="text-sm font-medium text-foreground">
+                          {payment.paymentMethod?.replace('_', ' ').toUpperCase() || 'Payment'}
+                        </p>
+                        <p class="text-xs text-muted-foreground">
+                          {formatDate(payment.paymentDate?.toDate() || payment.createdAt?.toDate() || new Date())}
+                        </p>
+                        {#if payment.reference}
+                          <p class="text-xs text-muted-foreground">Ref: {payment.reference}</p>
+                        {/if}
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-sm font-medium text-foreground">
+                        {formatCurrency(payment.amount)}
+                      </p>
+                      {#if payment.notes}
+                        <p class="text-xs text-muted-foreground max-w-24 truncate" title={payment.notes}>
+                          {payment.notes}
+                        </p>
+                      {/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          </div>
+        {:else if order.payments && order.payments.length > 0}
+          <div class="border rounded-xl overflow-hidden shadow-sm">
+            <div class="bg-muted/60 px-5 py-4 border-b">
+              <h5 class="text-sm font-semibold text-foreground">Payment History</h5>
+            </div>
+            <div class="p-5">
+              <div class="text-center py-4 text-muted-foreground">
+                <svg class="h-8 w-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-              </button>
+                <p class="text-sm">No payment details available</p>
+              </div>
+            </div>
+          </div>
+        {/if}
 
-              {#if showPaymentDetails}
-                <div class="p-5 space-y-4">
-                 {#if loadingPayments}
-                   <div class="flex items-center justify-center py-4">
-                     <svg class="animate-spin h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24">
-                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                     </svg>
-                     <span class="ml-2 text-sm text-muted-foreground">Loading payment details...</span>
-                   </div>
-                 {:else if paymentDetails.length > 0}
-                   <div class="space-y-3">
-                      {#each paymentDetails as payment, index}
-                        <div class="flex items-center justify-between p-4 bg-muted/30 rounded-xl border">
-                         <div class="flex items-center space-x-3">
-                           <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                             <svg class="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                             </svg>
-                           </div>
-                           <div>
-                             <p class="text-sm font-medium text-foreground">
-                               {payment.paymentMethod?.replace('_', ' ').toUpperCase() || 'Payment'}
-                             </p>
-                             <p class="text-xs text-muted-foreground">
-                               {formatDate(payment.paymentDate?.toDate() || payment.createdAt?.toDate() || new Date())}
-                             </p>
-                             {#if payment.reference}
-                               <p class="text-xs text-muted-foreground">Ref: {payment.reference}</p>
-                             {/if}
-                           </div>
-                         </div>
-                         <div class="text-right">
-                           <p class="text-sm font-medium text-foreground">
-                             {formatCurrency(payment.amount)}
-                           </p>
-                           {#if payment.notes}
-                             <p class="text-xs text-muted-foreground max-w-24 truncate" title={payment.notes}>
-                               {payment.notes}
-                             </p>
-                           {/if}
-                         </div>
-                       </div>
-                     {/each}
-                   </div>
-                 {:else}
-                   <div class="text-center py-4 text-muted-foreground">
-                     <svg class="h-8 w-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                     </svg>
-                     <p class="text-sm">No payment details available</p>
-                   </div>
-                 {/if}
-               </div>
-             {/if}
-           </div>
-
-          <!-- Action Buttons -->
+        <!-- Action Buttons -->
+        {#if onRecordPayment && order.outstandingAmount > 0}
           <div class="bg-muted/30 p-5 rounded-xl border">
-            <div class="flex flex-col sm:flex-row gap-4">
-             {#if onRecordPayment && order.outstandingAmount > 0}
-               <Button
-                 variant="default"
-                 size="sm"
-                 class="flex-1"
-                 onclick={() => onRecordPayment(order)}
-               >
-                 <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
-                 </svg>
-                 Record Payment
-               </Button>
-             {/if}
-           </div>
-         </div>
+            <Button
+              variant="default"
+              size="sm"
+              class="w-full"
+              onclick={() => onRecordPayment(order)}
+            >
+              <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+              </svg>
+              Record Payment
+            </Button>
+          </div>
+        {/if}
       </div>
     </div>
   </div>

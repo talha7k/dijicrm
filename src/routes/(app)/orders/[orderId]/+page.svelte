@@ -4,8 +4,9 @@
    import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
    import { db } from '$lib/firebase';
    import type { Order } from '$lib/types/document';
-   import type { User } from '$lib/types/user';
+    import type { UserProfile } from '$lib/types/user';
    import { activeCompanyId } from '$lib/stores/companyContext';
+   import { productsStore } from '$lib/stores/products';
    import OrderDetail from '$lib/components/app/client/OrderDetail.svelte';
    import PaymentModal from '$lib/components/app/client/PaymentModal.svelte';
    import { toast } from 'svelte-sonner';
@@ -19,22 +20,30 @@
   let showPaymentModal = $state(false);
   let selectedOrder = $state<Order | null>(null);
 
-  onMount(async () => {
-    const orderId = page.params.orderId;
-    if (!orderId) {
-      error = 'Invalid order ID';
-      loading = false;
-      return;
-    }
-    const companyId = $activeCompanyId;
+   onMount(async () => {
+     const orderId = page.params.orderId;
+     if (!orderId) {
+       error = 'Invalid order ID';
+       loading = false;
+       return;
+     }
+     const companyId = $activeCompanyId;
 
-    if (!companyId) {
-      error = 'No active company';
-      loading = false;
-      return;
-    }
+     if (!companyId) {
+       error = 'No active company';
+       loading = false;
+       return;
+     }
 
-    try {
+     // Load products data to ensure product details are available
+     try {
+       await productsStore.loadProducts();
+     } catch (productError) {
+       console.error('Error loading products:', productError);
+       // Continue even if products fail to load
+     }
+
+     try {
        const orderDoc = await getDoc(doc(db, 'orders', orderId));
        if (orderDoc.exists()) {
          const data = orderDoc.data() as Order;
@@ -46,7 +55,7 @@
              try {
                const clientDoc = await getDoc(doc(db, 'users', data.clientId));
                if (clientDoc.exists()) {
-                 const clientData = clientDoc.data() as User;
+                 const clientData = clientDoc.data() as UserProfile;
                  clientName = clientData.displayName || clientData.email || 'Unknown Client';
                }
              } catch (clientError) {
