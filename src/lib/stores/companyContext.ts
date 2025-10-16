@@ -17,11 +17,14 @@ type CompanyContextData = {
   error: any;
 };
 
-const companyContextData = persisted<CompanyContextData>("companyContext", {
-  data: null,
-  loading: true,
-  error: null,
-});
+export const companyContextData = persisted<CompanyContextData>(
+  "companyContext",
+  {
+    data: null,
+    loading: true,
+    error: null,
+  },
+);
 
 const switchCompany = async (companyId: string) => {
   companyContextData.update((s) => ({ ...s, loading: true, error: null }));

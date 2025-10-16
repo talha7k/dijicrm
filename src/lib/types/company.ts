@@ -4,6 +4,7 @@ export interface Company {
   name: string;
   code: string; // Unique company code for joining
   description?: string;
+  vatNumber?: string; // 15-digit Saudi VAT number
   ownerId: string; // UID of the company owner
   createdAt: Timestamp;
   updatedAt: Timestamp;

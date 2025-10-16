@@ -10,6 +10,7 @@ import { invalidateProfileCache } from "$lib/utils/profile-cache";
 export const GET: RequestHandler = async ({ locals }) => {
   try {
     const db = getDb();
+    if (!db) throw new Error("Database not initialized");
 
     // Get user from locals (set by auth hooks)
     const user = locals.user;
@@ -20,7 +21,7 @@ export const GET: RequestHandler = async ({ locals }) => {
     const userRef = db.collection("users").doc(user.uid);
     const userSnap = await userRef.get();
 
-    if (!userSnap.exists()) {
+    if (!userSnap.exists) {
       throw error(404, "User profile not found");
     }
 
@@ -43,6 +44,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 export const PUT: RequestHandler = async ({ request, locals }) => {
   try {
     const db = getDb();
+    if (!db) throw new Error("Database not initialized");
 
     const user = locals.user;
     if (!user || !user.uid || !user.email) {
@@ -102,6 +104,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     const db = getDb();
+    if (!db) throw new Error("Database not initialized");
 
     const user = locals.user;
     if (!user || !user.uid || !user.email) {

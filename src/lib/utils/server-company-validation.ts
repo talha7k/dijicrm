@@ -14,6 +14,7 @@ export async function validateCompanyAccess(
 ): Promise<boolean> {
   try {
     const db = getDb();
+    if (!db) throw new Error("Database not initialized");
 
     // Check if user is a member of the company
     const memberDoc = await db
@@ -39,6 +40,7 @@ export async function getUserCompanyRole(
 ): Promise<"member" | "admin" | "owner" | null> {
   try {
     const db = getDb();
+    if (!db) throw new Error("Database not initialized");
 
     const memberDoc = await db
       .collection("companyMembers")

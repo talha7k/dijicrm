@@ -7,6 +7,7 @@ import type { Company } from "$lib/types/company";
 export const POST: RequestHandler = async ({ request }) => {
   try {
     const db = getDb();
+    if (!db) throw new Error("Database not initialized");
 
     const { code } = await request.json();
 

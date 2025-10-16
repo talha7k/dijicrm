@@ -28,6 +28,7 @@ export async function POST({
 
     // Find invitation by token and company
     const db = getDb();
+    if (!db) throw new Error("Database not initialized");
     const invitationsRef = db.collection("invitations");
     const invitationSnapshot = await invitationsRef
       .where("code", "==", token)

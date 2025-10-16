@@ -2,8 +2,6 @@ import type { Timestamp } from "firebase/firestore";
 
 // Company Branding Configuration
 export interface CompanyBranding {
-  companyName?: string; // Company name for ZATCA compliance
-  vatNumber?: string; // VAT number for ZATCA compliance (15 digits for Saudi)
   logoUrl?: string; // URL to logo stored in Firebase Storage
   stampImageUrl?: string; // URL to stamp image stored in Firebase Storage
   stampPosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right";

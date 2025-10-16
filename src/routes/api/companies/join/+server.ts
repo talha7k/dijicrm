@@ -8,7 +8,9 @@ import type { CompanyMember } from "$lib/types/companyMember";
 export const POST: RequestHandler = async ({ request }) => {
   try {
     const db = getDb();
+    if (!db) throw new Error("Database not initialized");
     const auth = getAuthAdmin();
+    if (!auth) throw new Error("Auth not initialized");
 
     // Get current user from Authorization header
     const authHeader = request.headers.get("Authorization");

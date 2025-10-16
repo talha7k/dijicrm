@@ -21,6 +21,7 @@ export async function GET({ url, locals }: { url: URL; locals: any }) {
 
     // Query invitations for this company
     const db = getDb();
+    if (!db) throw new Error("Database not initialized");
     const invitationsRef = db.collection("invitations");
     const invitationsQuery = invitationsRef
       .where("companyId", "==", companyId)

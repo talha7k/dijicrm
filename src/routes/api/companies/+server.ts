@@ -7,7 +7,9 @@ import type { Company } from "$lib/types/company";
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     const db = getDb();
+    if (!db) throw new Error("Database not initialized");
     const auth = getAuthAdmin();
+    if (!auth) throw new Error("Auth not initialized");
 
     // Get current user from locals (set by auth hooks)
     const user = locals.user;

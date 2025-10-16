@@ -1,6 +1,6 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { getDb, getAuthAdmin } from "$lib/firebase-admin";
+import { getDb } from "$lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import type { UserProfile } from "$lib/types/user";
 import type { Product } from "$lib/stores/products";
@@ -8,66 +8,9 @@ import type { Order, DocumentTemplate, Payment } from "$lib/types/document";
 import type { StoredCompanyBranding } from "$lib/types/branding";
 
 // Sample data generation functions
-async function generateCompanyData(): Promise<{
-  companyId: string;
-  companyUser: UserProfile;
-}> {
-  const companyId = `company-${Date.now()}`;
-  const email = `admin-${Date.now()}@samplecompany.com`;
-  const password = `SamplePass123!`;
-
-  // Create Firebase Auth user
-  const userRecord = await getAuthAdmin().createUser({
-    email,
-    password,
-    displayName: "Sample Company Admin",
-  });
-
-  // Create company user profile
-  const companyUser: UserProfile = {
-    uid: userRecord.uid,
-    email,
-    displayName: "Sample Company Admin",
-    photoURL: null,
-    isActive: true,
-    lastLoginAt: Timestamp.now() as any,
-    createdAt: Timestamp.now() as any,
-    updatedAt: Timestamp.now() as any,
-    firstName: "John",
-    lastName: "Doe",
-    username: "sampleadmin",
-    bio: "Sample company administrator",
-    phoneNumber: "+1-555-0123",
-    emailNotifications: true,
-    pushNotifications: true,
-    theme: "system",
-    language: "en",
-    role: "company",
-    permissions: ["admin", "manage_clients", "manage_orders"],
-    address: {
-      street: "123 Business St",
-      city: "Business City",
-      state: "BC",
-      country: "USA",
-      postalCode: "12345",
-    },
-    metadata: {
-      deviceInfo: {
-        lastDevice: "Sample Device",
-        platform: "web",
-      },
-      lastIPAddress: "127.0.0.1",
-      accountStatus: "active",
-    },
-  };
-
-  // Save to Firestore
-  await getDb().collection("users").doc(userRecord.uid).set(companyUser);
-
-  return { companyId, companyUser };
-}
 
 async function generateBrandingData(
+  db: any,
   companyId: string,
 ): Promise<StoredCompanyBranding> {
   // Generate sample logo and stamp as data URLs for demo purposes
@@ -97,8 +40,6 @@ async function generateBrandingData(
 
   const branding: StoredCompanyBranding = {
     companyId,
-    companyName: "Sample Company LLC",
-    vatNumber: "123456789012345", // Sample VAT for ZATCA
     logoUrl: sampleLogoUrl,
     stampImageUrl: sampleStampUrl,
     stampPosition: "bottom-right",
@@ -108,12 +49,15 @@ async function generateBrandingData(
     updatedAt: Timestamp.now() as any,
   };
 
-  await getDb().collection("branding").doc(companyId).set(branding);
+  await db.collection("branding").doc(companyId).set(branding);
 
   return branding;
 }
 
-async function generateClientData(companyId: string): Promise<UserProfile[]> {
+async function generateClientData(
+  db: any,
+  companyId: string,
+): Promise<UserProfile[]> {
   const clients: UserProfile[] = [];
   const clientData = [
     {
@@ -134,15 +78,10 @@ async function generateClientData(companyId: string): Promise<UserProfile[]> {
   ];
 
   for (const data of clientData) {
-    const password = `ClientPass123!`;
-    const userRecord = await getAuthAdmin().createUser({
-      email: data.email,
-      password,
-      displayName: `${data.firstName} ${data.lastName}`,
-    });
+    const clientId = `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     const client: UserProfile = {
-      uid: userRecord.uid,
+      uid: clientId,
       email: data.email,
       displayName: `${data.firstName} ${data.lastName}`,
       photoURL: null,
@@ -161,6 +100,14 @@ async function generateClientData(companyId: string): Promise<UserProfile[]> {
       language: "en",
       role: "client",
       permissions: ["view_orders", "make_payments"],
+      companyAssociations: [
+        {
+          companyId: companyId,
+          role: "member" as const,
+          joinedAt: Timestamp.now() as any,
+        },
+      ],
+      currentCompanyId: companyId,
       address: {
         street: `${Math.floor(Math.random() * 999) + 1} Client Ave`,
         city: "Client City",
@@ -176,16 +123,20 @@ async function generateClientData(companyId: string): Promise<UserProfile[]> {
         lastIPAddress: "127.0.0.1",
         accountStatus: "active",
       },
+      onboardingCompleted: true,
     };
 
-    await getDb().collection("users").doc(userRecord.uid).set(client);
+    await db.collection("users").doc(clientId).set(client);
     clients.push(client);
   }
 
   return clients;
 }
 
-async function generateProductData(companyId: string): Promise<Product[]> {
+async function generateProductData(
+  db: any,
+  companyId: string,
+): Promise<Product[]> {
   const products: Product[] = [
     {
       id: `prod-${Date.now()}-1`,
@@ -223,13 +174,14 @@ async function generateProductData(companyId: string): Promise<Product[]> {
   ];
 
   for (const product of products) {
-    await getDb().collection("products").doc(product.id).set(product);
+    await db.collection("products").doc(product.id).set(product);
   }
 
   return products;
 }
 
 async function generateTemplateData(
+  db: any,
   companyId: string,
   companyUser: UserProfile,
 ): Promise<DocumentTemplate[]> {
@@ -312,16 +264,14 @@ async function generateTemplateData(
   ];
 
   for (const template of templates) {
-    await getDb()
-      .collection("documentTemplates")
-      .doc(template.id)
-      .set(template);
+    await db.collection("documentTemplates").doc(template.id).set(template);
   }
 
   return templates;
 }
 
 async function generateInvoiceData(
+  db: any,
   companyId: string,
   clients: UserProfile[],
   products: Product[],
@@ -353,7 +303,7 @@ async function generateInvoiceData(
       createdBy: companyUser.uid,
     };
 
-    await getDb().collection("orders").doc(order.id).set(order);
+    await db.collection("orders").doc(order.id).set(order);
     orders.push(order);
   }
 
@@ -361,6 +311,7 @@ async function generateInvoiceData(
 }
 
 async function generatePaymentData(
+  db: any,
   companyId: string,
   orders: Order[],
   clients: UserProfile[],
@@ -387,11 +338,11 @@ async function generatePaymentData(
           updatedAt: Timestamp.now() as any,
         };
 
-        await getDb().collection("payments").doc(payment.id).set(payment);
+        await db.collection("payments").doc(payment.id).set(payment);
         payments.push(payment);
 
         // Update order payments array
-        await getDb()
+        await db
           .collection("orders")
           .doc(order.id)
           .update({
@@ -406,9 +357,17 @@ async function generatePaymentData(
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
+    console.log("Sample data API called");
+
+    const db = getDb();
+    if (!db) throw new Error("Database not initialized");
+
     // Get current user from locals (set by auth hooks)
     const user = locals.user;
+    console.log("User from locals:", user);
+
     if (!user || !user.uid) {
+      console.log("No user found in locals");
       throw error(401, "Unauthorized");
     }
 
@@ -424,60 +383,69 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       );
     }
 
-    // Generate sample data in sequence
+    // Get current user's company
     let companyId: string;
-    let companyUser: UserProfile;
+    let companyUser: UserProfile | undefined;
 
     if (providedCompanyId) {
-      // Use existing company
-      console.log("Using existing company:", providedCompanyId);
+      // Use provided company ID
       companyId = providedCompanyId;
-
-      // Get the company owner/user
-      const companyDoc = await getDb()!
-        .collection("companies")
-        .doc(companyId)
-        .get();
-      if (!companyDoc.exists) {
-        throw error(404, "Company not found");
-      }
-
-      const companyData = companyDoc.data();
-      if (!companyData) {
-        throw error(404, "Company data not found");
-      }
-
-      const userDoc = await getDb()!
-        .collection("users")
-        .doc(companyData.ownerId)
-        .get();
+      console.log("Using provided company ID:", companyId);
+    } else {
+      // Get company from current user's profile
+      const userDoc = await db.collection("users").doc(user.uid).get();
       if (!userDoc.exists) {
-        throw error(404, "Company owner not found");
+        throw error(404, "User not found");
       }
 
       companyUser = userDoc.data() as UserProfile;
-    } else {
-      // Create new company
-      console.log("Generating sample company data...");
-      const result = await generateCompanyData();
-      companyId = result.companyId;
-      companyUser = result.companyUser;
+      console.log("User profile:", {
+        uid: user.uid,
+        currentCompanyId: companyUser.currentCompanyId,
+      });
+
+      if (!companyUser.currentCompanyId) {
+        throw error(
+          400,
+          "User has no active company. Please complete onboarding first.",
+        );
+      }
+
+      companyId = companyUser.currentCompanyId;
     }
 
-    console.log("Generating branding data...");
-    await generateBrandingData(companyId);
+    // Get company user for creating data
+    if (!companyUser) {
+      const userDoc = await db.collection("users").doc(user.uid).get();
+      companyUser = userDoc.data() as UserProfile;
+    }
 
-    console.log("Generating client data...");
-    const clients = await generateClientData(companyId);
+    // Verify company exists
+    const companyDoc = await db.collection("companies").doc(companyId).get();
+    if (!companyDoc.exists) {
+      throw error(404, `Company ${companyId} not found`);
+    }
+
+    console.log(
+      "Generating sample data for company:",
+      companyId,
+      "user:",
+      user.uid,
+    );
+
+    console.log("Generating client data for company:", companyId);
+    const clients = await generateClientData(db, companyId);
+    console.log("Generated", clients.length, "clients");
 
     console.log("Generating product data...");
-    const products = await generateProductData(companyId);
+    const products = await generateProductData(db, companyId);
 
     console.log("Generating template data...");
-    const templates = await generateTemplateData(companyId, companyUser);
+    const templates = await generateTemplateData(db, companyId, companyUser);
 
     console.log("Generating order data...");
     const orders = await generateInvoiceData(
+      db,
       companyId,
       clients,
       products,
@@ -486,7 +454,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     );
 
     console.log("Generating payment data...");
-    await generatePaymentData(companyId, orders, clients, companyUser);
+    await generatePaymentData(db, companyId, orders, clients, companyUser);
 
     return json({
       success: true,
@@ -501,13 +469,25 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     });
   } catch (err) {
     console.error("Sample data generation error:", err);
+    console.error(
+      "Error stack:",
+      err instanceof Error ? err.stack : "No stack trace",
+    );
 
-    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+    let errorMessage = "Unknown error";
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    } else if (typeof err === "string") {
+      errorMessage = err;
+    } else if (err && typeof err === "object") {
+      errorMessage = JSON.stringify(err);
+    }
 
     return json(
       {
         success: false,
         error: errorMessage,
+        details: err instanceof Error ? err.stack : undefined,
       },
       { status: 500 },
     );

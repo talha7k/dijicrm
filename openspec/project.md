@@ -68,6 +68,34 @@ A clear separation between server-side and client-side data fetching is crucial.
 
 All stores must be centralized in src/lib/stores/. Use Svelte stores for global state with Firebase real-time listeners for reactive data.
 
+##### Persisted Store Updates
+
+When using persisted stores (e.g., `svelte-persisted-store`), always update the cached data directly after database operations to prevent stale data issues. Instead of calling refresh functions that may skip fetching due to cache checks, update the store's underlying data directly:
+
+```typescript
+// ❌ Avoid: May not fetch fresh data due to caching
+await initializeFromUser();
+
+// ✅ Preferred: Update cached data directly
+companyContextData.update((s) => {
+  if (s.data) {
+    return {
+      ...s,
+      data: {
+        ...s.data,
+        company: {
+          ...s.data.company,
+          ...updatedData,
+        },
+      },
+    };
+  }
+  return s;
+});
+```
+
+This ensures immediate UI updates and prevents stale data after save operations.
+
 #### Hooks Usage
 
 Use custom hooks for client-side data fetching, caching, and reactive state derived from stores.

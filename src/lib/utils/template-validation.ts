@@ -6,6 +6,7 @@ import { processTemplateSyntax } from "./template-processing";
 import { brandingService } from "$lib/services/brandingService";
 import { generateZATCAQRCode } from "./zatca";
 import { userProfile } from "$lib/stores/user";
+import { companyContext } from "$lib/stores/companyContext";
 import { get } from "svelte/store";
 import QRCode from "qrcode";
 
@@ -206,9 +207,11 @@ export async function generatePreviewData(
 ): Promise<Record<string, any>> {
   const previewData: Record<string, any> = {};
 
-  // Get current user to load company branding
+  // Get current user and company context
   const userStore = get(userProfile);
+  const companyStore = get(companyContext);
   let branding = null;
+  let company = null;
 
   if (userStore.data?.role === "company") {
     try {
@@ -223,6 +226,11 @@ export async function generatePreviewData(
     }
   }
 
+  // Get company data for name and VAT number
+  if (companyStore.data?.company) {
+    company = companyStore.data.company;
+  }
+
   // Generate sample data based on template type
   if (template.type === "order") {
     previewData.items = [
@@ -235,12 +243,12 @@ export async function generatePreviewData(
     previewData.taxAmount = 1312.5;
     previewData.total = 10062.5;
 
-    // Generate ZATCA QR code if branding has required data
-    if (branding?.companyName && branding?.vatNumber) {
+    // Generate ZATCA QR code if company has required data
+    if (company?.name && company?.vatNumber) {
       try {
         const zatcaData = {
-          sellerName: branding.companyName,
-          vatNumber: branding.vatNumber,
+          sellerName: company.name,
+          vatNumber: company.vatNumber,
           invoiceDate: new Date().toISOString(),
           totalAmount: previewData.total,
           vatAmount: previewData.taxAmount,

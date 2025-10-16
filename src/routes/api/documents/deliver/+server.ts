@@ -8,7 +8,9 @@ import { requireCompanyAccess } from "$lib/utils/server-company-validation";
 export const POST = async ({ request, locals }: RequestEvent) => {
   try {
     const db = getDb();
+    if (!db) throw new Error("Database not initialized");
     const auth = getAuthAdmin();
+    if (!auth) throw new Error("Auth not initialized");
 
     // Get user from locals (set by auth hooks)
     const user = locals.user;
@@ -52,6 +54,7 @@ export const POST = async ({ request, locals }: RequestEvent) => {
 
       if (docSnap.exists) {
         const docData = docSnap.data();
+        if (!docData) continue;
         // Validate document belongs to the company
         if (docData.companyId === companyId) {
           documents.push({
@@ -79,12 +82,12 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     // Prepare attachments
     const attachments = [];
     for (const document of documents) {
-      if (document.pdfUrl) {
+      if ((document as any).pdfUrl) {
         // In a real implementation, you would fetch the PDF from storage
         // For now, we'll include the URL as a reference
         attachments.push({
           filename: `document-${document.id}.pdf`,
-          content: document.pdfUrl, // This should be the actual file content
+          content: (document as any).pdfUrl, // This should be the actual file content
           type: "application/pdf" as const,
         });
       }

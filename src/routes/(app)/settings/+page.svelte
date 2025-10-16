@@ -13,8 +13,8 @@
   import { brandingService } from "$lib/services/brandingService";
   import type { CompanyBranding } from "$lib/types/branding";
   import { smtpConfigStore } from "$lib/stores/smtpConfig";
-  import { companyContext } from "$lib/stores/companyContext";
-  import { get } from "svelte/store";
+import { companyContext } from "$lib/stores/companyContext";
+import { get } from "svelte/store";
   import AlertDialog from "$lib/components/shared/alert-dialog.svelte";
   import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
 
@@ -78,26 +78,28 @@
    let isGeneratingSampleData = $state(false);
    let sampleDataResult = $state<{ success: boolean; message: string; data?: any } | null>(null);
 
-   // Branding configuration
-   let branding = $state<CompanyBranding>({
-     companyName: "",
-     vatNumber: "",
-     logoUrl: "",
-     stampImageUrl: "",
-     stampPosition: "bottom-right",
-     primaryColor: "#007bff",
-     secondaryColor: "#6c757d",
-   });
+    // Branding configuration
+    let branding = $state<CompanyBranding>({
+      logoUrl: "",
+      stampImageUrl: "",
+      stampPosition: "bottom-right",
+      primaryColor: "#007bff",
+      secondaryColor: "#6c757d",
+    });
 
    // Logo upload state
    let selectedLogoFile = $state<File | null>(null);
    let isUploadingLogo = $state(false);
    let logoPreview = $state<string | null>(null);
 
-   // Stamp image upload state
-   let selectedStampFile = $state<File | null>(null);
-   let isUploadingStamp = $state(false);
-   let stampPreview = $state<string | null>(null);
+    // Stamp image upload state
+    let selectedStampFile = $state<File | null>(null);
+    let isUploadingStamp = $state(false);
+    let stampPreview = $state<string | null>(null);
+
+    // Company information state
+    let tempCompanyName = $state<string>("");
+    let tempVatNumber = $state<string>("");
 
    // SMTP hook
   const smtpStore = smtpConfigStore;
@@ -130,13 +132,30 @@
   onMount(async () => {
     mounted = true;
 
-    // Get company context
-    const companyContextValue = get(companyContext);
+    // Wait for company context to be loaded
+    let companyContextValue = get(companyContext);
+    if (!companyContextValue.data) {
+      // If not loaded yet, wait for it to load
+      await new Promise<void>((resolve) => {
+        const unsubscribe = companyContext.subscribe((value) => {
+          if (value.data) {
+            unsubscribe();
+            companyContextValue = value;
+            resolve();
+          }
+        });
+      });
+    }
+
     if (!companyContextValue.data) {
       showAlert("Authentication Error", "Company context not available. Please refresh the page.", "error");
       return;
     }
     const companyId = companyContextValue.data.companyId;
+
+    // Initialize company info from context
+    tempCompanyName = companyContextValue.data.company.name || "";
+    tempVatNumber = companyContextValue.data.company.vatNumber || "";
 
     try {
        // Load branding config
@@ -159,6 +178,69 @@
       showAlert("Configuration Error", "Failed to load existing configurations. You can still configure new settings.", "warning");
     }
   });
+
+  async function handleSaveCompanyInfo() {
+    // Get company context
+    const companyContextValue = get(companyContext);
+    if (!companyContextValue.data) {
+      showAlert("Authentication Error", "Company context not available.", "error");
+      return;
+    }
+    const companyId = companyContextValue.data.companyId;
+
+    // Validation
+    if (!tempCompanyName.trim()) {
+      showAlert("Validation Error", "Company name is required.", "error");
+      return;
+    }
+
+    if (tempVatNumber && !/^[0-9]{15}$/.test(tempVatNumber)) {
+      showAlert("Validation Error", "VAT number must be exactly 15 digits.", "error");
+      return;
+    }
+
+    try {
+      // Update company info in Firestore
+      const { doc, updateDoc } = await import("firebase/firestore");
+      const { db } = await import("$lib/firebase");
+      const { Timestamp } = await import("firebase/firestore");
+
+      const updatedData = {
+        name: tempCompanyName.trim(),
+        vatNumber: tempVatNumber || null,
+        updatedAt: Timestamp.now(),
+      };
+
+      await updateDoc(doc(db, "companies", companyId), updatedData);
+
+      // Update the cached company context immediately to avoid stale data
+      const { companyContextData } = await import("$lib/stores/companyContext");
+      companyContextData.update((s: any) => {
+        if (s.data) {
+          return {
+            ...s,
+            data: {
+              ...s.data,
+              company: {
+                ...s.data.company,
+                ...updatedData
+              }
+            }
+          };
+        }
+        return s;
+      });
+
+      // Update local temp state to match the saved value
+      tempCompanyName = tempCompanyName.trim();
+      tempVatNumber = tempVatNumber || "";
+
+      showAlert("Success", "Company information saved successfully!", "success");
+    } catch (error) {
+      console.error("Save company info error:", error);
+      showAlert("Save Failed", "Failed to save company information. Please try again.", "error");
+    }
+  }
 
   async function handleSaveSMTP() {
     // Get company context
@@ -471,18 +553,7 @@
     }
     const companyId = companyContextValue.data.companyId;
 
-    // Validation
-    if (branding.companyName && branding.companyName.trim().length === 0) {
-      showAlert("Validation Error", "Company name cannot be empty if provided.", "error");
-      return;
-    }
-
-    if (branding.vatNumber) {
-      if (!/^[0-9]{15}$/.test(branding.vatNumber)) {
-        showAlert("Validation Error", "VAT number must be exactly 15 digits.", "error");
-        return;
-      }
-    }
+    // Validation - no longer needed for company info since it's readonly
 
     try {
       const result = await brandingService.saveBranding(companyId, branding);
@@ -521,6 +592,9 @@
           // Get current company ID
           const companyContextValue = get(companyContext);
           const companyId = companyContextValue.data?.companyId;
+          
+          console.log('Generating sample data for company:', companyId);
+          console.log('Company context:', companyContextValue);
           
           const response = await fetch("/api/sample-data", {
             method: "POST",
@@ -752,14 +826,22 @@
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label for="company-name">Company Name</Label>
-                  <Input id="company-name" bind:value={branding.companyName} placeholder="Your Company Name" required />
+                  <Input id="company-name" bind:value={tempCompanyName} placeholder="Your Company Name" />
+                  <p class="text-xs text-muted-foreground mt-1">Company name can be edited here</p>
                 </div>
                 <div>
                   <Label for="vat-number">VAT Number</Label>
-                  <Input id="vat-number" bind:value={branding.vatNumber} placeholder="15-digit Saudi VAT number" maxlength={15} pattern="[0-9]{15}" required />
+                  <Input id="vat-number" bind:value={tempVatNumber} placeholder="15-digit Saudi VAT number" maxlength={15} pattern="[0-9]{15}" />
                   <p class="text-xs text-muted-foreground mt-1">Saudi VAT numbers must be exactly 15 digits</p>
                 </div>
               </div>
+            </div>
+
+            <div class="flex justify-end border-t pt-4">
+              <Button onclick={handleSaveCompanyInfo}>
+                <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
+                Save Company Info
+              </Button>
             </div>
 
             <div class="space-y-4">
