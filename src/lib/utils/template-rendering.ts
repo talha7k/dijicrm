@@ -87,12 +87,12 @@ function fallbackRenderTemplate(
  */
 export function injectBrandingIntoHtml(
   html: string,
-  branding: CompanyBranding,
+  branding: CompanyBranding & { zatcaQRCode?: string },
 ): string {
   let brandedHtml = html;
 
-  // Only inject logo if it's not already in the template
-  if (branding.logoUrl && !brandedHtml.includes("{{companyLogo}}")) {
+  // Only inject logo if it's not already in the rendered HTML
+  if (branding.logoUrl && !brandedHtml.includes(branding.logoUrl)) {
     // Add logo to the top of the document
     const logoHtml = `
       <div style="text-align: center; margin-bottom: 20px;">
@@ -108,8 +108,8 @@ export function injectBrandingIntoHtml(
     }
   }
 
-  // Inject stamp image if available and not already in template
-  if (branding.stampImageUrl && !brandedHtml.includes("{{companyStamp}}")) {
+  // Inject stamp image if available and not already in rendered HTML
+  if (branding.stampImageUrl && !brandedHtml.includes(branding.stampImageUrl)) {
     const stampPosition = branding.stampPosition || "bottom-right";
 
     // Position styles based on stamp position
@@ -141,6 +141,26 @@ export function injectBrandingIntoHtml(
         ${stampHtml}
       </div>
     `;
+  }
+
+  // Inject ZATCA QR code if available and not already in rendered HTML
+  if (branding.zatcaQRCode && !brandedHtml.includes(branding.zatcaQRCode)) {
+    const zatcaHtml = `
+      <img src="${branding.zatcaQRCode}" alt="ZATCA QR Code" class="zatca-qr-code" />
+    `;
+
+    // Wrap content in relative positioned container and add ZATCA
+    if (!brandedHtml.includes("position: relative")) {
+      brandedHtml = `
+        <div style="position: relative; min-height: 100vh;">
+          ${brandedHtml}
+          ${zatcaHtml}
+        </div>
+      `;
+    } else {
+      // If already wrapped, just add the ZATCA
+      brandedHtml = brandedHtml.replace(/(<\/div>\s*)$/, `${zatcaHtml}$1`);
+    }
   }
 
   // Apply brand colors if specified

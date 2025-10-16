@@ -193,8 +193,9 @@ async function generateTemplateData(
       description: "Standard order template with company branding",
       type: "order",
       htmlContent: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; position: relative;">
           <div style="text-align: center; margin-bottom: 30px;">
+            {{#if companyLogo}}<img src="{{companyLogo}}" alt="Company Logo" style="max-width: 200px; max-height: 100px; margin-bottom: 10px;" />{{/if}}
             <h1>{{companyName}}</h1>
             <p>Invoice</p>
           </div>
@@ -224,6 +225,16 @@ async function generateTemplateData(
           <div style="margin-top: 20px; text-align: right;">
             <p><strong>Total: {{amount}}</strong></p>
           </div>
+          {{#if zatcaQRCode}}
+          <div style="position: absolute; top: 20px; right: 20px;">
+            <img src="{{zatcaQRCode}}" alt="ZATCA QR Code" style="width: 100px; height: 100px;" />
+          </div>
+          {{/if}}
+          {{#if companyStamp}}
+          <div style="position: absolute; bottom: 20px; right: 20px; opacity: 0.8;">
+            <img src="{{companyStamp}}" alt="Company Stamp" style="max-width: 150px; max-height: 150px; transform: rotate(-15deg);" />
+          </div>
+          {{/if}}
         </div>
       `,
       placeholders: [
@@ -254,6 +265,24 @@ async function generateTemplateData(
           required: true,
         },
         { key: "amount", label: "Amount", type: "currency", required: true },
+        {
+          key: "companyLogo",
+          label: "Company Logo",
+          type: "image",
+          required: false,
+        },
+        {
+          key: "companyStamp",
+          label: "Company Stamp",
+          type: "image",
+          required: false,
+        },
+        {
+          key: "zatcaQRCode",
+          label: "ZATCA QR Code",
+          type: "image",
+          required: false,
+        },
       ],
       isActive: true,
       version: 1,

@@ -20,6 +20,13 @@ service firebase.storage {
       allow delete: if isAuthenticated();
     }
 
+    // Stamp images directory
+    match /stamps/{companyId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
     // Document PDFs and files
     match /documents/{companyId}/{allPaths=**} {
       allow read: if isAuthenticated();

@@ -1,7 +1,6 @@
 import { json, error, type RequestEvent } from "@sveltejs/kit";
 import {
   validateTemplateData,
-  injectBrandingIntoHtml,
   fetchImageAsDataUrl,
 } from "$lib/utils/template-rendering";
 import { renderTemplate } from "$lib/utils/template-validation";
@@ -281,13 +280,27 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     await requireCompanyAccess(user.uid, companyId, "generate documents");
     console.log("Company access validated");
 
-    // Fetch company branding data
+    // Fetch company branding data using admin SDK
     let branding: CompanyBranding | undefined;
     try {
-      const brandingResult = await brandingService.loadBranding(companyId);
-      if (brandingResult.success && brandingResult.branding) {
-        branding = brandingResult.branding;
-        console.log("Branding loaded successfully");
+      if (db) {
+        const brandingDoc = await db
+          .collection("companyBranding")
+          .doc(companyId)
+          .get();
+        if (brandingDoc.exists) {
+          const brandingData = brandingDoc.data();
+          branding = {
+            logoUrl: brandingData?.logoUrl,
+            stampImageUrl: brandingData?.stampImageUrl,
+            stampPosition: brandingData?.stampPosition,
+            primaryColor: brandingData?.primaryColor,
+            secondaryColor: brandingData?.secondaryColor,
+          };
+          console.log("Branding loaded successfully via admin SDK");
+        } else {
+          console.log("No branding document found for company");
+        }
       }
     } catch (brandingError) {
       console.warn(
@@ -493,21 +506,7 @@ export const POST = async ({ request, locals }: RequestEvent) => {
       console.log("No images found in rendered HTML");
     }
 
-    // Inject branding if available (using data URLs from template data)
-    if (branding) {
-      // Create a modified branding object with data URLs
-      const brandingWithDataUrls: CompanyBranding = {
-        ...branding,
-        logoUrl: data.companyLogo,
-        stampImageUrl: data.companyStamp,
-      };
-
-      console.log("Injecting branding with data URLs");
-      renderedHtml = injectBrandingIntoHtml(renderedHtml, brandingWithDataUrls);
-      console.log("Branding injected");
-    } else {
-      console.log("No branding to inject");
-    }
+    // Branding is handled by template placeholders - no forced injection
 
     if (format === "html") {
       // Return HTML for preview

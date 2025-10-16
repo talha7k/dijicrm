@@ -351,4 +351,122 @@ describe("BrandingService", () => {
       );
     });
   });
+
+  describe("Integration Tests - Real Firebase Data Access", () => {
+    describe("loadBranding - Real Data", () => {
+      it("should load actual branding data from Firebase", async () => {
+        // Use your actual company ID from the logs
+        const companyId = "X6C5b2tYbpTn9XNsEkGT";
+
+        const result = await brandingService.loadBranding(companyId);
+
+        console.log("Branding load result:", result);
+
+        if (result.success && result.branding) {
+          console.log("✅ Branding data found:");
+          console.log(
+            "- Logo URL:",
+            result.branding.logoUrl ? "Present" : "Missing",
+          );
+          console.log(
+            "- Stamp URL:",
+            result.branding.stampImageUrl ? "Present" : "Missing",
+          );
+          console.log(
+            "- Stamp Position:",
+            result.branding.stampPosition || "Not set",
+          );
+          console.log(
+            "- Primary Color:",
+            result.branding.primaryColor || "Not set",
+          );
+          console.log(
+            "- Secondary Color:",
+            result.branding.secondaryColor || "Not set",
+          );
+
+          // Verify logo URL is accessible
+          if (result.branding.logoUrl) {
+            expect(result.branding.logoUrl).toMatch(/^https?:\/\//);
+            console.log("✅ Logo URL is valid HTTP/HTTPS URL");
+          }
+
+          // Verify stamp URL is accessible
+          if (result.branding.stampImageUrl) {
+            expect(result.branding.stampImageUrl).toMatch(/^https?:\/\//);
+            console.log("✅ Stamp URL is valid HTTP/HTTPS URL");
+          }
+
+          // Verify stamp position is valid
+          if (result.branding.stampPosition) {
+            expect([
+              "top-left",
+              "top-right",
+              "bottom-left",
+              "bottom-right",
+            ]).toContain(result.branding.stampPosition);
+            console.log("✅ Stamp position is valid");
+          }
+
+          // Verify colors are valid hex codes
+          if (result.branding.primaryColor) {
+            expect(result.branding.primaryColor).toMatch(/^#[0-9A-Fa-f]{6}$/);
+            console.log("✅ Primary color is valid hex");
+          }
+
+          if (result.branding.secondaryColor) {
+            expect(result.branding.secondaryColor).toMatch(/^#[0-9A-Fa-f]{6}$/);
+            console.log("✅ Secondary color is valid hex");
+          }
+        } else if (result.success && !result.branding) {
+          console.log(
+            "ℹ️ No branding data found for company (this is normal for new companies)",
+          );
+        } else {
+          console.error("❌ Failed to load branding:", result.error);
+          throw new Error(`Branding load failed: ${result.error}`);
+        }
+      });
+
+      it("should verify branding images are accessible", async () => {
+        const companyId = "X6C5b2tYbpTn9XNsEkGT";
+
+        const result = await brandingService.loadBranding(companyId);
+
+        if (result.success && result.branding) {
+          // Test logo accessibility
+          if (result.branding.logoUrl) {
+            try {
+              const logoResponse = await fetch(result.branding.logoUrl, {
+                method: "HEAD",
+              });
+              expect(logoResponse.ok).toBe(true);
+              console.log("✅ Logo image is accessible via HTTP");
+            } catch (error) {
+              console.error("❌ Logo image not accessible:", error);
+              throw new Error("Logo image not accessible");
+            }
+          }
+
+          // Test stamp accessibility
+          if (result.branding.stampImageUrl) {
+            try {
+              const stampResponse = await fetch(result.branding.stampImageUrl, {
+                method: "HEAD",
+              });
+              expect(stampResponse.ok).toBe(true);
+              console.log("✅ Stamp image is accessible via HTTP");
+            } catch (error) {
+              console.error("❌ Stamp image not accessible:", error);
+              throw new Error("Stamp image not accessible");
+            }
+          }
+        } else {
+          console.log(
+            "⏭️ Skipping image accessibility test - no branding data",
+          );
+        }
+      });
+    });
+  });
 });
