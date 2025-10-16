@@ -119,11 +119,15 @@ function createPaymentsStore() {
     recordPayment: async (
       payment: Omit<Payment, "id" | "createdAt" | "updatedAt" | "companyId">,
     ) => {
+      console.log("💳 PaymentsStore.recordPayment called with:", payment);
       update((store) => ({ ...store, loading: true }));
 
       try {
         const companyId = get(activeCompanyId);
+        console.log("🏢 Company ID from store:", companyId);
+
         if (!companyId) {
+          console.error("❌ No active company ID available");
           throw new Error("No active company");
         }
 
@@ -134,12 +138,20 @@ function createPaymentsStore() {
           updatedAt: Timestamp.now(),
         };
 
+        console.log("📦 Final payment data to save:", newPaymentData);
+        console.log("🔥 Firebase DB instance:", !!db);
+
         // Save to Firebase
+        console.log("💾 Attempting to save to Firebase...");
         const docRef = await addDoc(collection(db, "payments"), newPaymentData);
+        console.log("✅ Firebase save successful, document ID:", docRef.id);
+
         const savedPayment: Payment = {
           ...newPaymentData,
           id: docRef.id,
         };
+
+        console.log("📝 Saved payment object:", savedPayment);
 
         // Update local state
         update((store) => ({
@@ -148,13 +160,38 @@ function createPaymentsStore() {
           loading: false,
         }));
 
+        console.log("✅ Payment store updated locally");
         return savedPayment;
       } catch (error) {
-        console.error("Error recording payment:", error);
+        console.error("❌ Error recording payment:", error);
+        console.error("❌ Error details:", {
+          message:
+            error && typeof error === "object" && "message" in error
+              ? error.message
+              : "No message",
+          code:
+            error && typeof error === "object" && "code" in error
+              ? error.code
+              : "No code",
+          name:
+            error && typeof error === "object" && "name" in error
+              ? error.name
+              : "No name",
+          stack:
+            error && typeof error === "object" && "stack" in error
+              ? error.stack
+              : "No stack",
+        });
+
+        const errorMessage =
+          error && typeof error === "object" && "message" in error
+            ? error.message
+            : "Unknown error";
+
         update((store) => ({
           ...store,
           loading: false,
-          error: "Failed to record payment",
+          error: `Failed to record payment: ${errorMessage}`,
         }));
         throw error;
       }

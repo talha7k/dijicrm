@@ -15,7 +15,7 @@
   import type { Order, Payment } from '$lib/types/document';
   import { Timestamp } from 'firebase/firestore';
   import { toast } from 'svelte-sonner';
-  import { companyContext } from '$lib/stores/companyContext';
+  import { companyContext, activeCompanyId } from '$lib/stores/companyContext';
   import { auth } from '$lib/firebase';
   import { get } from 'svelte/store';
 
@@ -100,7 +100,36 @@
     }
 
     try {
-      await paymentsStore.recordPayment({
+      console.log('🔄 Starting payment recording process...');
+      console.log('📊 Payment details:', {
+        orderId: order.id,
+        clientId: order.clientId,
+        amount,
+        paymentMethod,
+        userId,
+        companyContext: companyContextValue.data?.companyId
+      });
+
+      // Check Firebase auth state
+      if (!auth.currentUser) {
+        console.error('❌ No authenticated user');
+        toast.error('User not authenticated');
+        return;
+      }
+      console.log('✅ User authenticated:', auth.currentUser.uid);
+
+      // Check company context
+      const currentCompanyId = get(activeCompanyId);
+      console.log('🏢 Active company ID:', currentCompanyId);
+
+      if (!activeCompanyId) {
+        console.error('❌ No active company context');
+        toast.error('No active company context');
+        return;
+      }
+
+      // Prepare payment data
+      const paymentData = {
         orderId: order.id,
         clientId: order.clientId,
         amount,
@@ -108,24 +137,55 @@
         paymentMethod,
         notes: paymentNotes,
         recordedBy: userId,
+      };
+      console.log('💰 Payment data prepared:', paymentData);
+
+      // Record the payment and get the saved payment object
+      console.log('📝 Calling paymentsStore.recordPayment...');
+      const savedPayment = await paymentsStore.recordPayment(paymentData);
+      console.log('✅ Payment recorded successfully:', savedPayment);
+
+      // Calculate new financial values
+      const newPaidAmount = order.paidAmount + amount;
+      const newOutstandingAmount = Math.max(0, order.totalAmount - newPaidAmount);
+      const newStatus = newOutstandingAmount <= 0 ? 'paid' : newPaidAmount > 0 ? 'partially_paid' : order.status;
+
+      console.log('🔢 Financial calculations:', {
+        oldPaidAmount: order.paidAmount,
+        newPaidAmount,
+        newOutstandingAmount,
+        newStatus
       });
+
+      // Update order with complete payment information
+      console.log('📝 Updating order with payment information...');
+      await ordersStore.updateOrder(order.id, {
+        paidAmount: newPaidAmount,
+        outstandingAmount: newOutstandingAmount,
+        status: newStatus,
+        payments: [...order.payments, savedPayment.id],
+        updatedAt: Timestamp.now(),
+      });
+      console.log('✅ Order updated successfully');
 
       toast.success('Payment recorded successfully');
 
       // Reset form
       paymentAmount = '';
       paymentNotes = '';
-
-      // Update order status if fully paid
-      const totalPaid = orderPayments.reduce((sum, p) => sum + p.amount, 0) + amount;
-      if (totalPaid >= order.totalAmount) {
-        await ordersStore.updateOrder(order.id, { status: 'paid' });
-      } else if (totalPaid > 0) {
-        await ordersStore.updateOrder(order.id, { status: 'partially_paid' });
-      }
     } catch (error) {
-      console.error('Error recording payment:', error);
-      toast.error('Failed to record payment');
+      console.error('❌ Error recording payment:', error);
+      const errorDetails = {
+        message: error && typeof error === 'object' && 'message' in error ? error.message : 'No message',
+        code: error && typeof error === 'object' && 'code' in error ? error.code : 'No code',
+        stack: error && typeof error === 'object' && 'stack' in error ? error.stack : 'No stack'
+      };
+      console.error('❌ Error details:', errorDetails);
+
+      const errorMessage = error && typeof error === 'object' && 'message' in error
+        ? error.message
+        : 'Unknown error';
+      toast.error(`Failed to record payment: ${errorMessage}`);
     }
   }
 
@@ -180,7 +240,7 @@
 </script>
 
 <Dialog.Root bind:open>
-  <Dialog.Content class="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+  <Dialog.Content class="sm:max-w-[800px]">
     <Dialog.Header>
       <Dialog.Title>Order Details</Dialog.Title>
       <Dialog.Description>

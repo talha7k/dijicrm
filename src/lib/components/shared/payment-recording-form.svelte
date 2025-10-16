@@ -135,11 +135,11 @@ import Icon from "@iconify/svelte";
        amount: formData.amount,
        paymentDate: Timestamp.fromDate(new Date(formData.paymentDate)),
        paymentMethod: formData.paymentMethod,
-       reference: formData.reference || undefined,
-       notes: formData.notes || undefined,
-       proofFiles: proofFilesData,
+       ...(formData.reference && { reference: formData.reference }),
+       ...(formData.notes && { notes: formData.notes }),
+       ...(proofFilesData && { proofFiles: proofFilesData }),
        recordedBy: userId,
-     };
+      };
 
      onSave(payment);
    }
