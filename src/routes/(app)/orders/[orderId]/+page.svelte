@@ -1,17 +1,19 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { onMount } from 'svelte';
-  import { doc, getDoc } from 'firebase/firestore';
-  import { db } from '$lib/firebase';
-  import type { Order } from '$lib/types/document';
-  import { activeCompanyId } from '$lib/stores/companyContext';
-  import OrderCard from '$lib/components/app/client/OrderCard.svelte';
-  import PaymentModal from '$lib/components/app/client/PaymentModal.svelte';
-  import { toast } from 'svelte-sonner';
+   import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+   import { db } from '$lib/firebase';
+   import type { Order } from '$lib/types/document';
+   import type { User } from '$lib/types/user';
+   import { activeCompanyId } from '$lib/stores/companyContext';
+   import OrderDetail from '$lib/components/app/client/OrderDetail.svelte';
+   import PaymentModal from '$lib/components/app/client/PaymentModal.svelte';
+   import { toast } from 'svelte-sonner';
 
-  let order = $state<Order | null>(null);
-  let loading = $state(true);
-  let error = $state('');
+   let order = $state<Order | null>(null);
+   let clientName = $state<string>('Unknown Client');
+   let loading = $state(true);
+   let error = $state('');
 
   // Payment modal state
   let showPaymentModal = $state(false);
@@ -33,17 +35,31 @@
     }
 
     try {
-      const orderDoc = await getDoc(doc(db, 'orders', orderId));
-      if (orderDoc.exists()) {
-        const data = orderDoc.data() as Order;
-        if (data.companyId === companyId) {
-          order = data;
-        } else {
-          error = 'Order not found';
-        }
-      } else {
-        error = 'Order not found';
-      }
+       const orderDoc = await getDoc(doc(db, 'orders', orderId));
+       if (orderDoc.exists()) {
+         const data = orderDoc.data() as Order;
+         if (data.companyId === companyId) {
+           order = data;
+
+           // Fetch client information
+           if (data.clientId) {
+             try {
+               const clientDoc = await getDoc(doc(db, 'users', data.clientId));
+               if (clientDoc.exists()) {
+                 const clientData = clientDoc.data() as User;
+                 clientName = clientData.displayName || clientData.email || 'Unknown Client';
+               }
+             } catch (clientError) {
+               console.error('Error loading client:', clientError);
+               // Keep default clientName
+             }
+           }
+         } else {
+           error = 'Order not found';
+         }
+       } else {
+         error = 'Order not found';
+       }
     } catch (err) {
       console.error('Error loading order:', err);
       error = 'Failed to load order';
@@ -92,14 +108,12 @@
         </div>
       </div>
 
-      <!-- Order Card (Always Expanded) -->
-      <OrderCard
-        {order}
-        isExpanded={true}
-        onToggle={() => {}}
-        onClick={() => {}}
-        onRecordPayment={handleRecordPayment}
-      />
+       <!-- Order Detail View -->
+       <OrderDetail
+         {order}
+         onRecordPayment={handleRecordPayment}
+         {clientName}
+       />
     </div>
   {:else}
     <div class="text-center py-12">

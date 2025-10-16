@@ -118,10 +118,10 @@
                View All Orders
              </Button>
           </div>
-        {:else}
-          <div class="text-center py-4 text-muted-foreground">
-            No orders found
-          </div>
+         {:else}
+           <div class="text-center py-4 text-muted-foreground">
+             No orders found
+           </div>
          {/if}
        </CardContent>
      </Card>
@@ -133,51 +133,77 @@
          <CardDescription>Documents sent to you for review and completion</CardDescription>
        </CardHeader>
        <CardContent>
-         {#if $documents.loading}
-           <div class="text-center py-4">Loading documents...</div>
-         {:else if $documents.documents && $documents.documents.length > 0}
-           <div class="space-y-4">
-             {#each $documents.documents.slice(0, 5) as document}
-               <div class="flex items-center justify-between p-4 border rounded-lg">
-                 <div class="space-y-1">
-                   <p class="text-sm font-medium">Document {document.id}</p>
-                   <p class="text-sm text-muted-foreground">
-                     {document.data.clientName} - {document.data.companyName}
-                   </p>
-                   <p class="text-xs text-muted-foreground">
-                     Sent: {formatDateShort(document.sentAt)}
-                   </p>
-                 </div>
-                 <div class="text-right space-y-1">
-                   <Badge class={getDocumentStatusColor(document.status)}>
-                     {document.status.charAt(0).toUpperCase() + document.status.slice(1)}
-                   </Badge>
-                   {#if document.status === 'sent'}
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onclick={() => {
-                         documents.markAsViewed(document.id);
-                         // TODO: Open document viewer
-                       }}
-                     >
-                       View Document
-                     </Button>
-                   {/if}
-                 </div>
-               </div>
-             {/each}
-           </div>
-           <div class="mt-4">
-             <Button variant="outline" onclick={() => goto('/client-dashboard/documents')}>
-               View All Documents
-             </Button>
-           </div>
-         {:else}
-           <div class="text-center py-4 text-muted-foreground">
-             No documents found
-           </div>
-         {/if}
+          {#if $documents.loading}
+            <div class="text-center py-4">Loading documents...</div>
+          {:else}
+            {@const allDocuments = documents.getAllDocuments()}
+            {#if allDocuments && allDocuments.length > 0}
+              <div class="space-y-4">
+                {#each allDocuments.slice(0, 5) as document}
+                  <div class="flex items-center justify-between p-4 border rounded-lg">
+                    <div class="space-y-1">
+                      <p class="text-sm font-medium">
+                        {'uploadedAt' in document ? document.name : `Document ${document.id}`}
+                      </p>
+                      <p class="text-sm text-muted-foreground">
+                        {#if 'uploadedAt' in document}
+                          Uploaded by you
+                        {:else}
+                          {document.data.clientName} - {document.data.companyName}
+                        {/if}
+                      </p>
+                      <p class="text-xs text-muted-foreground">
+                        {#if 'uploadedAt' in document}
+                          Uploaded: {formatDateShort(document.uploadedAt)}
+                        {:else}
+                          Sent: {formatDateShort(document.sentAt)}
+                        {/if}
+                      </p>
+                    </div>
+                    <div class="text-right space-y-1">
+                      {#if 'uploadedAt' in document}
+                        <Badge class="bg-gray-100 text-gray-800">
+                          Uploaded
+                        </Badge>
+                        <a 
+                          href={document.fileUrl} 
+                          target="_blank" 
+                          class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
+                        >
+                          View PDF
+                        </a>
+                      {:else}
+                        <Badge class={getDocumentStatusColor(document.status)}>
+                          {document.status.charAt(0).toUpperCase() + document.status.slice(1)}
+                        </Badge>
+                        {#if document.status === 'sent'}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onclick={() => {
+                              documents.markAsViewed(document.id);
+                              // TODO: Open document viewer
+                            }}
+                          >
+                            View Document
+                          </Button>
+                        {/if}
+                      {/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
+              <div class="mt-4">
+                <Button variant="outline" onclick={() => goto('/client-dashboard/documents')}>
+                  View All Documents
+                </Button>
+              </div>
+            {:else}
+              <div class="text-center py-4 text-muted-foreground">
+                No documents found
+              </div>
+            {/if}
+          {/if}
        </CardContent>
      </Card>
    </DashboardLayout>

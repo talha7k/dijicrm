@@ -6,9 +6,11 @@
    import { clientManagementStore } from '$lib/stores/clientManagement';
    import { productsStore } from '$lib/stores/products';
 
-   import { ordersStore } from '$lib/stores/orders';
-   import { documentDeliveryStore } from '$lib/stores/documentDelivery';
-  import Button from '$lib/components/ui/button/button.svelte';
+    import { ordersStore } from '$lib/stores/orders';
+    import { documentDeliveryStore } from '$lib/stores/documentDelivery';
+    import { collection, query, where, getDocs } from 'firebase/firestore';
+    import { db } from '$lib/firebase';
+   import Button from '$lib/components/ui/button/button.svelte';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
@@ -63,7 +65,7 @@
   let activeTab = $state('overview');
 
    let clientOrders = $state<Order[]>([]);
-   let expandedOrders = $state<Set<string>>(new Set());
+
 
     let clientDocuments = $state<DocumentRecord[]>([]);
 
@@ -222,15 +224,7 @@
       goto(`/orders/${order.id}`);
     }
 
-   function toggleOrderExpanded(orderId: string) {
-     const newExpanded = new Set(expandedOrders);
-     if (newExpanded.has(orderId)) {
-       newExpanded.delete(orderId);
-     } else {
-       newExpanded.add(orderId);
-     }
-     expandedOrders = newExpanded;
-   }
+
 
   function handleSendDocument() {
     showDocumentModal = true;
@@ -588,14 +582,12 @@
                </div>
              {:else}
                <div class="space-y-3">
-                  {#each clientOrders as order}
-                    {@const isExpanded = expandedOrders.has(order.id)}
-                    <OrderCard
-                      {order}
-                      {isExpanded}
-                      onToggle={() => toggleOrderExpanded(order.id)}
-                      onClick={() => handleOrderClick(order)}
-                      onRecordPayment={handleRecordPayment}
+                   {#each clientOrders as order}
+                     <OrderCard
+                       {order}
+                       onClick={() => handleOrderClick(order)}
+                       onRecordPayment={handleRecordPayment}
+                       clientName={client.displayName || client.email || 'Unknown Client'}
                     />
                   {/each}
                 </div>

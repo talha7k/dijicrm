@@ -52,69 +52,114 @@
         <CardContent>
           {#if $documents.loading}
             <div class="text-center py-8">Loading documents...</div>
-          {:else if $documents.documents && $documents.documents.length > 0}
-            <div class="space-y-4">
-              {#each $documents.documents as document}
-                <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                  <div class="space-y-1 flex-1">
-                    <div class="flex items-center gap-2">
-                      <p class="text-sm font-medium">Document {document.id}</p>
-                      <Badge class={getDocumentStatusColor(document.status)}>
-                        {document.status.charAt(0).toUpperCase() + document.status.slice(1)}
-                      </Badge>
-                    </div>
-                    <p class="text-sm text-muted-foreground">
-                      {document.data.clientName} - {document.data.companyName}
-                    </p>
-                    <div class="flex gap-4 text-xs text-muted-foreground">
-                      <span>Sent: {formatDateShort(document.sentAt)}</span>
-                      {#if document.viewedAt}
-                        <span>Viewed: {formatDateShort(document.viewedAt)}</span>
-                      {/if}
-                      {#if document.completedAt}
-                        <span>Completed: {formatDateShort(document.completedAt)}</span>
-                      {/if}
-                    </div>
-                  </div>
-                  <div class="flex gap-2">
-                    {#if document.pdfUrl}
-                      <a href={document.pdfUrl} target="_blank" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3">
-                        Download PDF
-                      </a>
-                    {/if}
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onclick={() => viewDocument(document)}
-                    >
-                      {document.status === 'sent' ? 'View Document' : 'Review Document'}
-                    </Button>
-                  </div>
-                </div>
-              {/each}
-            </div>
           {:else}
-            <div class="text-center py-8 text-muted-foreground">
-              <p class="text-lg mb-2">No documents found</p>
-              <p>You haven't received any documents yet.</p>
-            </div>
+            {@const allDocuments = documents.getAllDocuments()}
+            {#if allDocuments && allDocuments.length > 0}
+              <div class="space-y-4">
+                {#each allDocuments as document}
+                  <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div class="space-y-1 flex-1">
+                      <div class="flex items-center gap-2">
+                        <p class="text-sm font-medium">
+                          {'uploadedAt' in document ? document.name : `Document ${document.id}`}
+                        </p>
+                        {#if 'uploadedAt' in document}
+                          <Badge class="bg-gray-100 text-gray-800">
+                            Uploaded
+                          </Badge>
+                        {:else}
+                          <Badge class={getDocumentStatusColor(document.status)}>
+                            {document.status.charAt(0).toUpperCase() + document.status.slice(1)}
+                          </Badge>
+                        {/if}
+                      </div>
+                      <p class="text-sm text-muted-foreground">
+                        {#if 'uploadedAt' in document}
+                          Uploaded by you
+                          {#if document.category}
+                            • {document.category}
+                          {/if}
+                          {#if document.description}
+                            <br />{document.description}
+                          {/if}
+                        {:else}
+                          {document.data.clientName} - {document.data.companyName}
+                        {/if}
+                      </p>
+                      <div class="flex gap-4 text-xs text-muted-foreground">
+                        {#if 'uploadedAt' in document}
+                          <span>Uploaded: {formatDateShort(document.uploadedAt)}</span>
+                          <span>Size: {(document.fileSize / 1024 / 1024).toFixed(2)} MB</span>
+                        {:else}
+                          <span>Sent: {formatDateShort(document.sentAt)}</span>
+                          {#if document.viewedAt}
+                            <span>Viewed: {formatDateShort(document.viewedAt)}</span>
+                          {/if}
+                          {#if document.completedAt}
+                            <span>Completed: {formatDateShort(document.completedAt)}</span>
+                          {/if}
+                        {/if}
+                      </div>
+                    </div>
+                    <div class="flex gap-2">
+                      {#if 'uploadedAt' in document}
+                        <a 
+                          href={document.fileUrl} 
+                          target="_blank" 
+                          class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
+                        >
+                          View PDF
+                        </a>
+                      {:else}
+                        {#if document.pdfUrl}
+                          <a href={document.pdfUrl} target="_blank" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3">
+                            Download PDF
+                          </a>
+                        {/if}
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onclick={() => viewDocument(document)}
+                        >
+                          {document.status === 'sent' ? 'View Document' : 'Review Document'}
+                        </Button>
+                      {/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            {:else}
+              <div class="text-center py-8 text-muted-foreground">
+                <p class="text-lg mb-2">No documents found</p>
+                <p>You haven't received any documents yet.</p>
+              </div>
+            {/if}
           {/if}
-        </CardContent>
+       </CardContent>
       </Card>
 
       <!-- Document Statistics -->
-      {#if $documents.documents && $documents.documents.length > 0}
+      {#if $documents.documents && $documents.documents.length > 0 || $documents.clientUploadedDocuments && $documents.clientUploadedDocuments.length > 0}
+        {@const allDocuments = documents.getAllDocuments()}
+        {@const generatedDocs = $documents.documents}
+        {@const uploadedDocs = $documents.clientUploadedDocuments}
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardContent class="pt-6">
-              <div class="text-2xl font-bold">{$documents.documents.length}</div>
+              <div class="text-2xl font-bold">{allDocuments.length}</div>
               <p class="text-xs text-muted-foreground">Total Documents</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent class="pt-6">
+              <div class="text-2xl font-bold">{uploadedDocs.length}</div>
+              <p class="text-xs text-muted-foreground">Uploaded by You</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent class="pt-6">
               <div class="text-2xl font-bold">
-                {$documents.documents.filter((d: GeneratedDocument) => d.status === 'sent').length}
+                {generatedDocs.filter((d: GeneratedDocument) => d.status === 'sent').length}
               </div>
               <p class="text-xs text-muted-foreground">Pending Review</p>
             </CardContent>
@@ -122,17 +167,9 @@
           <Card>
             <CardContent class="pt-6">
               <div class="text-2xl font-bold">
-                {$documents.documents.filter((d: GeneratedDocument) => d.status === 'viewed').length}
+                {generatedDocs.filter((d: GeneratedDocument) => d.status === 'viewed' || d.status === 'completed').length}
               </div>
-              <p class="text-xs text-muted-foreground">Viewed</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent class="pt-6">
-              <div class="text-2xl font-bold">
-                {$documents.documents.filter((d: GeneratedDocument) => d.status === 'completed').length}
-              </div>
-              <p class="text-xs text-muted-foreground">Completed</p>
+              <p class="text-xs text-muted-foreground">Viewed/Completed</p>
             </CardContent>
           </Card>
         </div>

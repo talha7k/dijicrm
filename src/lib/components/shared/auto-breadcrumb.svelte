@@ -37,8 +37,8 @@
 				displayName = 'Create';
 			} else if (segment === 'edit') {
 				displayName = 'Edit';
-			} else if (segment === 'invoices') {
-				displayName = 'Invoices';
+			} else if (segment === 'orders') {
+				displayName = 'Orders';
 			}
 
 			return {

@@ -10,10 +10,15 @@ import {
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import { userProfile } from "$lib/stores/user";
-import type { GeneratedDocument, DocumentDelivery } from "$lib/types/document";
+import type {
+  GeneratedDocument,
+  DocumentDelivery,
+  ClientDocument,
+} from "$lib/types/document";
 
 interface ClientDocumentsState {
   documents: GeneratedDocument[];
+  clientUploadedDocuments: ClientDocument[];
   deliveries: DocumentDelivery[];
   loading: boolean;
   error: string | null;
@@ -22,12 +27,14 @@ interface ClientDocumentsState {
 function createClientDocumentsStore() {
   const store = writable<ClientDocumentsState>({
     documents: [],
+    clientUploadedDocuments: [],
     deliveries: [],
     loading: false,
     error: null,
   });
 
   let unsubscribeDocuments: (() => void) | null = null;
+  let unsubscribeClientUploaded: (() => void) | null = null;
   let unsubscribeDeliveries: (() => void) | null = null;
 
   // Subscribe to user profile changes
@@ -40,11 +47,21 @@ function createClientDocumentsStore() {
         unsubscribeDocuments();
         unsubscribeDocuments = null;
       }
+      if (unsubscribeClientUploaded) {
+        unsubscribeClientUploaded();
+        unsubscribeClientUploaded = null;
+      }
       if (unsubscribeDeliveries) {
         unsubscribeDeliveries();
         unsubscribeDeliveries = null;
       }
-      store.set({ documents: [], deliveries: [], loading: false, error: null });
+      store.set({
+        documents: [],
+        clientUploadedDocuments: [],
+        deliveries: [],
+        loading: false,
+        error: null,
+      });
     }
   });
 
@@ -55,6 +72,9 @@ function createClientDocumentsStore() {
       // Clean up previous listeners
       if (unsubscribeDocuments) {
         unsubscribeDocuments();
+      }
+      if (unsubscribeClientUploaded) {
+        unsubscribeClientUploaded();
       }
       if (unsubscribeDeliveries) {
         unsubscribeDeliveries();
@@ -96,6 +116,36 @@ function createClientDocumentsStore() {
             error: error.message,
             loading: false,
           }));
+        },
+      );
+
+      // Set up real-time listener for client uploaded documents
+      const clientUploadedQuery = query(
+        collection(db, "clientDocuments"),
+        where("clientId", "==", clientId),
+      );
+
+      unsubscribeClientUploaded = onSnapshot(
+        clientUploadedQuery,
+        (querySnapshot) => {
+          const clientUploadedDocuments: ClientDocument[] = [];
+
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            clientUploadedDocuments.push({
+              id: doc.id,
+              ...data,
+              uploadedAt: data.uploadedAt,
+            } as ClientDocument);
+          });
+
+          store.update((state) => ({
+            ...state,
+            clientUploadedDocuments,
+          }));
+        },
+        (error) => {
+          console.error("Error loading client uploaded documents:", error);
         },
       );
 
@@ -182,12 +232,27 @@ function createClientDocumentsStore() {
     );
   }
 
+  // Get all documents (both generated and uploaded)
+  function getAllDocuments(): Array<GeneratedDocument | ClientDocument> {
+    const currentState = get(store);
+    return [
+      ...currentState.documents,
+      ...currentState.clientUploadedDocuments,
+    ].sort((a, b) => {
+      // Sort by date (newest first)
+      const dateA = "uploadedAt" in a ? a.uploadedAt : a.generatedAt;
+      const dateB = "uploadedAt" in b ? b.uploadedAt : b.generatedAt;
+      return dateB.toMillis() - dateA.toMillis();
+    });
+  }
+
   return {
     subscribe: store.subscribe,
     loadClientDocuments,
     markAsViewed,
     getDocumentsByStatus,
     getDocumentDelivery,
+    getAllDocuments,
   };
 }
 

@@ -69,6 +69,24 @@ export interface DocumentFile {
   uploadedBy: string; // User ID
 }
 
+export interface ClientDocument {
+  id: string;
+  companyId: string;
+  clientId: string;
+  name: string;
+  originalFileName: string;
+  category?: string;
+  description?: string;
+  fileSize: number;
+  fileUrl: string;
+  filePath: string;
+  fileType: string;
+  uploadedAt: Timestamp;
+  uploadedBy: string;
+  type: "custom";
+  status: "uploaded";
+}
+
 export interface DocumentDelivery {
   id: string;
   companyId: string;

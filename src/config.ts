@@ -69,7 +69,7 @@ export const companyNavItems: SidebarNav[] = [
       },
 
       {
-        title: "Invoices",
+        title: "Orders",
         url: "/orders",
         icon: "lucide:file-text",
       },
