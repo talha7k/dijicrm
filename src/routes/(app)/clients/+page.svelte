@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { requireCompany } from '$lib/utils/auth';
    import { clientManagementStore } from '$lib/stores/clientManagement';
-   import { clientInvoicesStore } from '$lib/stores/clientInvoices';
+   import { ordersStore } from '$lib/stores/orders';
    import { userProfile } from '$lib/stores/user';
    import { companyContext } from '$lib/stores/companyContext';
    import { db } from '$lib/firebase';
@@ -17,32 +17,32 @@
     import Loading from '$lib/components/ui/loading/loading.svelte';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
     import type { UserProfile } from '$lib/types/user';
-   import type { ClientInvoice } from '$lib/stores/clientInvoices';
+   import type { Order } from '$lib/types/document';
    import { toast } from 'svelte-sonner';
 
    // Company access is checked at layout level
 
    const clientStore = clientManagementStore;
-   const invoiceStore = clientInvoicesStore;
+    const orderStore = ordersStore;
      let clients = $state<UserProfile[]>([]);
-     let invoices = $state<ClientInvoice[]>([]);
+      let orders = $state<Order[]>([]);
      let loading = $state(false);
      let error = $state<string | null>(null);
      let searchQuery = $state('');
      let statusFilter = $state('all');
       let activityFilter = $state('all');
-      let invoiceCounts = $state<Record<string, number>>({});
+      let orderCounts = $state<Record<string, number>>({});
       
       // Delete confirmation state
        let showDeleteDialog = $state(false);
        let clientToDelete = $state<{ id: string; name: string } | null>(null);
        let isDeleting = $state(false);
-       let deleteDataCounts = $state<{
-         orders: number;
-         invoices: number;
-         documents: number;
-         emails: number;
-       }>({ orders: 0, invoices: 0, documents: 0, emails: 0 });
+let deleteDataCounts = $state<{
+  orders: number;
+  payments: number;
+  documents: number;
+  emails: number;
+}>({ orders: 0, payments: 0, documents: 0, emails: 0 });
        let isLoadingCounts = $state(false);
 
      const statusDisplay = $derived(
@@ -68,12 +68,12 @@
          clients = state.clients;
          loading = state.loading;
          error = state.error;
-         invoiceCounts = state.invoiceCounts || {};
+          orderCounts = state.orderCounts || {};
        });
 
-       invoiceStore.subscribe(state => {
-         invoices = state.data || [];
-       });
+        orderStore.subscribe(state => {
+          orders = state.data || [];
+        });
      });
 
      // Filter clients based on search and filters
@@ -111,7 +111,7 @@
   }
 
    function getClientInvoiceCount(clientId: string) {
-     return invoiceCounts[clientId] || 0;
+      return orderCounts[clientId] || 0;
    }
 
   function getActivityIndicator(client: UserProfile) {
@@ -165,8 +165,8 @@
       const companyContextValue = get(companyContext);
       const companyId = companyContextValue.data?.companyId;
       
-      // Count related data
-      const counts = { orders: 0, invoices: 0, documents: 0, emails: 0 };
+       // Count related data
+        const counts = { orders: 0, payments: 0, documents: 0, emails: 0 };
       
       if (companyId) {
         // Count orders
@@ -177,15 +177,6 @@
         );
         const ordersSnapshot = await getDocs(ordersQuery);
         counts.orders = ordersSnapshot.size;
-        
-        // Count invoices
-        const invoicesQuery = query(
-          collection(db, "invoices"),
-          where("clientId", "==", clientId),
-          where("companyId", "==", companyId)
-        );
-        const invoicesSnapshot = await getDocs(invoicesQuery);
-        counts.invoices = invoicesSnapshot.size;
       }
       
       // Count document deliveries
@@ -397,7 +388,7 @@
                         class="text-destructive focus:text-destructive"
                         onclick={(e) => {
                           e.stopPropagation();
-                          handleDeleteClient(client.uid, client.displayName);
+                          handleDeleteClient(client.uid, client.displayName || 'Unknown Client');
                         }}
                       >
                         <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -473,7 +464,7 @@
               </div>
               <div class="flex justify-between items-center">
                 <span class="text-sm text-gray-600">🧾 Invoices</span>
-                <span class="text-sm font-medium text-gray-900">{deleteDataCounts.invoices} items</span>
+                <span class="text-sm font-medium text-gray-900">{deleteDataCounts.orders} items</span>
               </div>
               <div class="flex justify-between items-center">
                 <span class="text-sm text-gray-600">📄 Documents</span>

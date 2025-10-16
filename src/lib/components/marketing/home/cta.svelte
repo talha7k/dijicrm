@@ -12,7 +12,7 @@
 			>
 				<div class="mb-5 block text-center lg:mb-0 lg:text-left">
 					<h2 class="font-manrope mb-5 text-2xl font-semibold lg:mb-2">Ready to streamline your CRM?</h2>
-					<p class="text-lG">Start managing invoices with TK-Crm today</p>
+					<p class="text-lG">Start managing orders with TK-Crm today</p>
 				</div>
 				<Button variant="default" size="lg">
 					Get Started

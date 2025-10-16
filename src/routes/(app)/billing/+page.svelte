@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Invoices from '$lib/components/app/billing/invoices.svelte';
+
 	import PaymentMethods from '$lib/components/app/billing/payment-methods.svelte';
 	import PlanCard from '$lib/components/app/billing/plan-card.svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
@@ -17,6 +17,5 @@
 			<PaymentMethods />
 		</div>
 		<Separator />
-		<Invoices />
 	</div>
 </div>

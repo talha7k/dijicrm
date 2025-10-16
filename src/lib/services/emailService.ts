@@ -464,7 +464,7 @@ If you have any questions, please contact your account representative.
             <div class="content">
               <p>${companyName} has invited you to join their client portal. This secure platform allows you to:</p>
               <ul>
-                <li>View and download your invoices</li>
+                <li>View and download your orders</li>
                 <li>Access important business documents</li>
                 <li>Submit completed forms and paperwork</li>
                 <li>Track your account status and communications</li>
@@ -504,7 +504,7 @@ Welcome to ${companyName}!
 Hello ${clientName},
 
 ${companyName} has invited you to join their client portal. This secure platform allows you to:
-- View and download your invoices
+- View and download your orders
 - Access important business documents
 - Submit completed forms and paperwork
 - Track your account status and communications

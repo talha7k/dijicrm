@@ -3,7 +3,7 @@ import type { NavItem, SidebarNav, SocialLink } from "$lib/types/nav";
 export const siteConfig = {
   title: "TK-Crm",
   description:
-    "A multi-dashboard portal for clients and companies to manage invoices. Built with SvelteKit and Firebase, this CRM system provides separate dashboards for client access and company administration, featuring invoice management, billing, notifications, and account settings.",
+    "A multi-dashboard portal for clients and companies to manage orders. Built with SvelteKit and Firebase, this CRM system provides separate dashboards for client access and company administration, featuring order management, billing, notifications, and account settings.",
   logo: "/logo.svg",
   logoDark: "/logo.svg",
   favicon: "/favicon.png",
@@ -44,8 +44,8 @@ export const clientNavItems: SidebarNav[] = [
         icon: "lucide:layout-dashboard",
       },
       {
-        title: "Invoices",
-        url: "/client-dashboard/invoices",
+        title: "Orders",
+        url: "/client-dashboard/orders",
         icon: "lucide:file-text",
       },
       {
@@ -84,12 +84,12 @@ export const companyNavItems: SidebarNav[] = [
 
       {
         title: "Invoices",
-        url: "/invoices",
+        url: "/orders",
         icon: "lucide:file-text",
       },
       {
         title: "Create Invoice",
-        url: "/invoices/create",
+        url: "/orders/create",
         icon: "lucide:plus-circle",
       },
       {
@@ -151,7 +151,7 @@ export const plans = {
       name: "Free Plan",
       features: [
         "Up to 10 clients",
-        "Basic invoice management",
+        "Basic order management",
         "Email notifications",
         "Community support",
       ],
@@ -186,7 +186,7 @@ export const plans = {
       name: "Free Plan",
       features: [
         "Up to 10 clients",
-        "Basic invoice management",
+        "Basic order management",
         "Email notifications",
         "Community support",
       ],

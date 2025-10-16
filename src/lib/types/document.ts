@@ -5,7 +5,7 @@ export interface DocumentTemplate {
   companyId: string; // Reference to company that owns the template
   name: string;
   description?: string;
-  type: "invoice" | "legal" | "business" | "custom";
+  type: "order" | "legal" | "business" | "custom";
   htmlContent: string; // The HTML template with placeholders
   placeholders: TemplatePlaceholder[]; // Defined placeholders in the template
   isActive: boolean;
@@ -86,7 +86,7 @@ export interface DocumentDelivery {
 
 export interface Payment {
   id: string;
-  invoiceId: string; // Reference to Order/invoice
+  orderId: string; // Reference to Order
   companyId: string;
   clientId: string;
   amount: number;

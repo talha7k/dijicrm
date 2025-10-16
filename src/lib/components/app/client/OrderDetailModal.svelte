@@ -38,11 +38,11 @@
 
   $effect(() => {
     if (order && open) {
-      // Load payments for this order (using invoiceId which references order)
+      // Load payments for this order (using orderId which references order)
       paymentsStore.subscribe((state) => {
-        orderPayments = state.data?.filter(p => p.invoiceId === order.id) || [];
+        orderPayments = state.data?.filter(p => p.orderId === order.id) || [];
       });
-      paymentsStore.loadPaymentsForInvoice(order.id);
+      paymentsStore.loadPaymentsForOrder(order.id);
     }
   });
 
@@ -101,7 +101,7 @@
 
     try {
       await paymentsStore.recordPayment({
-        invoiceId: order.id,
+        orderId: order.id,
         clientId: order.clientId,
         amount,
         paymentDate: Timestamp.now(),
@@ -141,9 +141,9 @@
 
     generatingInvoice = true;
     try {
-      // Generate invoice PDF using document generation
+      // Generate order PDF using document generation
       const result = await documentGenerationStore.generateDocument(
-        'invoice-template', // TODO: Use actual template ID
+        'order-template', // TODO: Use actual template ID
         {
           orderId: order.id,
           clientName: 'Client Name', // TODO: Get from client data
@@ -166,11 +166,11 @@
         // Update order status
         await ordersStore.updateOrder(order.id, { status: 'generated' });
       } else {
-        throw new Error(result.error || 'Failed to generate invoice');
+        throw new Error(result.error || 'Failed to generate order');
       }
     } catch (error) {
-      console.error('Error generating invoice:', error);
-      toast.error('Failed to generate invoice');
+      console.error('Error generating order:', error);
+      toast.error('Failed to generate order');
     } finally {
       generatingInvoice = false;
     }
@@ -243,7 +243,7 @@
           <Tabs.List class="grid w-full grid-cols-3">
             <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
             <Tabs.Trigger value="payments">Payments</Tabs.Trigger>
-            <Tabs.Trigger value="invoice">Invoice</Tabs.Trigger>
+            <Tabs.Trigger value="order">Invoice</Tabs.Trigger>
           </Tabs.List>
 
           <Tabs.Content value="overview" class="space-y-4">
@@ -348,7 +348,7 @@
             </Card.Root>
           </Tabs.Content>
 
-          <Tabs.Content value="invoice" class="space-y-4">
+          <Tabs.Content value="order" class="space-y-4">
             <!-- Invoice Actions -->
             <Card.Root>
               <Card.Header>

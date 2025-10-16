@@ -51,7 +51,7 @@
       ...template,
       htmlContent: htmlEditor,
       updatedAt: new Date(),
-      type: template.type as 'custom' | 'invoice' | 'legal' | 'business'
+      type: template.type as 'custom' | 'order' | 'legal' | 'business'
     };
     dispatch('save', updatedTemplate);
   };
@@ -61,7 +61,7 @@
       ...template,
       htmlContent: htmlEditor,
       updatedAt: new Date(),
-      type: template.type as 'custom' | 'invoice' | 'legal' | 'business'
+      type: template.type as 'custom' | 'order' | 'legal' | 'business'
     };
 
     // Validate before saving
@@ -96,7 +96,7 @@
     const previewTemplate = {
       ...template,
       htmlContent: htmlEditor,
-      type: template.type as 'custom' | 'invoice' | 'legal' | 'business'
+      type: template.type as 'custom' | 'order' | 'legal' | 'business'
     };
 
     try {
@@ -142,7 +142,7 @@
               {template.type ? template.type.charAt(0).toUpperCase() + template.type.slice(1) + (template.type === "legal" ? " Document" : template.type === "business" ? " Document" : "") : "Select template type"}
             </Select.Trigger>
             <Select.Content>
-              <Select.Item value="invoice">Invoice</Select.Item>
+              <Select.Item value="order">Invoice</Select.Item>
               <Select.Item value="legal">Legal Document</Select.Item>
               <Select.Item value="business">Business Document</Select.Item>
               <Select.Item value="custom">Custom</Select.Item>
@@ -224,19 +224,19 @@
       <div class="mt-4">
         <div class="border rounded-lg p-6 bg-white shadow-sm min-h-[600px] relative">
           <style>
-            .invoice-container { max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif; }
-            .invoice-header { margin-bottom: 30px; }
+            .order-container { max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif; }
+            .order-header { margin-bottom: 30px; }
             .company-info h2 { margin: 0 0 10px 0; font-size: 18px; }
             .company-info p { margin: 5px 0; }
             .billing-info { margin-bottom: 30px; }
             .bill-to h3 { margin: 0 0 10px 0; font-size: 16px; }
-            .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .invoice-table th, .invoice-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            .invoice-table th { background-color: #f5f5f5; font-weight: bold; }
+            .order-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .order-table th, .order-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            .order-table th { background-color: #f5f5f5; font-weight: bold; }
             .totals { text-align: right; margin-bottom: 30px; }
             .total-row { margin-bottom: 5px; }
             .total-row.total { font-weight: bold; font-size: 18px; }
-            .invoice-footer { margin-top: 40px; text-align: center; }
+            .order-footer { margin-top: 40px; text-align: center; }
           </style>
           {@html generatePreviewHtml()}
         </div>

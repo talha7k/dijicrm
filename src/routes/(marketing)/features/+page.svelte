@@ -50,7 +50,7 @@
 					</div>
 					<h4 class="mb-2 text-base font-semibold capitalize">Invoice Management & Billing</h4>
 					<p class="text-sm leading-5">
-						Comprehensive invoice creation, tracking, and billing system for efficient financial management
+						Comprehensive order creation, tracking, and billing system for efficient financial management
 					</p>
 				</Card.Content>
 			</Card.Root>
@@ -97,7 +97,7 @@
 			<!-- CTA Section -->
 			<div class="relative mt-8 rounded-2xl sm:col-span-2 xl:mt-0">
 				<p class="mb-9 text-center text-base leading-6 xl:text-left">
-					Start managing your invoices and client relationships with TK-Crm today
+					Start managing your orders and client relationships with TK-Crm today
 				</p>
 				<div class="flex flex-col items-center justify-center gap-7 xl:flex-row xl:justify-start">
 					<Button size="lg">Get Started</Button>

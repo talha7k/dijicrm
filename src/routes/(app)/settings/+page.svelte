@@ -103,25 +103,28 @@
   const smtpStore = smtpConfigStore;
 
    // Load SMTP config when mounted and company is ready
-  $effect(async () => {
+  $effect(() => {
     if (!mounted) return;
-    
+
     const companyContextValue = get(companyContext);
     if (!companyContextValue.data) return;
-    
-    try {
-      await smtpStore.initialize();
-      const loadedConfig = smtpStore.getCurrentConfig();
-      if (loadedConfig) {
-        smtpConfig = {
-          ...loadedConfig,
-          port: loadedConfig.port.toString(),
-        };
-        console.log('Updated smtpConfig from store:', { ...smtpConfig, auth: { ...smtpConfig.auth, pass: smtpConfig.auth.pass ? '***' : 'EMPTY' } });
+
+    // Load SMTP config asynchronously
+    (async () => {
+      try {
+        await smtpStore.initialize();
+        const loadedConfig = smtpStore.getCurrentConfig();
+        if (loadedConfig) {
+          smtpConfig = {
+            ...loadedConfig,
+            port: loadedConfig.port.toString(),
+          };
+          console.log('Updated smtpConfig from store:', { ...smtpConfig, auth: { ...smtpConfig.auth, pass: smtpConfig.auth.pass ? '***' : 'EMPTY' } });
+        }
+      } catch (error) {
+        console.error('Failed to load SMTP config:', error);
       }
-    } catch (error) {
-      console.error('Failed to load SMTP config:', error);
-    }
+    })();
   });
 
   onMount(async () => {
@@ -509,7 +512,7 @@
   async function handleGenerateSampleData() {
     showConfirm(
       "Generate Sample Data",
-      "This will generate sample data including companies, clients, invoices, and payments. This action cannot be easily undone. Are you sure you want to continue?",
+      "This will generate sample data including companies, clients, orders, and payments. This action cannot be easily undone. Are you sure you want to continue?",
       async () => {
         isGeneratingSampleData = true;
         sampleDataResult = null;
@@ -870,7 +873,7 @@
          <CardTitle>Data Management</CardTitle>
          <CardDescription>
            Generate sample data for testing and demonstration purposes.
-           This will populate your database with realistic company, client, and invoice data.
+           This will populate your database with realistic company, client, and order data.
          </CardDescription>
        </CardHeader>
        <CardContent class="space-y-6">
@@ -894,8 +897,8 @@
                <li>• Company administrator account with branding settings</li>
                <li>• Sample client accounts with authentication</li>
                <li>• Products and services catalog</li>
-               <li>• Document templates for invoices</li>
-               <li>• Sample invoices with payment records</li>
+                <li>• Document templates for orders</li>
+                <li>• Sample orders with payment records</li>
              </ul>
            </div>
 
@@ -936,7 +939,7 @@
                          <li>• {sampleDataResult.data.clientsCount} client accounts</li>
                          <li>• {sampleDataResult.data.productsCount} products</li>
                          <li>• {sampleDataResult.data.templatesCount} document templates</li>
-                         <li>• {sampleDataResult.data.invoicesCount} invoices</li>
+                         <li>• {sampleDataResult.data.ordersCount} orders</li>
                        </ul>
                      </div>
                    {/if}

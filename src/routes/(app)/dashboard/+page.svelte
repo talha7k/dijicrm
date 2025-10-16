@@ -29,7 +29,7 @@
 
   function getActivityIcon(type: CompanyMetrics['recentActivity'][0]['type']) {
     switch (type) {
-      case 'invoice_created': return 'lucide:file-text';
+      case 'order_created': return 'lucide:file-text';
       case 'payment_received': return 'lucide:credit-card';
       case 'client_added': return 'lucide:user-plus';
       case 'client_invited': return 'lucide:mail';
@@ -78,7 +78,7 @@
       </CardHeader>
       <CardContent>
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Button onclick={() => goto('/invoices')} class="h-20 flex-col">
+          <Button onclick={() => goto('/orders')} class="h-20 flex-col">
             <Icon icon="lucide:plus" class="h-6 w-6 mb-2" />
             Create Invoice
           </Button>
@@ -86,7 +86,7 @@
             <Icon icon="lucide:users" class="h-6 w-6 mb-2" />
             Manage Clients
           </Button>
-          <Button onclick={() => goto('/invoices')} variant="outline" class="h-20 flex-col">
+          <Button onclick={() => goto('/orders')} variant="outline" class="h-20 flex-col">
             <Icon icon="lucide:file-text" class="h-6 w-6 mb-2" />
             View Invoices
           </Button>

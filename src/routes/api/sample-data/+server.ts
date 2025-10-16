@@ -95,7 +95,7 @@ async function generateCompanyData(): Promise<{
     theme: "system",
     language: "en",
     role: "company",
-    permissions: ["admin", "manage_clients", "manage_invoices"],
+    permissions: ["admin", "manage_clients", "manage_orders"],
     address: {
       street: "123 Business St",
       city: "Business City",
@@ -212,7 +212,7 @@ async function generateClientData(companyId: string): Promise<UserProfile[]> {
       theme: "light",
       language: "en",
       role: "client",
-      permissions: ["view_invoices", "make_payments"],
+      permissions: ["view_orders", "make_payments"],
       address: {
         street: `${Math.floor(Math.random() * 999) + 1} Client Ave`,
         city: "Client City",
@@ -290,8 +290,8 @@ async function generateTemplateData(
       id: `template-${Date.now()}-1`,
       companyId,
       name: "Invoice Template",
-      description: "Standard invoice template with company branding",
-      type: "invoice",
+      description: "Standard order template with company branding",
+      type: "order",
       htmlContent: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
@@ -423,7 +423,7 @@ async function generatePaymentData(
       if (client) {
         const payment: Payment = {
           id: `payment-${Date.now()}-${payments.length}`,
-          invoiceId: order.id,
+          orderId: order.id,
           companyId,
           clientId: client.uid,
           amount: order.totalAmount,
@@ -483,8 +483,8 @@ export const POST: RequestHandler = async ({ request }) => {
     console.log("Generating template data...");
     const templates = await generateTemplateData(companyId, companyUser);
 
-    console.log("Generating invoice data...");
-    const invoices = await generateInvoiceData(
+    console.log("Generating order data...");
+    const orders = await generateInvoiceData(
       companyId,
       clients,
       products,
@@ -493,7 +493,7 @@ export const POST: RequestHandler = async ({ request }) => {
     );
 
     console.log("Generating payment data...");
-    await generatePaymentData(companyId, invoices, clients, companyUser);
+    await generatePaymentData(companyId, orders, clients, companyUser);
 
     return json({
       success: true,
@@ -503,7 +503,7 @@ export const POST: RequestHandler = async ({ request }) => {
         clientsCount: clients.length,
         productsCount: products.length,
         templatesCount: templates.length,
-        invoicesCount: invoices.length,
+        ordersCount: orders.length,
       },
     });
   } catch (err) {

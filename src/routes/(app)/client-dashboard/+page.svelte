@@ -8,14 +8,14 @@
   import { Button } from '$lib/components/ui/button';
    import { requireClient } from '$lib/utils/auth';
    import { formatDateShort } from '$lib/utils';
-    import { clientInvoicesStore, type ClientInvoice } from '$lib/stores/clientInvoices';
+    import { ordersStore } from '$lib/stores/orders';
     import { clientDocumentsStore } from '$lib/stores/clientDocuments';
-   import type { GeneratedDocument } from '$lib/types/document';
+    import type { Order, GeneratedDocument } from '$lib/types/document';
    import { userProfile } from '$lib/stores/user';
    import { get } from 'svelte/store';
 
    let mounted = $state(false);
-    let invoices = clientInvoicesStore;
+      let orders = ordersStore;
     let documents = clientDocumentsStore;
     let currentClientId = $state<string | null>(null);
 
@@ -26,18 +26,18 @@
        return; // Will redirect
      }
 
-     // Get current client ID from user profile
-     const $userProfile = get(userProfile);
-     if ($userProfile.data?.uid) {
-       currentClientId = $userProfile.data.uid;
+      // Get current client ID from user profile
+      const userProfileData = get(userProfile);
+      if (userProfileData.data?.uid) {
+        currentClientId = userProfileData.data.uid;
        // Documents are loaded automatically by the store when user profile changes
      }
    });
 
-   function getStatusColor(status: ClientInvoice['status']) {
+   function getStatusColor(status: Order['status']) {
      switch (status) {
        case 'paid': return 'bg-green-100 text-green-800';
-       case 'pending': return 'bg-yellow-100 text-yellow-800';
+       case 'sent': return 'bg-yellow-100 text-yellow-800';
        case 'overdue': return 'bg-red-100 text-red-800';
        default: return 'bg-gray-100 text-gray-800';
      }
@@ -64,27 +64,27 @@
 </script>
 
 {#if mounted}
-  <DashboardLayout title="Client Dashboard" description="Manage your invoices and account information">
+  <DashboardLayout title="Client Dashboard" description="Manage your orders and account information">
     <!-- Metrics Cards -->
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <MetricCard
         title="Total Invoices"
-        value={$invoices.data?.length || 0}
+        value={$orders.data?.length || 0}
         icon="lucide:file-text"
       />
       <MetricCard
         title="Paid Invoices"
-        value={$invoices.data?.filter(inv => inv.status === 'paid').length || 0}
+        value={$orders.data?.filter(ord => ord.status === 'paid').length || 0}
         icon="lucide:check-circle"
       />
       <MetricCard
         title="Pending Amount"
-        value={formatCurrency($invoices.data?.filter((inv) => inv.status === 'pending').reduce((sum, inv) => sum + inv.amount, 0) || 0)}
+        value={formatCurrency($orders.data?.filter((ord) => ord.status === 'sent').reduce((sum, ord) => sum + ord.outstandingAmount, 0) || 0)}
         icon="lucide:clock"
       />
       <MetricCard
         title="Overdue Amount"
-        value={formatCurrency($invoices.data?.filter((inv) => inv.status === 'overdue').reduce((sum, inv) => sum + inv.amount, 0) || 0)}
+        value={formatCurrency($orders.data?.filter((ord) => ord.status === 'overdue').reduce((sum, ord) => sum + ord.outstandingAmount, 0) || 0)}
         icon="lucide:alert-triangle"
       />
     </div>
@@ -93,37 +93,34 @@
     <Card>
       <CardHeader>
         <CardTitle>Recent Invoices</CardTitle>
-        <CardDescription>Your latest invoice activity</CardDescription>
+        <CardDescription>Your latest order activity</CardDescription>
       </CardHeader>
       <CardContent>
-        {#if $invoices.loading}
-          <div class="text-center py-4">Loading invoices...</div>
-        {:else if $invoices.data && $invoices.data.length > 0}
+        {#if $orders.loading}
+          <div class="text-center py-4">Loading orders...</div>
+        {:else if $orders.data && $orders.data.length > 0}
           <div class="space-y-4">
-            {#each $invoices.data.slice(0, 5) as invoice}
+            {#each $orders.data.slice(0, 5) as order}
               <div class="flex items-center justify-between p-4 border rounded-lg">
                 <div class="space-y-1">
-                  <p class="text-sm font-medium">{invoice.number}</p>
-                  <p class="text-sm text-muted-foreground">{invoice.description}</p>
-                  <p class="text-xs text-muted-foreground">Due: {formatDateShort(invoice.dueDate)}</p>
-                </div>
-                <div class="text-right space-y-1">
-                  <p class="text-sm font-medium">{formatCurrency(invoice.amount)}</p>
-                  <Badge class={getStatusColor(invoice.status)}>
-                    {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                  <p class="text-sm font-medium">{order.id}</p>
+                  <p class="text-sm text-muted-foreground">{order.description}</p>
+
+                  <Badge class={getStatusColor(order.status)}>
+                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                   </Badge>
                 </div>
               </div>
             {/each}
           </div>
           <div class="mt-4">
-            <Button variant="outline" onclick={() => goto('/client-dashboard/invoices')}>
-              View All Invoices
-            </Button>
+             <Button variant="outline" onclick={() => goto('/client-dashboard/orders')}>
+               View All Orders
+             </Button>
           </div>
         {:else}
           <div class="text-center py-4 text-muted-foreground">
-            No invoices found
+            No orders found
           </div>
          {/if}
        </CardContent>

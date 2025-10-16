@@ -15,7 +15,6 @@ import {
 import { db } from "$lib/firebase";
 import { activeCompanyId } from "./companyContext";
 
-
 interface DocumentTemplatesState {
   data: DocumentTemplate[];
   loading: boolean;

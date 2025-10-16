@@ -34,7 +34,7 @@
 									{/each}
 								</div>
 								<p class="py-6 text-lg leading-8">
-									"TK-Crm transformed our invoicing process! We went from manual spreadsheets to automated invoice management in days. Our clients love the professional invoices."
+									"TK-Crm transformed our invoicing process! We went from manual spreadsheets to automated order management in days. Our clients love the professional orders."
 								</p>
 								<div class="flex items-center">
 									<div class="flex items-center gap-4">
@@ -64,7 +64,7 @@
 									{/each}
 								</div>
 								<p class="py-6 text-lg leading-8">
-									"Managing client relationships and invoices has never been easier. TK-Crm's multi-dashboard system keeps everything organized for our team."
+									"Managing client relationships and orders has never been easier. TK-Crm's multi-dashboard system keeps everything organized for our team."
 								</p>
 								<div class="flex items-center">
 									<div class="flex items-center gap-4">
@@ -91,7 +91,7 @@
 									{/each}
 								</div>
 								<p class="py-6 text-lg leading-8">
-									"The notification system keeps us on top of payments and overdue invoices. Our cash flow has improved significantly since switching to TK-Crm."
+									"The notification system keeps us on top of payments and overdue orders. Our cash flow has improved significantly since switching to TK-Crm."
 								</p>
 								<div class="flex items-center">
 									<div class="flex items-center gap-4">

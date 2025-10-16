@@ -13,7 +13,7 @@
 				Streamline Your Invoice Management with TK-Crm
 			</h2>
 			<p class="mb-8 text-base font-normal lg:mx-auto lg:max-w-xl">
-				A comprehensive CRM system built with SvelteKit and Firebase for managing client relationships and invoices
+				A comprehensive CRM system built with SvelteKit and Firebase for managing client relationships and orders
 			</p>
 			<div
 				class="mx-auto flex max-w-lg flex-col justify-center gap-5 md:max-w-2xl md:flex-row lg:max-w-full"
@@ -41,7 +41,7 @@
 									Invoice Management
 								</h3>
 								<p class="mb-8 w-full text-xs font-normal xl:w-64">
-									Create, send, and track invoices effortlessly. Manage billing cycles and payment statuses in one place.
+									Create, send, and track orders effortlessly. Manage billing cycles and payment statuses in one place.
 								</p>
 								<Button variant="outline" href="/features">
 									Learn More
@@ -85,7 +85,7 @@
 					</div>
 					<h3 class="py-5 text-lg font-bold xl:text-xl">Notification System</h3>
 					<p class="mb-8 text-xs font-normal">
-						Stay informed with automated notifications for invoice updates, payments, and important events
+						Stay informed with automated notifications for order updates, payments, and important events
 					</p>
 					<Button variant="outline" href="/features">
 						Explore Notifications

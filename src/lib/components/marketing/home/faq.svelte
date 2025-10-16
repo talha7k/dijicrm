@@ -6,22 +6,22 @@
 		{
 			question: 'How do I get started with TK-Crm?',
 			answer:
-				"Getting started is easy! Sign up for an account, complete your company profile, and start adding clients. Our intuitive dashboard guides you through creating your first invoice in minutes."
+				"Getting started is easy! Sign up for an account, complete your company profile, and start adding clients. Our intuitive dashboard guides you through creating your first order in minutes."
 		},
 		{
 			question: 'How does the multi-dashboard system work?',
 			answer:
-				'TK-Crm provides separate dashboards for clients and company administrators. Clients can view their invoices and payment history, while admins have full access to client management, billing, and analytics.'
+				'TK-Crm provides separate dashboards for clients and company administrators. Clients can view their orders and payment history, while admins have full access to client management, billing, and analytics.'
 		},
 		{
-			question: 'Can I customize my invoices?',
+			question: 'Can I customize my orders?',
 			answer:
-				"Yes! TK-Crm allows you to customize invoice templates with your branding, add company logos, choose color schemes, and include custom fields. Professional invoices that reflect your business."
+				"Yes! TK-Crm allows you to customize order templates with your branding, add company logos, choose color schemes, and include custom fields. Professional orders that reflect your business."
 		},
 		{
 			question: 'What payment methods are supported?',
 			answer:
-				'We support multiple payment methods including credit cards, bank transfers, PayPal, and Stripe integration. Clients can pay invoices directly through the platform with secure payment processing.'
+				'We support multiple payment methods including credit cards, bank transfers, PayPal, and Stripe integration. Clients can pay orders directly through the platform with secure payment processing.'
 		},
 		{
 			question: 'How secure is TK-Crm?',
@@ -41,7 +41,7 @@
 		{
 			question: 'How do I migrate from my current invoicing system?',
 			answer:
-				'We provide migration tools and support to help you import clients, invoices, and historical data. Our team assists with data mapping and ensures a smooth transition to TK-Crm.'
+				'We provide migration tools and support to help you import clients, orders, and historical data. Our team assists with data mapping and ensures a smooth transition to TK-Crm.'
 		}
 	] } = $props();
 </script>

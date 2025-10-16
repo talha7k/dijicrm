@@ -14,14 +14,14 @@ import Icon from "@iconify/svelte";
  import { get } from "svelte/store";
 
   interface Props {
-    invoiceId: string;
+    orderId: string;
     outstandingAmount: number;
     clientId: string;
     onSave: (payment: Omit<Payment, "id" | "createdAt" | "updatedAt">) => void;
     onCancel: () => void;
   }
 
-  let { invoiceId, outstandingAmount, clientId, onSave, onCancel }: Props = $props();
+  let { orderId, outstandingAmount, clientId, onSave, onCancel }: Props = $props();
 
   let formData = $state({
     amount: outstandingAmount,
@@ -106,7 +106,7 @@ import Icon from "@iconify/svelte";
        try {
          const uploadResults = await uploadMultipleFiles(
            Array.from(fileInput),
-           `payment-proof-${invoiceId}`,
+           `payment-proof-${orderId}`,
            { path: `companies/${companyContextValue.data.companyId}/payments/proof` }
          );
 
@@ -128,8 +128,8 @@ import Icon from "@iconify/svelte";
        }
      }
 
-     const payment: Omit<Payment, "id" | "createdAt" | "updatedAt"> = {
-       invoiceId,
+      const payment: Omit<Payment, "id" | "createdAt" | "updatedAt"> = {
+        orderId,
        companyId: companyContextValue.data!.companyId,
        clientId,
        amount: formData.amount,

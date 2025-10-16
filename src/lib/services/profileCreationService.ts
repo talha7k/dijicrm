@@ -225,11 +225,11 @@ function getDefaultPermissions(
 ): string[] {
   switch (role) {
     case "client":
-      return ["read:invoices", "read:documents"];
+      return ["read:orders", "read:documents"];
     case "company-member":
       return [
-        "read:invoices",
-        "write:invoices",
+        "read:orders",
+        "write:orders",
         "read:clients",
         "write:clients",
         "read:documents",
@@ -238,8 +238,8 @@ function getDefaultPermissions(
     case "create-company":
       return [
         "admin:company",
-        "read:invoices",
-        "write:invoices",
+        "read:orders",
+        "write:orders",
         "read:clients",
         "write:clients",
         "read:documents",

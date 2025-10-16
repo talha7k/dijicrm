@@ -20,7 +20,7 @@ export interface CompanyMetrics {
   recentActivity: {
     id: string;
     type:
-      | "invoice_created"
+      | "order_created"
       | "payment_received"
       | "client_added"
       | "client_invited"

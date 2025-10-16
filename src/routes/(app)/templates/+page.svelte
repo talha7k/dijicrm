@@ -37,13 +37,13 @@
   // Sample templates for quick copy
   const sampleTemplates = [
     {
-      id: "sample-invoice",
+      id: "sample-order",
       name: "Standard Invoice Template",
-      description: "Professional invoice template with automatic company branding (logo and stamp)",
-      type: "invoice",
+      description: "Professional order template with automatic company branding (logo and stamp)",
+      type: "order",
       htmlContent: `
-        <div class="invoice-container">
-          <header class="invoice-header">
+        <div class="order-container">
+          <header class="order-header">
             <div class="company-logo" style="text-align: center; margin-bottom: 20px;">
               <img src="{{companyLogo}}" alt="Company Logo" style="max-width: 200px; max-height: 100px;" />
             </div>
@@ -57,7 +57,7 @@
             <h1>Invoice</h1>
             <div class="company-info">
               <h2>{{companyName}}</h2>
-              <p>Invoice #: {{invoiceNumber}}</p>
+              <p>Invoice #: {{orderNumber}}</p>
               <p>Date: {{date}}</p>
               <p>Due Date: {{dueDate}}</p>
             </div>
@@ -71,7 +71,7 @@
             </div>
           </div>
 
-          <table class="invoice-table">
+          <table class="order-table">
             <thead>
               <tr>
                 <th>Description</th>
@@ -109,7 +109,7 @@
             </div>
           </div>
 
-          <footer class="invoice-footer">
+          <footer class="order-footer">
             <div class="company-stamp" style="text-align: center; margin-top: 40px;">
               <img src="{{companyStamp}}" alt="Company Stamp" style="max-width: 150px; max-height: 150px;" />
             </div>
@@ -122,7 +122,7 @@
         { key: "companyLogo", label: "Company Logo URL", type: "image", required: true },
         { key: "companyStamp", label: "Company Stamp URL", type: "image", required: false },
         { key: "companyName", label: "Company Name", type: "text", required: true },
-        { key: "invoiceNumber", label: "Invoice Number", type: "text", required: true },
+        { key: "orderNumber", label: "Invoice Number", type: "text", required: true },
         { key: "date", label: "Invoice Date", type: "date", required: true },
         { key: "dueDate", label: "Due Date", type: "date", required: true },
         { key: "clientName", label: "Client Name", type: "text", required: true },
@@ -135,7 +135,7 @@
         { key: "paymentTerms", label: "Payment Terms", type: "text", required: false },
         { key: "zatcaQRCode", label: "ZATCA QR Code (Base64)", type: "text", required: false },
       ],
-      tags: ["invoice", "professional"]
+      tags: ["order", "professional"]
     },
     {
       id: "sample-contract",
@@ -383,7 +383,7 @@ function handleDeleteTemplate(template: any) {
 
   function getTypeColor(type: string) {
     switch (type) {
-      case 'invoice': return 'bg-blue-100 text-blue-800';
+      case 'order': return 'bg-blue-100 text-blue-800';
       case 'legal': return 'bg-red-100 text-red-800';
       case 'business': return 'bg-green-100 text-green-800';
       case 'custom': return 'bg-gray-100 text-gray-800';
@@ -393,7 +393,7 @@ function handleDeleteTemplate(template: any) {
 </script>
 
 {#if mounted}
-  <DashboardLayout title="Document Templates" description="Create and manage HTML templates for invoices and documents">
+  <DashboardLayout title="Document Templates" description="Create and manage HTML templates for orders and documents">
     <!-- Header Actions -->
       <div class="flex justify-between items-center">
         <div class="flex gap-4">
@@ -408,7 +408,7 @@ function handleDeleteTemplate(template: any) {
             </Select.Trigger>
             <Select.Content>
               <Select.Item value="all">All Types</Select.Item>
-              <Select.Item value="invoice">Invoice</Select.Item>
+              <Select.Item value="order">Invoice</Select.Item>
               <Select.Item value="legal">Legal</Select.Item>
               <Select.Item value="business">Business</Select.Item>
               <Select.Item value="custom">Custom</Select.Item>
@@ -606,19 +606,19 @@ function handleDeleteTemplate(template: any) {
         <div class="mt-4">
           <div class="border rounded-lg p-6 bg-white shadow-sm min-h-[600px] relative">
             <style>
-              .invoice-container { max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif; }
-              .invoice-header { margin-bottom: 30px; }
+              .order-container { max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif; }
+              .order-header { margin-bottom: 30px; }
               .company-info h2 { margin: 0 0 10px 0; font-size: 18px; }
               .company-info p { margin: 5px 0; }
               .billing-info { margin-bottom: 30px; }
               .bill-to h3 { margin: 0 0 10px 0; font-size: 16px; }
-              .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-              .invoice-table th, .invoice-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              .invoice-table th { background-color: #f5f5f5; font-weight: bold; }
+              .order-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+              .order-table th, .order-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              .order-table th { background-color: #f5f5f5; font-weight: bold; }
               .totals { text-align: right; margin-bottom: 30px; }
               .total-row { margin-bottom: 5px; }
               .total-row.total { font-weight: bold; font-size: 18px; }
-              .invoice-footer { margin-top: 40px; text-align: center; }
+              .order-footer { margin-top: 40px; text-align: center; }
             </style>
             {@html previewHtml}
           </div>

@@ -28,7 +28,7 @@
 				<h4 class="font-medium text-foreground">Client</h4>
 			</div>
 			<p class="text-sm text-muted-foreground">
-				Join an existing company using an invitation code to access your invoices and documents.
+				Join an existing company using an invitation code to access your orders and documents.
 			</p>
 		</button>
 
@@ -64,7 +64,7 @@
 				<h4 class="font-medium text-foreground">Create Company</h4>
 			</div>
 			<p class="text-sm text-muted-foreground">
-				Start a new company and become the admin to manage clients, invoices, and documents.
+				Start a new company and become the admin to manage clients, orders, and documents.
 			</p>
 		</button>
 	</div>

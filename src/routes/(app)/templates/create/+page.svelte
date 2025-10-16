@@ -10,6 +10,7 @@
   import Icon from '@iconify/svelte';
   import { requireCompany } from '$lib/utils/auth';
   import { documentTemplatesStore } from '$lib/stores/documentTemplates';
+  import { auth } from '$lib/firebase';
   import type { DocumentTemplate } from '$lib/types/document';
 
   let mounted = $state(false);
@@ -19,13 +20,13 @@
   // Sample templates for quick start
   const sampleTemplates = [
     {
-      id: "sample-invoice",
+      id: "sample-order",
       name: "Standard Invoice Template",
-      description: "Professional invoice template with automatic company branding (logo and stamp)",
-      type: "invoice",
+      description: "Professional order template with automatic company branding (logo and stamp)",
+      type: "order",
        htmlContent: `
-        <div class="invoice-container" style="position: relative;">
-          <header class="invoice-header">
+        <div class="order-container" style="position: relative;">
+          <header class="order-header">
             <div class="company-logo" style="text-align: center; margin-bottom: 20px;">
               <img src="{{companyLogo}}" alt="Company Logo" style="max-width: 200px; max-height: 100px;" />
             </div>
@@ -39,7 +40,7 @@
             <h1>Invoice</h1>
             <div class="company-info">
               <h2>{{companyName}}</h2>
-              <p>Invoice #: {{invoiceNumber}}</p>
+              <p>Invoice #: {{orderNumber}}</p>
               <p>Date: {{date}}</p>
               <p>Due Date: {{dueDate}}</p>
             </div>
@@ -53,7 +54,7 @@
             </div>
           </div>
 
-          <table class="invoice-table">
+          <table class="order-table">
             <thead>
               <tr>
                 <th>Description</th>
@@ -91,7 +92,7 @@
             </div>
           </div>
 
-          <footer class="invoice-footer">
+          <footer class="order-footer">
             <div class="company-stamp" style="text-align: center; margin-top: 40px;">
               <img src="{{companyStamp}}" alt="Company Stamp" style="max-width: 150px; max-height: 150px;" />
             </div>
@@ -104,7 +105,7 @@
         { key: "companyLogo", label: "Company Logo URL", type: "image", required: true },
         { key: "companyStamp", label: "Company Stamp URL", type: "image", required: false },
         { key: "companyName", label: "Company Name", type: "text", required: true },
-        { key: "invoiceNumber", label: "Invoice Number", type: "text", required: true },
+        { key: "orderNumber", label: "Invoice Number", type: "text", required: true },
         { key: "date", label: "Invoice Date", type: "date", required: true },
         { key: "dueDate", label: "Due Date", type: "date", required: true },
         { key: "clientName", label: "Client Name", type: "text", required: true },
@@ -117,7 +118,7 @@
         { key: "paymentTerms", label: "Payment Terms", type: "text", required: false },
         { key: "zatcaQRCode", label: "ZATCA QR Code (Base64)", type: "image", required: false },
       ],
-      tags: ["invoice", "professional"]
+      tags: ["order", "professional"]
     },
     {
       id: "sample-contract",
@@ -270,6 +271,12 @@
       console.log('Saving template:', template);
       
       // Clean up the template data before saving
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        toast.error('User not authenticated');
+        return;
+      }
+
       const templateData = {
         name: template.name,
         description: template.description,
@@ -278,7 +285,8 @@
         placeholders: template.placeholders || [],
         isActive: template.isActive ?? true,
         version: template.version ?? 1,
-        tags: template.tags || []
+        tags: template.tags || [],
+        createdBy: userId
       };
 
       console.log('Cleaned template data:', templateData);
@@ -319,7 +327,7 @@ function handleTemplatePreview(template: DocumentTemplate) {
 
   function getTypeColor(type: string) {
     switch (type) {
-      case 'invoice': return 'bg-blue-100 text-blue-800';
+      case 'order': return 'bg-blue-100 text-blue-800';
       case 'legal': return 'bg-red-100 text-red-800';
       case 'business': return 'bg-green-100 text-green-800';
       case 'custom': return 'bg-gray-100 text-gray-800';

@@ -66,7 +66,7 @@ function createPaymentsStore() {
       }
     },
 
-    loadPaymentsForInvoice: async (invoiceId: string) => {
+    loadPaymentsForOrder: async (orderId: string) => {
       update((store) => ({ ...store, loading: true, error: null }));
 
       try {
@@ -80,10 +80,10 @@ function createPaymentsStore() {
           return;
         }
 
-        // Query Firebase for payments by invoice and company
+        // Query Firebase for payments by order and company
         const paymentsQuery = query(
           collection(db, "payments"),
-          where("invoiceId", "==", invoiceId),
+          where("orderId", "==", orderId),
           where("companyId", "==", companyId),
         );
 
@@ -107,11 +107,11 @@ function createPaymentsStore() {
           error: null,
         });
       } catch (error) {
-        console.error("Error loading payments for invoice:", error);
+        console.error("Error loading payments for order:", error);
         set({
           data: null,
           loading: false,
-          error: "Failed to load payments for invoice",
+          error: "Failed to load payments for order",
         });
       }
     },

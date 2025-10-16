@@ -14,7 +14,7 @@ describe("paymentsStore", () => {
 
   it("should validate payment data structure", () => {
     const payment: Omit<Payment, "id" | "createdAt" | "updatedAt"> = {
-      invoiceId: "invoice-123",
+      orderId: "order-123",
       companyId: "company-1",
       clientId: "client-1",
       amount: 1000,
@@ -26,7 +26,7 @@ describe("paymentsStore", () => {
     };
 
     // Validate required fields
-    expect(payment.invoiceId).toBeDefined();
+    expect(payment.orderId).toBeDefined();
     expect(payment.companyId).toBeDefined();
     expect(payment.clientId).toBeDefined();
     expect(payment.amount).toBeGreaterThan(0);
@@ -37,7 +37,7 @@ describe("paymentsStore", () => {
 
   it("should handle payment with proof files", () => {
     const payment: Omit<Payment, "id" | "createdAt" | "updatedAt"> = {
-      invoiceId: "invoice-123",
+      orderId: "order-123",
       companyId: "company-1",
       clientId: "client-1",
       amount: 1000,

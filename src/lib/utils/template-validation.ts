@@ -224,7 +224,7 @@ export async function generatePreviewData(
   }
 
   // Generate sample data based on template type
-  if (template.type === "invoice") {
+  if (template.type === "order") {
     previewData.items = [
       { description: "Web Development Services", quantity: 40, rate: 125.0 },
       { description: "UI/UX Design Consultation", quantity: 20, rate: 150.0 },

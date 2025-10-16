@@ -22,7 +22,7 @@ interface ClientManagementState {
   clients: UserProfile[];
   loading: boolean;
   error: string | null;
-  invoiceCounts: Record<string, number>;
+  orderCounts: Record<string, number>;
 }
 
 function createClientManagementStore() {
@@ -30,7 +30,7 @@ function createClientManagementStore() {
     clients: [],
     loading: false,
     error: null,
-    invoiceCounts: {},
+    orderCounts: {},
   });
 
   let unsubscribe: (() => void) | null = null;
@@ -63,7 +63,7 @@ function createClientManagementStore() {
 
         store.update((state) => ({
           ...state,
-          invoiceCounts: counts,
+          orderCounts: counts,
         }));
       } catch (error) {
         console.error("Error loading invoice counts:", error);

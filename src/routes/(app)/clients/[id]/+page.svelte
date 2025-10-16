@@ -5,7 +5,7 @@
   import { requireCompany } from '$lib/utils/auth';
    import { clientManagementStore } from '$lib/stores/clientManagement';
    import { productsStore } from '$lib/stores/products';
-   import { clientInvoicesStore } from '$lib/stores/clientInvoices';
+
    import { ordersStore } from '$lib/stores/orders';
    import { documentDeliveryStore } from '$lib/stores/documentDelivery';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -32,7 +32,7 @@
     import { get } from 'svelte/store';
      import type { UserProfile } from '$lib/types/user';
      import type { Product } from '$lib/stores/products';
-     import type { ClientInvoice } from '$lib/stores/clientInvoices';
+
      import type { Order } from '$lib/types/document';
      import type { EmailRecord } from '$lib/stores/emailHistory';
 
@@ -49,16 +49,15 @@
 
   // Company access is checked at layout level
 
-   const clientStore = clientManagementStore;
-   const productStore = productsStore;
-   const invoiceStore = clientInvoicesStore;
-   const orderStore = ordersStore;
-   const deliveryStore = documentDeliveryStore;
+    const clientStore = clientManagementStore;
+    const productStore = productsStore;
+    const orderStore = ordersStore;
+    const deliveryStore = documentDeliveryStore;
   const clientId = $page.params.id as string;
 
   let client = $state<UserProfile | undefined>(undefined);
   let products = $state<Product[]>([]);
-  let invoices = $state<ClientInvoice[]>([]);
+   let orders = $state<Order[]>([]);
   let loading = $state(true);
   let activeTab = $state('overview');
 
@@ -108,7 +107,7 @@
     let showPaymentModal = $state(false);
     let showDocumentPreviewModal = $state(false);
     let documentToPreview = $state<any>(null);
-   let selectedInvoice = $state<ClientInvoice | null>(null);
+   let selectedOrder = $state<Order | null>(null);
 
   onMount(async () => {
     try {
@@ -120,15 +119,14 @@
         return;
       }
 
-      // Load products and invoices
+      // Load products and orders
       await productStore.loadProducts();
       productStore.subscribe((state) => {
         products = state.data || [];
       });
 
-       invoiceStore.subscribe((state) => {
-         invoices = state.data || [];
-       });
+        // Note: orders variable is for ClientInvoice type, not Order type
+        // This subscription is handled by the clientInvoicesStore
 
        // Load orders for this client
        await orderStore.loadClientOrders(clientId);
@@ -195,18 +193,17 @@
 
         await orderStore.createOrder({
           clientId,
-         title: order.title,
-         description: order.description,
-         selectedProducts: order.selectedProducts,
-         status: "draft",
-         documents: [],
-         totalAmount: order.totalAmount,
-         paidAmount: 0,
-         outstandingAmount: order.totalAmount,
-         payments: [],
-         companyId: companyContextValue.data.companyId,
-         createdBy: userId,
-       });
+          title: order.title,
+          description: order.description,
+          selectedProducts: order.selectedProducts,
+          status: "draft",
+          documents: [],
+          totalAmount: order.totalAmount,
+          paidAmount: 0,
+          outstandingAmount: order.totalAmount,
+          payments: [],
+          createdBy: userId,
+        });
        showOrderModal = false;
        toast.success('Order created successfully');
      } catch (error) {
@@ -220,7 +217,7 @@
    }
 
    function handleOrderClick(order: Order) {
-     goto(`/invoices/${order.id}`);
+     goto(`/orders/${order.id}`);
    }
 
   function handleSendDocument() {
@@ -242,13 +239,13 @@
     toast.success('Document uploaded successfully');
   }
 
-  function handleRecordPayment(invoice: ClientInvoice) {
-    selectedInvoice = invoice;
+  function handleRecordPayment(order: Order) {
+    selectedOrder = order;
     showPaymentModal = true;
   }
 
   function handlePaymentComplete() {
-    // Update invoice status or refresh data
+    // Update order status or refresh data
     toast.success('Payment recorded successfully');
   }
 
@@ -308,7 +305,7 @@
         <p class="text-muted-foreground">{client.email}</p>
       </div>
         <div class="flex space-x-2">
-          <Button onclick={() => goto(`/invoices/create?clientId=${clientId}`)}>
+          <Button onclick={() => goto(`/orders/create?clientId=${clientId}`)}>
             <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
@@ -406,11 +403,11 @@
           <Card.Title>Financial Summary</Card.Title>
         </Card.Header>
         <Card.Content>
-          {#if invoices.length === 0}
+          {#if orders.length === 0}
             <div class="text-center py-4">
               <lucide:receipt class="h-8 w-8 mx-auto text-muted-foreground mb-2"></lucide:receipt>
-              <p class="text-sm text-muted-foreground">No invoices yet</p>
-              <Button variant="outline" size="sm" onclick={() => goto(`/invoices/create?clientId=${clientId}`)} class="mt-2">
+              <p class="text-sm text-muted-foreground">No orders yet</p>
+              <Button variant="outline" size="sm" onclick={() => goto(`/orders/create?clientId=${clientId}`)} class="mt-2">
                 <svg class="mr-2 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -422,19 +419,19 @@
               <div class="flex justify-between">
                 <span class="text-sm">Total Invoiced</span>
                 <span class="text-sm font-medium">
-                  {formatCurrency(invoices.reduce((sum, inv) => sum + inv.amount, 0))}
+                  {formatCurrency(orders.reduce((sum, ord) => sum + ord.totalAmount, 0))}
                 </span>
               </div>
               <div class="flex justify-between">
                 <span class="text-sm">Paid</span>
                 <span class="text-sm font-medium text-green-600">
-                  {formatCurrency(invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0))}
+                  {formatCurrency(orders.filter(ord => ord.status === 'paid').reduce((sum, ord) => sum + ord.totalAmount, 0))}
                 </span>
               </div>
               <div class="flex justify-between">
                 <span class="text-sm">Outstanding</span>
                 <span class="text-sm font-medium text-red-600">
-                  {formatCurrency(invoices.filter(inv => inv.status !== 'paid').reduce((sum, inv) => sum + inv.amount, 0))}
+                  {formatCurrency(orders.filter(ord => ord.status !== 'paid').reduce((sum, ord) => sum + ord.totalAmount, 0))}
                 </span>
               </div>
             </div>
@@ -700,7 +697,7 @@ onPreview={(document) => {
 
 <!-- Payment Modal -->
      <PaymentModal
-       invoice={selectedInvoice}
+       order={selectedOrder}
        open={showPaymentModal}
        onPaymentComplete={handlePaymentComplete}
      />
