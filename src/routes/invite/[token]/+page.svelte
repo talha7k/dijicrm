@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { firekitAuth } from 'svelte-firekit';
+  import { authenticatedFetch } from '$lib/utils/api';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
@@ -127,13 +128,10 @@ try {
        clientData.invitedBy = clientData.invitedBy; // This should be set from invitation data
        clientData.invitationStatus = 'accepted';
 
-       // Create user profile in Firestore
-       const profileResponse = await fetch('/api/profile', {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json',
-         },
-         body: JSON.stringify({
+// Create user profile in Firestore
+        const profileResponse = await authenticatedFetch('/api/profile', {
+          method: 'POST',
+          body: JSON.stringify({
            uid: clientData.uid,
            email: clientData.email,
            displayName: clientData.displayName,
@@ -151,13 +149,10 @@ try {
          throw new Error('Failed to create user profile');
        }
 
-       // Mark invitation as used
-       await fetch('/api/invitations/use', {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json',
-         },
-         body: JSON.stringify({
+// Mark invitation as used
+        await authenticatedFetch('/api/invitations/use', {
+          method: 'POST',
+          body: JSON.stringify({
            token: token,
            usedBy: clientData.uid,
          }),

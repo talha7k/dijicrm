@@ -9,10 +9,11 @@
   import { documentTemplatesStore } from "$lib/stores/documentTemplates";
   import { clientDocumentsStore } from "$lib/stores/clientDocuments";
   import { documentGenerationStore } from "$lib/stores/documentGeneration";
-  import { clientManagementStore } from "$lib/stores/clientManagement";
-  import { companyContext } from "$lib/stores/companyContext";
-  import { get } from "svelte/store";
-  import { mapClientDataToTemplate } from "$lib/utils/client-data-mapping";
+import { clientManagementStore } from "$lib/stores/clientManagement";
+import { companyContext } from "$lib/stores/companyContext";
+import { get } from "svelte/store";
+import { mapClientDataToTemplate } from "$lib/utils/client-data-mapping";
+import { authenticatedFetch } from "$lib/utils/api";
   import type { UserProfile } from "$lib/types/user";
   import { toast } from "svelte-sonner";
 
@@ -168,11 +169,8 @@
 
   async function generateSampleTemplates() {
     try {
-      const response = await fetch("/api/sample-data", {
+      const response = await authenticatedFetch("/api/sample-data", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
 
       if (response.ok) {

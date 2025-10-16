@@ -15,7 +15,7 @@
   import { smtpConfigStore } from "$lib/stores/smtpConfig";
 import { companyContext } from "$lib/stores/companyContext";
 import { get } from "svelte/store";
-import { auth } from "$lib/firebase";
+import { authenticatedFetch } from "$lib/utils/api";
   import AlertDialog from "$lib/components/shared/alert-dialog.svelte";
   import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
 
@@ -318,20 +318,8 @@ import { auth } from "$lib/firebase";
         port: parseInt(smtpConfig.port),
       };
 
-      // Get auth token for API call
-      const user = auth.currentUser;
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (user) {
-        const token = await user.getIdToken();
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const response = await fetch("/api/test-email", {
+      const response = await authenticatedFetch("/api/test-email", {
         method: "POST",
-        headers,
         body: JSON.stringify({
           to: testEmail,
           smtpConfig: configForTest,
@@ -607,11 +595,8 @@ import { auth } from "$lib/firebase";
           console.log('Generating sample data for company:', companyId);
           console.log('Company context:', companyContextValue);
           
-          const response = await fetch("/api/sample-data", {
+          const response = await authenticatedFetch("/api/sample-data", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
             body: JSON.stringify({
               companyId: companyId || undefined
             }),

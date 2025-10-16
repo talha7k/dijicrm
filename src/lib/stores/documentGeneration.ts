@@ -1,5 +1,5 @@
 import { writable } from "svelte/store";
-import { auth } from "$lib/firebase";
+import { authenticatedFetch } from "$lib/utils/api";
 
 interface DocumentGenerationState {
   loading: boolean;
@@ -34,20 +34,8 @@ function createDocumentGenerationStore() {
       update((state) => ({ ...state, loading: true, error: null }));
 
       try {
-        // Get auth token
-        const user = auth.currentUser;
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-        };
-
-        if (user) {
-          const token = await user.getIdToken();
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-
-        const response = await fetch("/api/documents/generate", {
+        const response = await authenticatedFetch("/api/documents/generate", {
           method: "POST",
-          headers,
           body: JSON.stringify({
             templateId,
             data,
