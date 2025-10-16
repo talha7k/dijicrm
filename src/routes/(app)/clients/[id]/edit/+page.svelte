@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { requireCompany } from '$lib/utils/auth';
   import { clientManagementStore } from '$lib/stores/clientManagement';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -15,7 +15,7 @@
    // Company access is checked at layout level
 
   const clientStore = clientManagementStore;
-  const clientId = $page.params.id as string;
+  const clientId = page.params.id as string;
 
   let client = $state<UserProfile | undefined>(undefined);
   let loading = $state(true);

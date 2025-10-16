@@ -4,6 +4,8 @@
   import { firekitUser, firekitDoc } from 'svelte-firekit';
   import { createUserProfile, validateOnboardingData } from '$lib/services/profileCreationService';
   import { userProfile } from '$lib/stores/user';
+  import { companyContext, initializeFromUser } from '$lib/stores/companyContext';
+  import { app } from '$lib/stores/app';
   import type { User } from 'firebase/auth';
   import type { UserProfile } from '$lib/types/user';
   import { toast } from 'svelte-sonner';
@@ -75,26 +77,45 @@
    				}
    			});
 
-   			console.log('Profile store updated with created data');
+    			console.log('Profile store updated with created data');
 
-   			// Also verify the profile was actually saved by reading it directly
-   			try {
-   				const profileRef = doc(db, "users", firekitUser.user!.uid);
-   				const profileDoc = await getDoc(profileRef);
-   				
-   				if (profileDoc.exists()) {
-   					console.log('Profile verified in Firestore:', profileDoc.data());
-   				} else {
-   					console.error('Profile not found in Firestore after creation!');
-   				}
-   			} catch (verifyError) {
-   				console.error('Error verifying profile in Firestore:', verifyError);
-   			}
+    			// Wait a moment for the profile to be fully persisted
+    			await new Promise(resolve => setTimeout(resolve, 500));
 
-   			// Wait a moment for everything to sync, then dispatch complete
-   			setTimeout(() => {
-   				dispatch('complete');
-   			}, 1000);
+    			// Initialize company context now that user has company associations
+    			try {
+    				console.log('Initializing company context after onboarding...');
+    				await initializeFromUser();
+    				
+    				// Update app state to reflect company readiness
+    				app.update(s => ({ ...s, companyReady: true }));
+    				
+    				console.log('Company context initialized successfully');
+    				toast.success('Company setup completed successfully!');
+    			} catch (companyError) {
+    				console.error('Error initializing company context:', companyError);
+    				// Don't fail the onboarding, but log the error
+    				toast.error('Company setup completed, but context initialization failed. You may need to refresh the page.');
+    			}
+
+    			// Also verify the profile was actually saved by reading it directly
+    			try {
+    				const profileRef = doc(db, "users", firekitUser.user!.uid);
+    				const profileDoc = await getDoc(profileRef);
+    				
+    				if (profileDoc.exists()) {
+    					console.log('Profile verified in Firestore:', profileDoc.data());
+    				} else {
+    					console.error('Profile not found in Firestore after creation!');
+    				}
+    			} catch (verifyError) {
+    				console.error('Error verifying profile in Firestore:', verifyError);
+    			}
+
+    			// Wait a moment for everything to sync, then dispatch complete
+    			setTimeout(() => {
+    				dispatch('complete');
+    			}, 1000);
    		} catch (error) {
    			console.error('Error creating profile:', error);
    			toast.error(`Failed to complete setup: ${error instanceof Error ? error.message : 'Unknown error'}`);

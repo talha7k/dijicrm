@@ -1,63 +1,11 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import {
-  initializeApp,
-  getApps,
-  cert,
-  applicationDefault,
-} from "firebase-admin/app";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
-import { PUBLIC_FIREBASE_PROJECT_ID } from "$env/static/public";
+import { getDb, getAuthAdmin } from "$lib/firebase-admin";
+import { Timestamp } from "firebase-admin/firestore";
 import type { UserProfile } from "$lib/types/user";
 import type { Product } from "$lib/stores/products";
 import type { Order, DocumentTemplate, Payment } from "$lib/types/document";
 import type { StoredCompanyBranding } from "$lib/types/branding";
-
-// Define types that match Firestore admin SDK
-type AdminTimestamp = FirebaseFirestore.Timestamp;
-
-// Initialize Firebase Admin if not already initialized
-let adminApp: any;
-let db: any;
-let auth: any;
-
-function initializeFirebaseAdmin() {
-  if (getApps().length === 0) {
-    // For local development, use application default credentials
-    // Run: gcloud auth application-default login
-    // For production, use service account key
-    const isProduction = process.env.NODE_ENV === "production";
-    let credential;
-
-    if (isProduction) {
-      const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-      if (!serviceAccountKey) {
-        throw new Error(
-          "FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set",
-        );
-      }
-      const serviceAccount = JSON.parse(serviceAccountKey);
-      credential = cert({
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key,
-        projectId: serviceAccount.project_id,
-      });
-    } else {
-      credential = applicationDefault();
-    }
-
-    adminApp = initializeApp({
-      credential,
-      projectId: PUBLIC_FIREBASE_PROJECT_ID,
-    });
-  } else {
-    adminApp = getApps()[0];
-  }
-
-  db = getFirestore(adminApp);
-  auth = getAuth(adminApp);
-}
 
 // Sample data generation functions
 async function generateCompanyData(): Promise<{
@@ -69,7 +17,7 @@ async function generateCompanyData(): Promise<{
   const password = `SamplePass123!`;
 
   // Create Firebase Auth user
-  const userRecord = await auth.createUser({
+  const userRecord = await getAuthAdmin().createUser({
     email,
     password,
     displayName: "Sample Company Admin",
@@ -114,7 +62,7 @@ async function generateCompanyData(): Promise<{
   };
 
   // Save to Firestore
-  await db.collection("users").doc(userRecord.uid).set(companyUser);
+  await getDb().collection("users").doc(userRecord.uid).set(companyUser);
 
   return { companyId, companyUser };
 }
@@ -160,7 +108,7 @@ async function generateBrandingData(
     updatedAt: Timestamp.now() as any,
   };
 
-  await db.collection("branding").doc(companyId).set(branding);
+  await getDb().collection("branding").doc(companyId).set(branding);
 
   return branding;
 }
@@ -187,7 +135,7 @@ async function generateClientData(companyId: string): Promise<UserProfile[]> {
 
   for (const data of clientData) {
     const password = `ClientPass123!`;
-    const userRecord = await auth.createUser({
+    const userRecord = await getAuthAdmin().createUser({
       email: data.email,
       password,
       displayName: `${data.firstName} ${data.lastName}`,
@@ -230,7 +178,7 @@ async function generateClientData(companyId: string): Promise<UserProfile[]> {
       },
     };
 
-    await db.collection("users").doc(userRecord.uid).set(client);
+    await getDb().collection("users").doc(userRecord.uid).set(client);
     clients.push(client);
   }
 
@@ -275,7 +223,7 @@ async function generateProductData(companyId: string): Promise<Product[]> {
   ];
 
   for (const product of products) {
-    await db.collection("products").doc(product.id).set(product);
+    await getDb().collection("products").doc(product.id).set(product);
   }
 
   return products;
@@ -364,7 +312,10 @@ async function generateTemplateData(
   ];
 
   for (const template of templates) {
-    await db.collection("documentTemplates").doc(template.id).set(template);
+    await getDb()
+      .collection("documentTemplates")
+      .doc(template.id)
+      .set(template);
   }
 
   return templates;
@@ -402,7 +353,7 @@ async function generateInvoiceData(
       createdBy: companyUser.uid,
     };
 
-    await db.collection("orders").doc(order.id).set(order);
+    await getDb().collection("orders").doc(order.id).set(order);
     orders.push(order);
   }
 
@@ -436,11 +387,11 @@ async function generatePaymentData(
           updatedAt: Timestamp.now() as any,
         };
 
-        await db.collection("payments").doc(payment.id).set(payment);
+        await getDb().collection("payments").doc(payment.id).set(payment);
         payments.push(payment);
 
         // Update order payments array
-        await db
+        await getDb()
           .collection("orders")
           .doc(order.id)
           .update({
@@ -453,10 +404,16 @@ async function generatePaymentData(
   return payments;
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   try {
-    // Initialize Firebase Admin
-    initializeFirebaseAdmin();
+    // Get current user from locals (set by auth hooks)
+    const user = locals.user;
+    if (!user || !user.uid) {
+      throw error(401, "Unauthorized");
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const { companyId: providedCompanyId } = body;
 
     // Check environment - prevent production data generation
     const isProduction = process.env.NODE_ENV === "production";
@@ -468,8 +425,44 @@ export const POST: RequestHandler = async ({ request }) => {
     }
 
     // Generate sample data in sequence
-    console.log("Generating sample company data...");
-    const { companyId, companyUser } = await generateCompanyData();
+    let companyId: string;
+    let companyUser: UserProfile;
+
+    if (providedCompanyId) {
+      // Use existing company
+      console.log("Using existing company:", providedCompanyId);
+      companyId = providedCompanyId;
+
+      // Get the company owner/user
+      const companyDoc = await getDb()!
+        .collection("companies")
+        .doc(companyId)
+        .get();
+      if (!companyDoc.exists) {
+        throw error(404, "Company not found");
+      }
+
+      const companyData = companyDoc.data();
+      if (!companyData) {
+        throw error(404, "Company data not found");
+      }
+
+      const userDoc = await getDb()!
+        .collection("users")
+        .doc(companyData.ownerId)
+        .get();
+      if (!userDoc.exists) {
+        throw error(404, "Company owner not found");
+      }
+
+      companyUser = userDoc.data() as UserProfile;
+    } else {
+      // Create new company
+      console.log("Generating sample company data...");
+      const result = await generateCompanyData();
+      companyId = result.companyId;
+      companyUser = result.companyUser;
+    }
 
     console.log("Generating branding data...");
     await generateBrandingData(companyId);

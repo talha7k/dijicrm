@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { requireCompany } from '$lib/utils/auth';
    import { clientManagementStore } from '$lib/stores/clientManagement';
    import { productsStore } from '$lib/stores/products';
@@ -53,7 +53,7 @@
     const productStore = productsStore;
     const orderStore = ordersStore;
     const deliveryStore = documentDeliveryStore;
-  const clientId = $page.params.id as string;
+  const clientId = page.params.id as string;
 
   let client = $state<UserProfile | undefined>(undefined);
   let products = $state<Product[]>([]);

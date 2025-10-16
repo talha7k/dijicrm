@@ -3,10 +3,10 @@
 	import SignUpForm from '$lib/components/auth/sign-up-form.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 
 	// Check for invitation token in URL
-	let invitationToken = $derived($page.url.searchParams.get('token'));
+	let invitationToken = $derived(page.url.searchParams.get('token'));
 </script>
 
 <Card.Root class="sm:w-[448px]">

@@ -5,6 +5,7 @@ import { userProfile } from "$lib/stores/user";
 import { companyContext, initializeFromUser } from "$lib/stores/companyContext";
 import { handlePostAuthentication } from "$lib/services/authService";
 import { app } from "$lib/stores/app";
+import { goto } from "$app/navigation";
 
 let initializationPromise: Promise<void> | null = null;
 
@@ -49,6 +50,17 @@ function initialize(): Promise<void> {
           if (profile.data) {
             app.update((s) => ({ ...s, profileReady: true }));
 
+            // Check if onboarding is completed
+            if (!profile.data.onboardingCompleted) {
+              app.update((s) => ({
+                ...s,
+                initializing: false,
+                companyReady: false,
+              }));
+              goto("/onboarding");
+              return;
+            }
+
             // Only initialize company if we don't have persisted data
             if (!persistedCompany.data) {
               await initializeFromUser();
@@ -57,6 +69,18 @@ function initialize(): Promise<void> {
             const company = get(companyContext);
             if (company.data) {
               app.update((s) => ({ ...s, companyReady: true }));
+            } else if (company.error) {
+              // Check if the error is due to no company associations
+              if (company.error.includes("No company associations found")) {
+                // Redirect to onboarding for users without company access
+                app.update((s) => ({
+                  ...s,
+                  initializing: false,
+                  companyReady: false,
+                }));
+                goto("/onboarding");
+                return;
+              }
             }
           }
         } else {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { firekitAuth } from 'svelte-firekit';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Input } from '$lib/components/ui/input/index.js';
@@ -11,7 +11,7 @@
   import type { UserProfile } from '$lib/types/user';
   import { Timestamp } from 'firebase/firestore';
 
-  const token = $page.params.token;
+  const token = page.params.token;
 
   let invitationValid = $state(false);
   let clientData = $state<UserProfile | null>(null);

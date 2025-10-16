@@ -1,62 +1,15 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import {
-  initializeApp,
-  getApps,
-  cert,
-  applicationDefault,
-} from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getDb, getAuthAdmin } from "$lib/firebase-admin";
 import { Timestamp } from "@firebase/firestore";
-import { getAuth } from "firebase-admin/auth";
-import { PUBLIC_FIREBASE_PROJECT_ID } from "$env/static/public";
 import type { UserProfile } from "$lib/types/user";
 import { validateProfileStructure } from "$lib/services/profileValidationService";
 import { invalidateProfileCache } from "$lib/utils/profile-cache";
 
-// Initialize Firebase Admin if not already initialized
-let adminApp: any;
-let db: any;
-let auth: any;
-
-function initializeFirebaseAdmin() {
-  if (getApps().length === 0) {
-    const isProduction = process.env.NODE_ENV === "production";
-    let credential;
-
-    if (isProduction) {
-      const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-      if (!serviceAccountKey) {
-        throw new Error(
-          "FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set",
-        );
-      }
-      const serviceAccount = JSON.parse(serviceAccountKey);
-      credential = cert({
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key,
-        projectId: serviceAccount.project_id,
-      });
-    } else {
-      credential = applicationDefault();
-    }
-
-    adminApp = initializeApp({
-      credential,
-      projectId: PUBLIC_FIREBASE_PROJECT_ID,
-    });
-    db = getFirestore(adminApp);
-    auth = getAuth(adminApp);
-  } else {
-    db = getFirestore();
-    auth = getAuth();
-  }
-}
-
 // GET /api/profile - Get current user profile
 export const GET: RequestHandler = async ({ locals }) => {
   try {
-    initializeFirebaseAdmin();
+    const db = getDb();
 
     // Get user from locals (set by auth hooks)
     const user = locals.user;
@@ -89,7 +42,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 // PUT /api/profile - Update user profile
 export const PUT: RequestHandler = async ({ request, locals }) => {
   try {
-    initializeFirebaseAdmin();
+    const db = getDb();
 
     const user = locals.user;
     if (!user || !user.uid || !user.email) {
@@ -148,7 +101,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 // POST /api/profile - Create user profile (used during onboarding completion)
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
-    initializeFirebaseAdmin();
+    const db = getDb();
 
     const user = locals.user;
     if (!user || !user.uid || !user.email) {

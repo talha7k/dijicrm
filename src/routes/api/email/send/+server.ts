@@ -3,13 +3,27 @@ import type { RequestHandler } from "./$types";
 import type { EmailOptions, SMTPConfig } from "$lib/services/emailService";
 import nodemailer from "nodemailer";
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   try {
+    // Get current user from locals (set by auth hooks)
+    const user = locals.user;
+    if (!user || !user.uid) {
+      throw error(401, "Unauthorized");
+    }
+
     const {
       smtpConfig,
       emailOptions,
-    }: { smtpConfig: SMTPConfig; emailOptions: EmailOptions } =
-      await request.json();
+      companyId,
+    }: {
+      smtpConfig: SMTPConfig;
+      emailOptions: EmailOptions;
+      companyId: string;
+    } = await request.json();
+
+    if (!companyId) {
+      throw error(400, "Company ID is required");
+    }
 
     if (!smtpConfig || !smtpConfig.enabled) {
       throw error(400, "SMTP configuration is required and must be enabled");

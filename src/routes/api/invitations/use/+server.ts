@@ -1,32 +1,40 @@
 import { json, error } from "@sveltejs/kit";
-import { db } from "$lib/firebase";
-import {
-  collection,
-  query,
-  where,
-  limit,
-  getDocs,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+import { getDb } from "$lib/firebase-admin";
+import { Timestamp } from "firebase-admin/firestore";
 
-export async function POST({ request }: { request: Request }) {
+export async function POST({
+  request,
+  locals,
+}: {
+  request: Request;
+  locals: any;
+}) {
   try {
-    const { token, usedBy } = await request.json();
+    // Get current user from locals (set by auth hooks)
+    const user = locals.user;
+    if (!user || !user.uid) {
+      throw error(401, "Unauthorized");
+    }
+
+    const { token, usedBy, companyId } = await request.json();
+
+    if (!token || !usedBy || !companyId) {
+      throw error(400, "Token, usedBy, and companyId are required");
+    }
 
     if (!token || !usedBy) {
       throw error(400, "Token and usedBy are required");
     }
 
-    // Find invitation by token
-    const invitationsRef = collection(db, "invitations");
-    const invitationQuery = query(
-      invitationsRef,
-      where("code", "==", token),
-      where("status", "==", "pending"),
-      limit(1),
-    );
-    const invitationSnapshot = await getDocs(invitationQuery);
+    // Find invitation by token and company
+    const db = getDb();
+    const invitationsRef = db.collection("invitations");
+    const invitationSnapshot = await invitationsRef
+      .where("code", "==", token)
+      .where("status", "==", "pending")
+      .where("companyId", "==", companyId)
+      .limit(1)
+      .get();
 
     if (invitationSnapshot.empty) {
       throw error(404, "Invitation not found or already used");
@@ -38,15 +46,15 @@ export async function POST({ request }: { request: Request }) {
     // Check if invitation has expired
     const expiresAt = invitationData.expiresAt.toDate();
     if (expiresAt < new Date()) {
-      await updateDoc(invitationDoc.ref, { status: "expired" });
+      await invitationDoc.ref.update({ status: "expired" });
       throw error(410, "Invitation has expired");
     }
 
     // Mark invitation as used
-    await updateDoc(invitationDoc.ref, {
+    await invitationDoc.ref.update({
       status: "used",
       usedBy: usedBy,
-      usedAt: serverTimestamp(),
+      usedAt: Timestamp.now(),
     });
 
     return json({

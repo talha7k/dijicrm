@@ -1,24 +1,32 @@
 import { json, error } from "@sveltejs/kit";
-import { db } from "$lib/firebase";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { getDb } from "$lib/firebase-admin";
+import { requireCompanyAccess } from "$lib/utils/server-company-validation";
 
-export async function GET({ url }: { url: URL }) {
+export async function GET({ url, locals }: { url: URL; locals: any }) {
   try {
+    // Get user from locals (set by auth hooks)
+    const user = locals.user;
+    if (!user || !user.uid) {
+      throw error(401, "Unauthorized");
+    }
+
     const companyId = url.searchParams.get("companyId");
 
     if (!companyId) {
       throw error(400, "Company ID is required");
     }
 
-    // Query invitations for this company
-    const invitationsRef = collection(db, "invitations");
-    const invitationsQuery = query(
-      invitationsRef,
-      where("companyId", "==", companyId),
-      orderBy("createdAt", "desc"),
-    );
+    // Validate user has access to the company
+    await requireCompanyAccess(user.uid, companyId, "view invitations");
 
-    const invitationSnapshot = await getDocs(invitationsQuery);
+    // Query invitations for this company
+    const db = getDb();
+    const invitationsRef = db.collection("invitations");
+    const invitationsQuery = invitationsRef
+      .where("companyId", "==", companyId)
+      .orderBy("createdAt", "desc");
+
+    const invitationSnapshot = await invitationsQuery.get();
     const invitations = invitationSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
@@ -30,6 +38,9 @@ export async function GET({ url }: { url: URL }) {
     return json({ invitations });
   } catch (err) {
     console.error("Error fetching invitations:", err);
+    if (err instanceof Error && "status" in err) {
+      throw err;
+    }
     throw error(500, "Failed to fetch invitations");
   }
 }

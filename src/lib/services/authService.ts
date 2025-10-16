@@ -17,33 +17,20 @@ export async function createBasicUserProfile(user: User): Promise<UserProfile> {
     lastLoginAt: Timestamp.now(),
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
-    firstName: undefined,
-    lastName: undefined,
-    username: undefined,
-    bio: undefined,
-    phoneNumber: undefined,
     emailNotifications: true,
     pushNotifications: true,
     theme: "system",
     language: "en",
     role: "company",
     permissions: [],
-    companyAssociations: undefined,
-    currentCompanyId: undefined,
-    address: undefined,
     metadata: {
       deviceInfo: {
         lastDevice: navigator.userAgent || "unknown",
         platform: navigator.platform || "unknown",
       },
-      lastIPAddress: undefined,
       accountStatus: "active",
     },
     onboardingCompleted: false,
-    invitationToken: undefined,
-    invitationExpiresAt: undefined,
-    invitedBy: undefined,
-    invitationStatus: undefined,
   };
 
   const userRef = doc(db, "users", user.uid);

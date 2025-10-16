@@ -2,58 +2,13 @@ import { json, error, type RequestEvent } from "@sveltejs/kit";
 import { emailService, EmailTemplates } from "$lib/services/emailService";
 import { Timestamp } from "firebase/firestore";
 import type { DocumentDelivery } from "$lib/types/document";
-import {
-  initializeApp,
-  getApps,
-  cert,
-  applicationDefault,
-} from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
-import { PUBLIC_FIREBASE_PROJECT_ID } from "$env/static/public";
-
-// Initialize Firebase Admin if not already initialized
-let adminApp: any;
-let db: any;
-let auth: any;
-
-function initializeFirebaseAdmin() {
-  if (getApps().length === 0) {
-    const isProduction = process.env.NODE_ENV === "production";
-    let credential;
-
-    if (isProduction) {
-      const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-      if (!serviceAccountKey) {
-        throw new Error(
-          "FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set",
-        );
-      }
-      const serviceAccount = JSON.parse(serviceAccountKey);
-      credential = cert({
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key,
-        projectId: serviceAccount.project_id,
-      });
-    } else {
-      credential = applicationDefault();
-    }
-
-    adminApp = initializeApp({
-      credential,
-      projectId: PUBLIC_FIREBASE_PROJECT_ID,
-    });
-    db = getFirestore(adminApp);
-    auth = getAuth(adminApp);
-  } else {
-    db = getFirestore();
-    auth = getAuth();
-  }
-}
+import { getDb, getAuthAdmin } from "$lib/firebase-admin";
+import { requireCompanyAccess } from "$lib/utils/server-company-validation";
 
 export const POST = async ({ request, locals }: RequestEvent) => {
   try {
-    initializeFirebaseAdmin();
+    const db = getDb();
+    const auth = getAuthAdmin();
 
     // Get user from locals (set by auth hooks)
     const user = locals.user;
@@ -86,17 +41,28 @@ export const POST = async ({ request, locals }: RequestEvent) => {
       );
     }
 
-    // Fetch documents from database
+    // Validate user has access to the company
+    await requireCompanyAccess(user.uid, companyId, "deliver documents");
+
+    // Fetch documents from database - ensure they belong to the company
     const documents = [];
     for (const documentId of documentIds) {
       const docRef = db.collection("generatedDocuments").doc(documentId);
       const docSnap = await docRef.get();
 
       if (docSnap.exists) {
-        documents.push({
-          id: documentId,
-          ...docSnap.data(),
-        });
+        const docData = docSnap.data();
+        // Validate document belongs to the company
+        if (docData.companyId === companyId) {
+          documents.push({
+            id: documentId,
+            ...docData,
+          });
+        } else {
+          console.warn(
+            `Document ${documentId} does not belong to company ${companyId}`,
+          );
+        }
       } else {
         console.warn(`Document ${documentId} not found`);
       }

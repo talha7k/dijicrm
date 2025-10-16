@@ -7,50 +7,8 @@ import {
 import type { DocumentTemplate } from "$lib/types/document";
 import { brandingService } from "$lib/services/brandingService";
 import type { CompanyBranding } from "$lib/types/branding";
-import {
-  initializeApp,
-  getApps,
-  cert,
-  applicationDefault,
-} from "firebase-admin/app";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
-import { PUBLIC_FIREBASE_PROJECT_ID } from "$env/static/public";
-
-// Initialize Firebase Admin
-let adminApp: any;
-let db: any;
-
-function initializeFirebaseAdmin() {
-  if (getApps().length === 0) {
-    const isProduction = process.env.NODE_ENV === "production";
-    let credential;
-
-    if (isProduction) {
-      const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-      if (!serviceAccountKey) {
-        throw new Error(
-          "FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set",
-        );
-      }
-      const serviceAccount = JSON.parse(serviceAccountKey);
-      credential = cert({
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key,
-        projectId: serviceAccount.project_id,
-      });
-    } else {
-      credential = applicationDefault();
-    }
-
-    adminApp = initializeApp({
-      credential,
-      projectId: PUBLIC_FIREBASE_PROJECT_ID,
-    });
-    db = getFirestore(adminApp);
-  } else {
-    db = getFirestore();
-  }
-}
+import { getDb } from "$lib/firebase-admin";
+import { requireCompanyAccess } from "$lib/utils/server-company-validation";
 
 // Mock function - replace with actual PDF generation
 async function generatePdfFromHtml(
@@ -70,17 +28,29 @@ async function generatePdfFromHtml(
   return mockPdf;
 }
 
-export const POST = async ({ request }: RequestEvent) => {
+export const POST = async ({ request, locals }: RequestEvent) => {
   try {
-    // Initialize Firebase Admin
-    initializeFirebaseAdmin();
+    // Get Firestore database instance
+    const db = getDb();
+
+    // Get user from locals (set by auth hooks)
+    const user = locals.user;
+    if (!user || !user.uid) {
+      throw error(401, "Unauthorized");
+    }
 
     const body = await request.json();
     const { templateId, data, format = "pdf", companyId } = body;
 
-    if (!templateId || !data) {
-      throw error(400, "Missing required fields: templateId and data");
+    if (!templateId || !data || !companyId) {
+      throw error(
+        400,
+        "Missing required fields: templateId, data, and companyId",
+      );
     }
+
+    // Validate user has access to the company
+    await requireCompanyAccess(user.uid, companyId, "generate documents");
 
     // Load company branding if companyId is provided
     let branding: CompanyBranding | undefined;
@@ -99,18 +69,27 @@ export const POST = async ({ request }: RequestEvent) => {
       }
     }
 
-    // Fetch template from Firestore
-    const templateDoc = await db
+    // Fetch template from Firestore - ensure it belongs to the company
+    console.log("Fetching template:", templateId, "for company:", companyId);
+    const templateDoc = await db!
       .collection("documentTemplates")
-      .doc(templateId)
+      .where("companyId", "==", companyId)
+      .where("__name__", "==", templateId)
+      .limit(1)
       .get();
-    if (!templateDoc.exists) {
-      console.error("Template not found:", { templateId });
-      throw error(404, "Template not found");
+
+    if (templateDoc.empty) {
+      console.error("Template not found or access denied:", {
+        templateId,
+        companyId,
+      });
+      throw error(404, "Template not found or access denied");
     }
-    const templateData = templateDoc.data();
+
+    const templateData = templateDoc.docs[0].data();
+
     const template: DocumentTemplate = {
-      id: templateDoc.id,
+      id: templateDoc.docs[0].id,
       ...templateData,
       createdAt: templateData.createdAt,
       updatedAt: templateData.updatedAt,
@@ -173,6 +152,11 @@ export const POST = async ({ request }: RequestEvent) => {
     }
   } catch (err) {
     console.error("Document generation error:", err);
+    console.error("Error details:", {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+      name: err instanceof Error ? err.name : undefined,
+    });
 
     if (err instanceof Error && "status" in err) {
       throw err; // Re-throw SvelteKit errors

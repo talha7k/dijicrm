@@ -518,11 +518,18 @@
         sampleDataResult = null;
 
         try {
+          // Get current company ID
+          const companyContextValue = get(companyContext);
+          const companyId = companyContextValue.data?.companyId;
+          
           const response = await fetch("/api/sample-data", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
+            body: JSON.stringify({
+              companyId: companyId || undefined
+            }),
           });
 
           if (response.ok) {
