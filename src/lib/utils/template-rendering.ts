@@ -15,6 +15,13 @@ export function renderTemplate(
 
   // Replace all placeholders in the format {{placeholderKey}}
   for (const placeholder of template.placeholders) {
+    if (!placeholder || typeof placeholder.key !== "string") {
+      console.error(
+        `Invalid placeholder found in template ${template.id}:`,
+        placeholder,
+      );
+      continue;
+    }
     const placeholderRegex = new RegExp(`{{${placeholder.key}}}`, "g");
     const value = getPlaceholderValue(placeholder, data);
     html = html.replace(placeholderRegex, value);

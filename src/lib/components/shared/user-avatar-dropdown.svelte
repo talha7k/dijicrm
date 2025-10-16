@@ -2,6 +2,7 @@
     import { goto } from "$app/navigation";
     import { firekitAuth } from "svelte-firekit";
     import { userProfile } from "$lib/stores/user";
+    import { app } from "$lib/stores/app";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
     import * as Avatar from "$lib/components/ui/avatar";
     import { Button } from "$lib/components/ui/button";
@@ -16,6 +17,23 @@
 
     async function handleLogout() {
       await firekitAuth.signOut();
+      
+      // Clear local stores
+      userProfile.update(() => ({
+        data: undefined,
+        loading: false,
+        error: null,
+        update: async () => {},
+      }));
+      
+      app.update(() => ({
+        initializing: false,
+        authenticated: false,
+        profileReady: false,
+        companyReady: false,
+        error: null,
+      }));
+      
       goto("/sign-in");
     }
 

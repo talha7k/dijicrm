@@ -88,6 +88,19 @@ export const POST = async ({ request, locals }: RequestEvent) => {
 
     const templateData = templateDoc.docs[0].data();
 
+    if (
+      !templateData.htmlContent ||
+      typeof templateData.htmlContent !== "string" ||
+      !Array.isArray(templateData.placeholders) ||
+      !templateData.createdAt ||
+      !templateData.updatedAt
+    ) {
+      throw error(
+        500,
+        `Template ${templateId} is malformed. It is missing or has invalid 'htmlContent', 'placeholders', 'createdAt', or 'updatedAt' fields.`,
+      );
+    }
+
     const template: DocumentTemplate = {
       id: templateDoc.docs[0].id,
       ...templateData,

@@ -1,5 +1,5 @@
 import type { GeneratedDocument, DocumentDelivery } from "$lib/types/document";
-import { db } from "$lib/firebase";
+import { db, auth } from "$lib/firebase";
 import {
   collection,
   addDoc,
@@ -75,11 +75,41 @@ class EmailService {
 
       if (this.smtpConfig) {
         // Use SMTP via API endpoint
+        // Get auth token - wait for user to be available
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+
+        // Wait for auth state to be ready
+        let user = auth.currentUser;
+        console.log("Initial auth.currentUser:", user?.uid || "null");
+
+        if (!user) {
+          // If user is not immediately available, wait a bit for auth to initialize
+          console.log("User not available, waiting for auth state...");
+          await new Promise<void>((resolve) => {
+            const unsubscribe = auth.onAuthStateChanged((authUser) => {
+              unsubscribe();
+              user = authUser;
+              console.log("Auth state changed, user:", user?.uid || "null");
+              resolve();
+            });
+          });
+        }
+
+        if (user) {
+          console.log("Getting ID token for user:", user.uid);
+          const token = await user.getIdToken();
+          console.log("Token received, length:", token.length);
+          headers["Authorization"] = `Bearer ${token}`;
+          console.log("Authorization header set");
+        } else {
+          console.log("No user available, skipping Authorization header");
+        }
+
         const response = await fetch("/api/email/send", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({
             smtpConfig: this.smtpConfig,
             emailOptions: options,

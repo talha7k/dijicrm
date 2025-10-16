@@ -15,6 +15,7 @@
   import { smtpConfigStore } from "$lib/stores/smtpConfig";
 import { companyContext } from "$lib/stores/companyContext";
 import { get } from "svelte/store";
+import { auth } from "$lib/firebase";
   import AlertDialog from "$lib/components/shared/alert-dialog.svelte";
   import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
 
@@ -317,14 +318,24 @@ import { get } from "svelte/store";
         port: parseInt(smtpConfig.port),
       };
 
+      // Get auth token for API call
+      const user = auth.currentUser;
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (user) {
+        const token = await user.getIdToken();
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const response = await fetch("/api/test-email", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           to: testEmail,
           smtpConfig: configForTest,
+          companyId: get(companyContext).data?.companyId || '',
         }),
       });
 

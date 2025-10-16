@@ -1,14 +1,8 @@
-import {
-  initializeApp,
-  getApps,
-  cert,
-  applicationDefault,
-  type App,
-} from "firebase-admin/app";
+import { initializeApp, getApps, cert, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getAuth, type Auth } from "firebase-admin/auth";
-
-const PUBLIC_FIREBASE_PROJECT_ID = process.env.PUBLIC_FIREBASE_PROJECT_ID;
+import { SERVICE_ACCOUNT_KEY } from "$env/static/private";
+import { PUBLIC_FIREBASE_PROJECT_ID } from "$env/static/public";
 
 let adminApp: App | null = null;
 let db: Firestore | null = null;
@@ -17,40 +11,30 @@ let auth: Auth | null = null;
 function initializeFirebaseAdmin() {
   if (adminApp) return; // Already initialized
 
-  let credential;
-
-  // Try to get service account from environment variable
-  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (serviceAccountKey) {
-    try {
-      const serviceAccount = JSON.parse(serviceAccountKey);
-      credential = cert({
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key,
-        projectId: serviceAccount.project_id,
-      });
-    } catch (parseError) {
-      console.error(
-        "Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:",
-        parseError,
-      );
-      throw new Error("Invalid FIREBASE_SERVICE_ACCOUNT_KEY format");
-    }
-  } else {
-    console.warn(
-      "FIREBASE_SERVICE_ACCOUNT_KEY not found, using application default credentials",
+  try {
+    const serviceAccount = JSON.parse(SERVICE_ACCOUNT_KEY);
+    console.log(
+      "Initializing Firebase Admin with service account:",
+      serviceAccount.client_email,
     );
-    credential = applicationDefault();
+    const credential = cert({
+      clientEmail: serviceAccount.client_email,
+      privateKey: serviceAccount.private_key,
+      projectId: serviceAccount.project_id,
+    });
+
+    adminApp = initializeApp({
+      credential,
+      projectId: PUBLIC_FIREBASE_PROJECT_ID,
+    });
+
+    db = getFirestore(adminApp);
+    auth = getAuth(adminApp);
+  } catch (error) {
+    console.error("Firebase Admin initialization error:", error);
+    // You might want to throw an error here or handle it gracefully
   }
-
-  adminApp = initializeApp({
-    credential,
-    projectId: PUBLIC_FIREBASE_PROJECT_ID,
-  });
-  db = getFirestore(adminApp);
-  auth = getAuth(adminApp);
 }
-
 /**
  * Get Firestore database instance
  * Initializes Firebase Admin if not already done

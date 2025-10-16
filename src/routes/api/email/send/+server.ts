@@ -4,12 +4,20 @@ import type { EmailOptions, SMTPConfig } from "$lib/services/emailService";
 import nodemailer from "nodemailer";
 
 export const POST: RequestHandler = async ({ request, locals }) => {
+  console.log(
+    "Email API called - locals.user:",
+    locals.user?.uid || "undefined",
+  );
+
   try {
     // Get current user from locals (set by auth hooks)
     const user = locals.user;
     if (!user || !user.uid) {
+      console.log("No user found in locals, returning 401");
       throw error(401, "Unauthorized");
     }
+
+    console.log("User authenticated:", user.uid);
 
     const {
       smtpConfig,

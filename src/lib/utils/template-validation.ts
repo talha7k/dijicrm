@@ -31,7 +31,7 @@ export function validateTemplate(template: DocumentTemplate): ValidationResult {
 
   if (
     !template.type ||
-    !["invoice", "legal", "business", "custom"].includes(template.type)
+    !["order", "legal", "business", "custom"].includes(template.type)
   ) {
     errors.push("Invalid template type");
   }
