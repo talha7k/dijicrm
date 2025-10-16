@@ -6,7 +6,7 @@ import type { UserProfile } from "$lib/types/user";
  */
 
 /**
- * Validates if a user has access to a specific company by checking Firestore
+ * Validates if a user has access to a specific company by checking user profile
  */
 export async function validateCompanyAccess(
   userId: string,
@@ -18,43 +18,30 @@ export async function validateCompanyAccess(
 
     console.log(`Checking access for user ${userId} to company ${companyId}`);
 
-    // Check if user is a member of the company
-    const memberDoc = await db
-      .collection("companyMembers")
-      .where("userId", "==", userId)
-      .where("companyId", "==", companyId)
-      .limit(1)
-      .get();
+    // Check the user's profile for company associations
+    const userDoc = await db.collection("users").doc(userId).get();
+    if (!userDoc.exists) {
+      console.log(`User ${userId} profile not found`);
+      return false;
+    }
 
-    const hasAccess = !memberDoc.empty;
+    const userData = userDoc.data();
+    if (!userData || !userData.companyAssociations) {
+      console.log(`User ${userId} has no company associations`);
+      return false;
+    }
+
+    const hasAccess = userData.companyAssociations.some(
+      (assoc: any) => assoc.companyId === companyId,
+    );
+
     console.log(`User ${userId} access to company ${companyId}: ${hasAccess}`);
 
     if (!hasAccess) {
-      // Let's check what companies this user actually has access to
-      const allUserMemberships = await db
-        .collection("companyMembers")
-        .where("userId", "==", userId)
-        .get();
-
       console.log(
         `User ${userId} has access to companies:`,
-        allUserMemberships.docs.map((doc) => doc.data().companyId),
+        userData.companyAssociations.map((assoc: any) => assoc.companyId),
       );
-
-      // Also check the user's profile to see what company they should be associated with
-      const userDoc = await db.collection("users").doc(userId).get();
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        if (userData) {
-          console.log(`User ${userId} profile:`, {
-            currentCompanyId: userData.currentCompanyId,
-            companyAssociations: userData.companyAssociations,
-            role: userData.role,
-          });
-        }
-      } else {
-        console.log(`User ${userId} profile not found in users collection`);
-      }
     }
 
     return hasAccess;
@@ -65,7 +52,7 @@ export async function validateCompanyAccess(
 }
 
 /**
- * Gets the user's role in a specific company from Firestore
+ * Gets the user's role in a specific company from user profile
  */
 export async function getUserCompanyRole(
   userId: string,
@@ -75,19 +62,20 @@ export async function getUserCompanyRole(
     const db = getDb();
     if (!db) throw new Error("Database not initialized");
 
-    const memberDoc = await db
-      .collection("companyMembers")
-      .where("userId", "==", userId)
-      .where("companyId", "==", companyId)
-      .limit(1)
-      .get();
-
-    if (memberDoc.empty) {
+    const userDoc = await db.collection("users").doc(userId).get();
+    if (!userDoc.exists) {
       return null;
     }
 
-    const memberData = memberDoc.docs[0].data();
-    return memberData.role || "member";
+    const userData = userDoc.data();
+    if (!userData || !userData.companyAssociations) {
+      return null;
+    }
+
+    const association = userData.companyAssociations.find(
+      (assoc: any) => assoc.companyId === companyId,
+    );
+    return association?.role || null;
   } catch (error) {
     console.error("Error getting user company role:", error);
     return null;

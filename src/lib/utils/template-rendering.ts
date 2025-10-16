@@ -3,11 +3,63 @@ import type {
   TemplatePlaceholder,
 } from "$lib/types/document";
 import type { CompanyBranding } from "$lib/types/branding";
+import Handlebars from "handlebars";
+
+/**
+ * Fetches an image from a URL and converts it to a base64 data URL
+ */
+export async function fetchImageAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.warn(`Failed to fetch image from ${url}: ${response.status}`);
+      return null;
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.startsWith("image/")) {
+      console.warn(
+        `URL does not point to an image: ${url}, content-type: ${contentType}`,
+      );
+      return null;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.warn(`Error fetching image from ${url}:`, error);
+    return null;
+  }
+}
 
 /**
  * Renders a document template by replacing placeholders with actual data
  */
 export function renderTemplate(
+  template: DocumentTemplate,
+  data: Record<string, any>,
+): string {
+  try {
+    // Register helper functions for Handlebars
+    Handlebars.registerHelper("formatCurrency", formatCurrency);
+    Handlebars.registerHelper("formatDate", formatDate);
+    Handlebars.registerHelper("multiply", (a: number, b: number) => a * b);
+
+    // Compile and render the template with Handlebars
+    const compiledTemplate = Handlebars.compile(template.htmlContent);
+    return compiledTemplate(data);
+  } catch (error) {
+    console.error("Error rendering template with Handlebars:", error);
+    // Fallback to simple replacement if Handlebars fails
+    return fallbackRenderTemplate(template, data);
+  }
+}
+
+/**
+ * Fallback template rendering using simple regex replacement
+ */
+function fallbackRenderTemplate(
   template: DocumentTemplate,
   data: Record<string, any>,
 ): string {
@@ -39,8 +91,8 @@ export function injectBrandingIntoHtml(
 ): string {
   let brandedHtml = html;
 
-  // Inject logo if available
-  if (branding.logoUrl) {
+  // Only inject logo if it's not already in the template
+  if (branding.logoUrl && !brandedHtml.includes("{{companyLogo}}")) {
     // Add logo to the top of the document
     const logoHtml = `
       <div style="text-align: center; margin-bottom: 20px;">
@@ -56,8 +108,8 @@ export function injectBrandingIntoHtml(
     }
   }
 
-  // Inject stamp image if available
-  if (branding.stampImageUrl) {
+  // Inject stamp image if available and not already in template
+  if (branding.stampImageUrl && !brandedHtml.includes("{{companyStamp}}")) {
     const stampPosition = branding.stampPosition || "bottom-right";
 
     // Position styles based on stamp position
@@ -211,7 +263,10 @@ export function validateTemplateData(
     if (placeholder.required) {
       const value = data[placeholder.key];
       if (value === undefined || value === null || value === "") {
-        missingFields.push(placeholder.label);
+        // For image fields, allow empty/placeholder values
+        if (placeholder.type !== "image") {
+          missingFields.push(placeholder.label);
+        }
       }
     }
   }

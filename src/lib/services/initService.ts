@@ -1,5 +1,5 @@
 import { get } from "svelte/store";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, getRedirectResult } from "firebase/auth";
 import { auth } from "$lib/firebase";
 import { userProfile } from "$lib/stores/user";
 import { companyContext, initializeFromUser } from "$lib/stores/companyContext";

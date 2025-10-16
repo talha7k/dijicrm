@@ -1,31 +1,247 @@
 import { json, error, type RequestEvent } from "@sveltejs/kit";
 import {
-  renderTemplate,
   validateTemplateData,
   injectBrandingIntoHtml,
+  fetchImageAsDataUrl,
 } from "$lib/utils/template-rendering";
+import { renderTemplate } from "$lib/utils/template-validation";
 import type { DocumentTemplate } from "$lib/types/document";
 import { brandingService } from "$lib/services/brandingService";
 import type { CompanyBranding } from "$lib/types/branding";
 import { getDb } from "$lib/firebase-admin";
 import { requireCompanyAccess } from "$lib/utils/server-company-validation";
+import puppeteer from "puppeteer";
+import { generateZATCAQRCode } from "$lib/utils/zatca";
+import QRCode from "qrcode";
 
-// Mock function - replace with actual PDF generation
+/**
+ * Generate a QR code image from text data
+ * Uses the qrcode library to generate a data URL
+ */
+async function generateQRCodeImage(data: string): Promise<string> {
+  try {
+    // Generate QR code as data URL
+    const qrCodeDataUrl = await QRCode.toDataURL(data, {
+      width: 100,
+      margin: 1,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+    });
+    return qrCodeDataUrl;
+  } catch (error) {
+    console.warn("QR code generation failed:", error);
+    // Fallback to a simple placeholder
+    return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+  }
+}
+
 async function generatePdfFromHtml(
   html: string,
   branding?: CompanyBranding,
 ): Promise<Uint8Array> {
-  // In a real implementation, this would use Puppeteer or similar
-  // For now, return a mock PDF buffer with branding info
-  let brandingInfo = "";
-  if (branding) {
-    brandingInfo = ` | Logo: ${branding.logoUrl ? "Yes" : "No"} | Stamp: ${branding.stampImageUrl ? "Yes" : "None"}`;
-  }
+  let browser;
+  try {
+    // Launch Puppeteer browser with args for better PDF generation
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-web-security",
+        "--disable-features=VizDisplayCompositor",
+        "--font-render-hinting=none",
+        "--disable-extensions",
+        "--disable-plugins",
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+      ],
+    });
 
-  const mockPdf = new TextEncoder().encode(
-    `Mock PDF generated from HTML: ${html.substring(0, 100)}...${brandingInfo}`,
-  );
-  return mockPdf;
+    const page = await browser.newPage();
+
+    // Set viewport for better PDF rendering
+    await page.setViewport({ width: 794, height: 1123 }); // A4 size
+
+    // Add CSS for better table and image rendering
+    const styles = `
+      <style>
+        body {
+          font-family: 'Arial', sans-serif;
+          margin: 0;
+          padding: 20px;
+          color: #333;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 20px 0;
+        }
+        th, td {
+          border: 1px solid #ddd;
+          padding: 8px 12px;
+          text-align: left;
+          vertical-align: top;
+        }
+        th {
+          background-color: #f5f5f5;
+          font-weight: bold;
+        }
+        tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        img {
+          max-width: 100%;
+          height: auto;
+          display: block;
+        }
+        .invoice-container {
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        .header {
+          margin-bottom: 30px;
+        }
+        .company-info {
+          margin-bottom: 20px;
+        }
+        .billing-info {
+          margin-bottom: 30px;
+        }
+        .order-table {
+          margin: 20px 0;
+        }
+        .totals {
+          text-align: right;
+          margin-top: 20px;
+        }
+        .total-row {
+          margin-bottom: 5px;
+        }
+        .total-row.total {
+          font-weight: bold;
+          font-size: 18px;
+          border-top: 2px solid #333;
+          padding-top: 10px;
+        }
+        .footer {
+          margin-top: 40px;
+          text-align: center;
+          font-size: 12px;
+          color: #666;
+        }
+        .zatca-qr-code {
+          position: absolute !important;
+          top: 20px !important;
+          right: 20px !important;
+          width: 100px !important;
+          height: 100px !important;
+        }
+        .company-logo {
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        .company-logo img {
+          max-width: 200px;
+          max-height: 100px;
+        }
+      </style>
+    `;
+
+    // Wrap HTML in proper document structure with styles
+    const fullHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Document</title>
+          ${styles}
+        </head>
+        <body>
+          <div class="invoice-container">
+            ${html}
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Load HTML content
+    await page.setContent(fullHtml, {
+      waitUntil: "networkidle0",
+      timeout: 30000,
+    });
+
+    // Wait for images to load and log any failed images
+    try {
+      const failedImages = await page.evaluate(() => {
+        const images = Array.from(document.querySelectorAll("img"));
+        const failed: string[] = [];
+
+        return new Promise<string[]>((resolve) => {
+          let loaded = 0;
+          const total = images.length;
+
+          if (total === 0) {
+            resolve([]);
+            return;
+          }
+
+          images.forEach((img, index) => {
+            if (img.complete && img.naturalHeight > 0) {
+              loaded++;
+              if (loaded === total) resolve(failed);
+            } else {
+              img.addEventListener("load", () => {
+                loaded++;
+                if (loaded === total) resolve(failed);
+              });
+              img.addEventListener("error", () => {
+                failed.push(img.src);
+                loaded++;
+                if (loaded === total) resolve(failed);
+              });
+            }
+          });
+
+          // Timeout after 10 seconds
+          setTimeout(() => resolve(failed), 10000);
+        });
+      });
+
+      console.log("Images loaded, failed images:", failedImages);
+    } catch (error) {
+      console.warn("Error checking image loading:", error);
+    }
+
+    // Additional wait for rendering
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    // Generate PDF with better settings
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "20px",
+        right: "20px",
+        bottom: "20px",
+        left: "20px",
+      },
+      preferCSSPageSize: false,
+      displayHeaderFooter: false,
+    });
+
+    return new Uint8Array(pdfBuffer);
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+    throw new Error("Failed to generate PDF");
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
 }
 
 export const POST = async ({ request, locals }: RequestEvent) => {
@@ -65,22 +281,137 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     await requireCompanyAccess(user.uid, companyId, "generate documents");
     console.log("Company access validated");
 
-    // Load company branding if companyId is provided
+    // Fetch company branding data
     let branding: CompanyBranding | undefined;
-    if (companyId) {
+    try {
+      const brandingResult = await brandingService.loadBranding(companyId);
+      if (brandingResult.success && brandingResult.branding) {
+        branding = brandingResult.branding;
+        console.log("Branding loaded successfully");
+      }
+    } catch (brandingError) {
+      console.warn(
+        "Failed to load branding for document generation:",
+        brandingError,
+      );
+    }
+
+    // Fetch company data for ZATCA QR code generation
+    let companyData: any = null;
+    if (db) {
       try {
-        const brandingResult = await brandingService.loadBranding(companyId);
-        if (brandingResult.success && brandingResult.branding) {
-          branding = brandingResult.branding;
+        const companyDoc = await db
+          .collection("companies")
+          .doc(companyId)
+          .get();
+        if (companyDoc.exists) {
+          companyData = companyDoc.data();
+          console.log("Company data loaded for ZATCA generation");
         }
-      } catch (brandingError) {
-        console.warn(
-          "Failed to load branding for PDF generation:",
-          brandingError,
-        );
-        // Continue without branding
+      } catch (companyError) {
+        console.warn("Failed to load company data:", companyError);
       }
     }
+
+    // Generate ZATCA QR code if company has required data
+    if (companyData?.name && companyData?.vatNumber && data.total) {
+      try {
+        const zatcaData = {
+          sellerName: companyData.name,
+          vatNumber: companyData.vatNumber,
+          invoiceDate: data.date || new Date().toISOString(),
+          totalAmount: data.total || data.totalAmount || 0,
+          vatAmount:
+            data.taxAmount || (data.total * (data.taxRate || 0)) / 100 || 0,
+        };
+        console.log("Generating ZATCA QR with data:", zatcaData);
+        const qrCodeData = generateZATCAQRCode(zatcaData);
+        console.log("ZATCA QR code data generated, length:", qrCodeData.length);
+        data.zatcaQRCode = await generateQRCodeImage(qrCodeData);
+        console.log(
+          "ZATCA QR code image generated, data URL length:",
+          data.zatcaQRCode.length,
+        );
+      } catch (zatcaError) {
+        console.warn("Failed to generate ZATCA QR code:", zatcaError);
+      }
+    } else {
+      console.log("ZATCA QR conditions not met:", {
+        hasCompanyName: !!companyData?.name,
+        hasVatNumber: !!companyData?.vatNumber,
+        hasTotal: !!data.total,
+      });
+    }
+
+    // Add branding data to template data
+    if (branding) {
+      // Fetch and convert logo to data URL if available
+      if (branding.logoUrl) {
+        if (branding.logoUrl.startsWith("data:")) {
+          data.companyLogo = branding.logoUrl;
+          console.log("Using existing data URL for company logo");
+        } else {
+          console.log(
+            "Fetching company logo from Firebase Storage:",
+            branding.logoUrl.substring(0, 50) + "...",
+          );
+          const logoDataUrl = await fetchImageAsDataUrl(branding.logoUrl);
+          if (logoDataUrl) {
+            data.companyLogo = logoDataUrl;
+            console.log("Successfully converted logo to data URL");
+          } else {
+            console.log("Failed to fetch logo, using placeholder");
+            data.companyLogo =
+              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+          }
+        }
+      }
+
+      // Fetch and convert stamp to data URL if available
+      if (branding.stampImageUrl) {
+        if (branding.stampImageUrl.startsWith("data:")) {
+          data.companyStamp = branding.stampImageUrl;
+          console.log("Using existing data URL for company stamp");
+        } else {
+          console.log(
+            "Fetching company stamp from Firebase Storage:",
+            branding.stampImageUrl.substring(0, 50) + "...",
+          );
+          const stampDataUrl = await fetchImageAsDataUrl(
+            branding.stampImageUrl,
+          );
+          if (stampDataUrl) {
+            data.companyStamp = stampDataUrl;
+            console.log("Successfully converted stamp to data URL");
+          } else {
+            console.log("Failed to fetch stamp, using placeholder");
+            data.companyStamp =
+              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+          }
+        }
+      }
+
+      console.log("Branding data added to template data");
+    } else {
+      // Provide fallback values when branding cannot be loaded
+      data.companyLogo =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+      data.companyStamp =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+      console.log("Using fallback branding data (transparent placeholders)");
+    }
+
+    console.log("Final template data keys:", Object.keys(data));
+    console.log("Items data:", data.items);
+    console.log("ZATCA QR code present:", !!data.zatcaQRCode);
+    console.log(
+      "Company logo URL:",
+      data.companyLogo?.substring(0, 50) + "...",
+    );
+    console.log(
+      "Company stamp URL:",
+      data.companyStamp?.substring(0, 50) + "...",
+    );
 
     // Fetch template from Firestore - ensure it belongs to the company
     console.log("Fetching template:", templateId, "for company:", companyId);
@@ -121,6 +452,11 @@ export const POST = async ({ request, locals }: RequestEvent) => {
       updatedAt: templateData.updatedAt,
     } as DocumentTemplate;
 
+    console.log(
+      "Template HTML content:",
+      template.htmlContent.substring(0, 300) + "...",
+    );
+
     // Validate template data
     const validation = validateTemplateData(template, data);
     if (!validation.isValid) {
@@ -140,10 +476,37 @@ export const POST = async ({ request, locals }: RequestEvent) => {
 
     // Render template
     let renderedHtml = renderTemplate(template, data);
+    console.log("Rendered HTML length:", renderedHtml.length);
+    console.log("Rendered HTML preview:", renderedHtml.substring(0, 500));
 
-    // Inject branding if available
+    // Check for images in rendered HTML
+    const imageMatches = renderedHtml.match(/<img[^>]*src="([^"]*)"[^>]*>/g);
+    if (imageMatches) {
+      console.log(
+        "Found images in HTML:",
+        imageMatches.map((match) => {
+          const srcMatch = match.match(/src="([^"]*)"/);
+          return srcMatch ? srcMatch[1].substring(0, 50) + "..." : "no src";
+        }),
+      );
+    } else {
+      console.log("No images found in rendered HTML");
+    }
+
+    // Inject branding if available (using data URLs from template data)
     if (branding) {
-      renderedHtml = injectBrandingIntoHtml(renderedHtml, branding);
+      // Create a modified branding object with data URLs
+      const brandingWithDataUrls: CompanyBranding = {
+        ...branding,
+        logoUrl: data.companyLogo,
+        stampImageUrl: data.companyStamp,
+      };
+
+      console.log("Injecting branding with data URLs");
+      renderedHtml = injectBrandingIntoHtml(renderedHtml, brandingWithDataUrls);
+      console.log("Branding injected");
+    } else {
+      console.log("No branding to inject");
     }
 
     if (format === "html") {

@@ -302,13 +302,13 @@ import { authenticatedFetch } from "$lib/utils/api";
             content: result.content,
             format: "pdf",
           });
-        } catch (error) {
-          console.error(
-            `Failed to generate document from template ${templateId}:`,
-            error,
-          );
-          toast.error(`Failed to generate ${template.name}`);
-        }
+         } catch (error) {
+           console.error(
+             `Failed to generate document from template ${templateId}:`,
+             error,
+           );
+           // Error toast is now handled by the document generation store
+         }
       }
 
       // Prepare attachments (generated documents + custom documents)

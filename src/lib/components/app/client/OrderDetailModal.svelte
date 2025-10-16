@@ -31,7 +31,7 @@
   let paymentAmount = $state('');
   let paymentMethod = $state('bank_transfer');
   let paymentNotes = $state('');
-  let generatingInvoice = $state(false);
+
 
   // Get payments for this order
   let orderPayments = $state<Payment[]>([]);
@@ -139,7 +139,6 @@
       return;
     }
 
-    generatingInvoice = true;
     try {
       // Generate order PDF using document generation
       const result = await documentGenerationStore.generateDocument(
@@ -162,7 +161,6 @@
       );
 
       if (result.success) {
-        toast.success('Invoice generated successfully');
         // Update order status
         await ordersStore.updateOrder(order.id, { status: 'generated' });
       } else {
@@ -170,9 +168,7 @@
       }
     } catch (error) {
       console.error('Error generating order:', error);
-      toast.error('Failed to generate order');
-    } finally {
-      generatingInvoice = false;
+      // Error toast is now handled by the store
     }
   }
 
@@ -367,15 +363,15 @@
                     </Button>
                   </div>
                 {:else}
-                  <Button onclick={handleGenerateInvoice} disabled={generatingInvoice}>
-                    {#if generatingInvoice}
-                      <Icon icon="lucide:loader" class="h-4 w-4 mr-2 animate-spin" />
-                      Generating...
-                    {:else}
-                      <Icon icon="lucide:file-text" class="h-4 w-4 mr-2" />
-                      Generate Invoice
-                    {/if}
-                  </Button>
+                   <Button onclick={handleGenerateInvoice} disabled={$documentGenerationStore.loading}>
+                     {#if $documentGenerationStore.loading}
+                       <Icon icon="lucide:loader" class="h-4 w-4 mr-2 animate-spin" />
+                       Generating Invoice...
+                     {:else}
+                       <Icon icon="lucide:file-text" class="h-4 w-4 mr-2" />
+                       Generate Invoice
+                     {/if}
+                   </Button>
                 {/if}
               </Card.Content>
             </Card.Root>

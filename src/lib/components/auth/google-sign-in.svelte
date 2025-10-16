@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { firekitAuth } from 'svelte-firekit';
+	import { signInWithPopup, GoogleAuthProvider, getAuth } from 'firebase/auth';
 	import { toast } from 'svelte-sonner';
 
 	import Button from '../ui/button/button.svelte';
@@ -21,18 +21,22 @@
 		try {
 			isLoading = true;
 
-			// Perform Google authentication
-			await firekitAuth.signInWithGoogle();
-
-			// Get the authenticated user from Firebase Auth
+			// Get Firebase Auth instance
 			const { auth } = await import('$lib/firebase');
-			const user = auth.currentUser;
+			
+			// Create Google provider
+			const provider = new GoogleAuthProvider();
+			provider.addScope('email');
+			provider.addScope('profile');
 
-			if (user) {
-				await handlePostAuthentication(user);
-			} else {
-				throw new Error('Authentication failed - no user returned');
-			}
+			// Sign in with popup
+			const result = await signInWithPopup(auth, provider);
+			console.log('Popup result:', result);
+
+			// Handle post-authentication
+			await handlePostAuthentication(result.user);
+			toast.success('Successfully signed in with Google!');
+
 		} catch (error) {
 			console.error('Google sign-in error:', error);
 			if (error instanceof Error) {
@@ -40,7 +44,6 @@
 			} else {
 				toast.error('An error occurred during sign-in');
 			}
-		} finally {
 			isLoading = false;
 		}
 	}

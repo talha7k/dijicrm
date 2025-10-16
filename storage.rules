@@ -6,50 +6,32 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    function isCompanyMember(companyId) {
-      return isAuthenticated() &&
-             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
-             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.companyAssociations.hasAny(function(ca) {
-               return ca.companyId == companyId;
-             });
-    }
-
-    function isCompanyAdmin(companyId) {
-      return isAuthenticated() &&
-             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
-             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.companyAssociations.hasAny(function(ca) {
-               return ca.companyId == companyId && (ca.role == 'admin' || ca.role == 'owner');
-             });
-    }
-
-    function isClientOfCompany(companyId) {
-      return isAuthenticated() &&
-             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
-             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'client' &&
-             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.companyAssociations.hasAny(function(ca) {
-               return ca.companyId == companyId;
-             });
-    }
-
     // Company logos and branding
     match /companies/{companyId}/{allPaths=**} {
-      allow read: if isCompanyMember(companyId);
-      allow write: if isCompanyAdmin(companyId);
-      allow delete: if isCompanyAdmin(companyId);
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // Logos directory
+    match /logos/{companyId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+      allow delete: if isAuthenticated();
     }
 
     // Document PDFs and files
     match /documents/{companyId}/{allPaths=**} {
-      allow read: if isCompanyMember(companyId);
-      allow write: if isCompanyMember(companyId);
-      allow delete: if isCompanyAdmin(companyId);
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+      allow delete: if isAuthenticated();
     }
 
     // Client-uploaded files (proof of payment, signed documents, etc.)
     match /clients/{companyId}/{clientId}/{allPaths=**} {
-      allow read: if isCompanyMember(companyId) || (isClientOfCompany(companyId) && request.auth.uid == clientId);
-      allow write: if isCompanyMember(companyId) || (isClientOfCompany(companyId) && request.auth.uid == clientId);
-      allow delete: if isCompanyAdmin(companyId);
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+      allow delete: if isAuthenticated();
     }
 
     // Public files (if any)

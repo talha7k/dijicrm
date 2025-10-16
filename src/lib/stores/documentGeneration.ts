@@ -1,5 +1,6 @@
 import { writable } from "svelte/store";
 import { authenticatedFetch } from "$lib/utils/api";
+import { toast } from "svelte-sonner";
 
 interface DocumentGenerationState {
   loading: boolean;
@@ -33,6 +34,16 @@ function createDocumentGenerationStore() {
     ) {
       update((state) => ({ ...state, loading: true, error: null }));
 
+      // Show loading toast
+      const loadingToast = toast.loading(
+        format === "pdf"
+          ? "Generating PDF document..."
+          : "Generating document preview...",
+        {
+          description: "This may take a few moments",
+        },
+      );
+
       try {
         const response = await authenticatedFetch("/api/documents/generate", {
           method: "POST",
@@ -57,6 +68,14 @@ function createDocumentGenerationStore() {
           result: result,
         }));
 
+        // Dismiss loading toast and show success
+        toast.dismiss(loadingToast);
+        toast.success(
+          format === "pdf"
+            ? "Document generated successfully!"
+            : "Preview generated successfully!",
+        );
+
         return result;
       } catch (error) {
         const errorMessage =
@@ -67,6 +86,12 @@ function createDocumentGenerationStore() {
           loading: false,
           error: errorMessage,
         }));
+
+        // Dismiss loading toast and show error
+        toast.dismiss(loadingToast);
+        toast.error("Failed to generate document", {
+          description: errorMessage,
+        });
 
         throw error;
       }

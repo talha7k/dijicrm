@@ -50,6 +50,19 @@ export function mapClientDataToTemplate(
     dueDate: formatDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 days from now
     serviceDescription: "Professional services provided",
     amount: 1000, // Default amount
+
+    // Order/invoice specific fields (with defaults for client documents)
+    orderNumber: `INV-${Date.now()}`, // Generate a default invoice number
+    items: [
+      {
+        description: "Professional services provided",
+        quantity: 1,
+        rate: 1000,
+        amount: 1000,
+      },
+    ],
+    subtotal: 1000,
+    total: 1000, // Same as amount for simple cases
   };
 
   return clientData;
@@ -121,5 +134,9 @@ export function getClientPlaceholderKeys(): string[] {
     "dueDate",
     "serviceDescription",
     "amount",
+    "orderNumber",
+    "items",
+    "subtotal",
+    "total",
   ];
 }
