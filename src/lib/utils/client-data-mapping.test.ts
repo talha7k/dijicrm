@@ -81,6 +81,16 @@ describe("client-data-mapping", () => {
       expect(result.currentDate).toBe("October 16, 2025");
     });
 
+    it("should include common document fields with defaults", () => {
+      const result = mapClientDataToTemplate(mockClient);
+
+      expect(result.companyName).toBe("Your Company");
+      expect(result.date).toBeDefined();
+      expect(result.dueDate).toBeDefined();
+      expect(result.serviceDescription).toBe("Professional services provided");
+      expect(result.amount).toBe(1000);
+    });
+
     it("should handle missing optional fields", () => {
       const clientWithoutOptionals: UserProfile = {
         ...mockClient,
@@ -124,6 +134,11 @@ describe("client-data-mapping", () => {
       expect(keys).toContain("clientEmail");
       expect(keys).toContain("clientAddress");
       expect(keys).toContain("currentDate");
+      expect(keys).toContain("companyName");
+      expect(keys).toContain("date");
+      expect(keys).toContain("dueDate");
+      expect(keys).toContain("serviceDescription");
+      expect(keys).toContain("amount");
       expect(keys.length).toBeGreaterThan(20);
     });
   });

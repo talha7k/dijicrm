@@ -43,6 +43,13 @@ export function mapClientDataToTemplate(
     // Current date for document generation
     currentDate: formatDate(new Date()),
     currentDateTime: new Date().toISOString(),
+
+    // Common document fields (with defaults)
+    companyName: "Your Company", // Will be overridden by actual company name
+    date: formatDate(new Date()),
+    dueDate: formatDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 days from now
+    serviceDescription: "Professional services provided",
+    amount: 1000, // Default amount
   };
 
   return clientData;
@@ -109,5 +116,10 @@ export function getClientPlaceholderKeys(): string[] {
     "clientUsername",
     "currentDate",
     "currentDateTime",
+    "companyName",
+    "date",
+    "dueDate",
+    "serviceDescription",
+    "amount",
   ];
 }

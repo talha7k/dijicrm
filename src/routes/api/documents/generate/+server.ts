@@ -105,6 +105,7 @@ export const POST = async ({ request }: RequestEvent) => {
       .doc(templateId)
       .get();
     if (!templateDoc.exists) {
+      console.error("Template not found:", { templateId });
       throw error(404, "Template not found");
     }
     const templateData = templateDoc.data();
@@ -118,6 +119,14 @@ export const POST = async ({ request }: RequestEvent) => {
     // Validate template data
     const validation = validateTemplateData(template, data);
     if (!validation.isValid) {
+      console.error("Template validation failed:", {
+        templateId,
+        missingFields: validation.missingFields,
+        providedData: Object.keys(data),
+        requiredPlaceholders: template.placeholders
+          .filter((p) => p.required)
+          .map((p) => p.key),
+      });
       throw error(
         400,
         `Missing required fields: ${validation.missingFields.join(", ")}`,

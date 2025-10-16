@@ -71,7 +71,8 @@
           client = state.clients.find(c => c.uid === clientId) || null;
         });
 
-        // Load client documents
+        // Load templates and client documents
+        documentTemplatesStore.loadTemplates();
         clientDocumentsStore.loadClientDocuments(clientId);
 
         return () => {
@@ -109,11 +110,15 @@
       const template = availableTemplates.find(t => t.id === templateId);
       if (!template) return;
 
+      // Get company information
+      const companyId = get(companyContext).data?.companyId;
+      const companyName = get(companyContext).data?.company?.name || "Your Company";
+
       // Map client data to template variables
       const templateData = mapClientDataToTemplate(client);
 
-          // Get company ID for branding
-          const companyId = get(companyContext).data?.companyId;
+      // Override with actual company name
+      templateData.companyName = companyName;
 
       // Generate HTML preview
       const result = await documentGenerationStore.previewDocument(templateId, templateData, companyId);
@@ -135,6 +140,82 @@
   function closePreview() {
     showPreview = false;
     previewDocument = null;
+  }
+
+  async function generateSampleTemplates() {
+    try {
+      const response = await fetch("/api/sample-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        toast.success("Sample templates generated successfully!");
+        // Reload templates
+        documentTemplatesStore.loadTemplates();
+      } else {
+        toast.error("Failed to generate sample templates");
+      }
+    } catch (error) {
+      console.error("Error generating sample templates:", error);
+      toast.error("Failed to generate sample templates");
+    }
+  }
+
+  async function downloadDocument(templateId: string, fileName: string, format: 'html' | 'pdf') {
+    if (!client) {
+      toast.error('Client data not available');
+      return;
+    }
+
+    try {
+      // Get company information
+      const companyId = get(companyContext).data?.companyId;
+      const companyName = get(companyContext).data?.company?.name || "Your Company";
+
+      // Map client data to template variables
+      const templateData = mapClientDataToTemplate(client);
+      templateData.companyName = companyName;
+
+      // Generate document
+      const result = await documentGenerationStore.generateDocument(
+        templateId,
+        templateData,
+        format,
+        companyId
+      );
+
+      // Create download link
+      const blob = format === 'pdf' 
+        ? base64ToBlob(result.content, 'application/pdf')
+        : new Blob([result.content], { type: 'text/html' });
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${fileName}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success(`${format.toUpperCase()} document downloaded successfully!`);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      toast.error(`Failed to download ${format} document`);
+    }
+  }
+
+  function base64ToBlob(base64: string, mimeType: string): Blob {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mimeType });
   }
 
   async function handleSend() {
@@ -160,8 +241,9 @@
     generatedDocuments = [];
 
     try {
-      // Get company ID for branding
+      // Get company information
       const companyId = get(companyContext).data?.companyId;
+      const companyName = get(companyContext).data?.company?.name || "Your Company";
 
       // Generate documents from selected templates
       for (const templateId of selectedTemplates) {
@@ -171,6 +253,9 @@
         try {
           // Map client data to template variables
           const templateData = mapClientDataToTemplate(client);
+
+          // Override with actual company name
+          templateData.companyName = companyName;
 
           // Generate PDF document
           const result = await documentGenerationStore.generateDocument(
@@ -254,9 +339,20 @@
       </Dialog.Description>
     </Dialog.Header>
 
-    <div class="space-y-6">
-       <!-- Template Documents -->
-       {#if availableTemplates.length > 0}
+     <div class="space-y-6">
+        <!-- Debug Info (remove in production) -->
+        <div class="p-3 bg-gray-100 rounded text-xs">
+          <p><strong>Debug Info:</strong></p>
+          <p>Client loaded: {client ? 'Yes' : 'No'}</p>
+          <p>Templates available: {availableTemplates.length}</p>
+          <p>Custom documents: {customDocuments.length}</p>
+          {#if client}
+            <p>Client name: {client.displayName || client.firstName + ' ' + client.lastName}</p>
+          {/if}
+        </div>
+
+        <!-- Template Documents -->
+        {#if availableTemplates.length > 0}
          <div class="space-y-3">
            <Label class="text-base font-medium">Template Documents</Label>
            <div class="space-y-2">
@@ -274,21 +370,39 @@
                     </Label>
                     <p class="text-sm text-muted-foreground">{template.description}</p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onclick={() => handlePreview(template.id)}
-                    disabled={!client || previewLoading}
-                  >
-                    {previewLoading ? 'Loading...' : 'Preview'}
-                  </Button>
+                  <div class="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onclick={() => handlePreview(template.id)}
+                      disabled={!client || previewLoading}
+                    >
+                      {previewLoading ? 'Loading...' : 'Preview'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onclick={() => downloadDocument(template.id, template.name, 'pdf')}
+                      disabled={!client}
+                    >
+                      Download PDF
+                    </Button>
+                  </div>
                 </div>
               {/each}
            </div>
          </div>
-       {/if}
+        {:else}
+          <div class="text-center py-8 text-muted-foreground">
+            <p>No document templates available.</p>
+            <p class="text-sm mb-4">Create templates in the Templates section to generate documents.</p>
+            <Button variant="outline" onclick={generateSampleTemplates}>
+              Generate Sample Templates
+            </Button>
+          </div>
+        {/if}
 
-      <!-- Custom Documents -->
+       <!-- Custom Documents -->
       <div class="space-y-3">
         <Label class="text-base font-medium">Custom Documents</Label>
         <div class="space-y-2">
@@ -343,12 +457,20 @@
        {#if showPreview && previewDocument}
          <Card.Root>
            <Card.Header>
-             <div class="flex items-center justify-between">
-               <Card.Title class="text-base">Preview: {previewDocument.name}</Card.Title>
-               <Button variant="outline" size="sm" onclick={closePreview}>
-                 Close Preview
-               </Button>
-             </div>
+              <div class="flex items-center justify-between">
+                <Card.Title class="text-base">Preview: {previewDocument.name}</Card.Title>
+                <div class="flex space-x-2">
+                  <Button variant="outline" size="sm" onclick={() => previewDocument && downloadDocument(previewDocument.id, previewDocument.name, 'html')}>
+                    Download HTML
+                  </Button>
+                  <Button variant="outline" size="sm" onclick={() => previewDocument && downloadDocument(previewDocument.id, previewDocument.name, 'pdf')}>
+                    Download PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onclick={closePreview}>
+                    Close Preview
+                  </Button>
+                </div>
+              </div>
            </Card.Header>
            <Card.Content>
              <div class="max-h-96 overflow-y-auto border rounded p-4 bg-white">
