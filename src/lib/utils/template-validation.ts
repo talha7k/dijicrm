@@ -249,12 +249,12 @@ export async function generatePreviewData(
         const zatcaData = {
           sellerName: company.name,
           vatNumber: company.vatNumber,
-          invoiceDate: new Date().toISOString(),
+          timestamp: new Date().toISOString(),
           totalAmount: previewData.total,
           vatAmount: previewData.taxAmount,
         };
-        const qrCodeData = generateZATCAQRCode(zatcaData);
-        previewData.zatcaQRCode = await generateQRCodeImage(qrCodeData);
+        const qrCodeDataUrl = await generateZATCAQRCode(zatcaData);
+        previewData.zatcaQRCode = qrCodeDataUrl;
       } catch (error) {
         console.warn("Could not generate ZATCA QR code:", error);
         previewData.zatcaQRCode = getSampleValue({

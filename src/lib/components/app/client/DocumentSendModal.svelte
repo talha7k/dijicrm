@@ -322,8 +322,15 @@
         const template = availableTemplates.find((t) => t.id === templateId);
         if (!template) continue;
 
-        generationProgress.current = i + 1;
-        generationProgress.currentDocument = template.name;
+        // Update progress before generation
+        generationProgress = {
+          current: i,
+          total: selectedTemplates.length,
+          currentDocument: template.name,
+        };
+
+        // Add a small delay to ensure UI updates
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         try {
           // Map client data to template variables
@@ -346,6 +353,13 @@
             content: result.content,
             format: "pdf",
           });
+
+          // Update progress after successful generation
+          generationProgress = {
+            current: i + 1,
+            total: selectedTemplates.length,
+            currentDocument: template.name,
+          };
          } catch (error) {
            console.error(
              `Failed to generate document from template ${templateId}:`,
@@ -665,25 +679,40 @@
       {/if}
     </div>
 
-    {#if loading && generationProgress.total > 0}
-      <div class="px-6 py-4 border-t">
-        <div class="space-y-2">
-          <div class="flex justify-between text-sm">
-            <span>Generating documents...</span>
-            <span>{generationProgress.current} of {generationProgress.total}</span>
+    {#if loading}
+      <div class="px-6 py-4 border-t bg-muted/30">
+        {#if generationProgress.total > 0}
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-medium">Generating documents...</span>
+              <span class="text-sm font-bold text-primary">
+                {generationProgress.current} / {generationProgress.total}
+              </span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div
+                class="bg-primary h-3 rounded-full transition-all duration-500 ease-out"
+                style="width: {Math.min((generationProgress.current / generationProgress.total) * 100, 100)}%"
+              ></div>
+            </div>
+            {#if generationProgress.currentDocument}
+              <div class="flex items-center space-x-2">
+                <div class="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                <p class="text-sm text-muted-foreground">
+                  Currently generating: <span class="font-medium">{generationProgress.currentDocument}</span>
+                </p>
+              </div>
+            {/if}
+            <div class="text-xs text-muted-foreground">
+              {Math.round((generationProgress.current / generationProgress.total) * 100)}% complete
+            </div>
           </div>
-          <div class="w-full bg-gray-200 rounded-full h-2">
-            <div
-              class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style="width: {(generationProgress.current / generationProgress.total) * 100}%"
-            ></div>
+        {:else}
+          <div class="flex items-center space-x-3">
+            <div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <span class="text-sm font-medium">Preparing documents...</span>
           </div>
-          {#if generationProgress.currentDocument}
-            <p class="text-xs text-muted-foreground">
-              Generating: {generationProgress.currentDocument}
-            </p>
-          {/if}
-        </div>
+        {/if}
       </div>
     {/if}
 
@@ -696,7 +725,15 @@
         disabled={loading ||
           (selectedTemplates.length === 0 && selectedCustomDocs.length === 0)}
       >
-        {loading ? "Sending..." : "Send Documents"}
+        {#if loading}
+          {#if generationProgress.total > 0}
+            Generating ({generationProgress.current}/{generationProgress.total})
+          {:else}
+            Sending...
+          {/if}
+        {:else}
+          Send Documents
+        {/if}
       </Button>
     </Dialog.Footer>
   </Dialog.Content>

@@ -24,7 +24,8 @@
    import EmailComposeModal from '$lib/components/app/client/EmailComposeModal.svelte';
    import PaymentModal from '$lib/components/app/client/PaymentModal.svelte';
     import EmailHistory from '$lib/components/app/client/EmailHistory.svelte';
-    import DocumentHistory from '$lib/components/app/client/DocumentHistory.svelte';
+     import DocumentHistory from '$lib/components/app/client/DocumentHistory.svelte';
+     import OrderCard from '$lib/components/app/client/OrderCard.svelte';
     
     import { emailHistoryStore } from '$lib/stores/emailHistory';
     import { companyContext } from '$lib/stores/companyContext';
@@ -61,9 +62,10 @@
   let loading = $state(true);
   let activeTab = $state('overview');
 
-  let clientOrders = $state<Order[]>([]);
+   let clientOrders = $state<Order[]>([]);
+   let expandedOrders = $state<Set<string>>(new Set());
 
-   let clientDocuments = $state<DocumentRecord[]>([]);
+    let clientDocuments = $state<DocumentRecord[]>([]);
 
    // Subscribe to document delivery store
    $effect(() => {
@@ -217,7 +219,17 @@
    }
 
    function handleOrderClick(order: Order) {
-     goto(`/orders/${order.id}`);
+      goto(`/orders/${order.id}`);
+    }
+
+   function toggleOrderExpanded(orderId: string) {
+     const newExpanded = new Set(expandedOrders);
+     if (newExpanded.has(orderId)) {
+       newExpanded.delete(orderId);
+     } else {
+       newExpanded.add(orderId);
+     }
+     expandedOrders = newExpanded;
    }
 
   function handleSendDocument() {
@@ -440,14 +452,34 @@
       </Card.Root>
     </div>
 
-    <!-- Tabs -->
-    <Tabs.Root bind:value={activeTab}>
-      <Tabs.List class="grid w-full grid-cols-4">
-        <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
-        <Tabs.Trigger value="orders">Orders</Tabs.Trigger>
-        <Tabs.Trigger value="emails">Emails</Tabs.Trigger>
-        <Tabs.Trigger value="documents">Documents</Tabs.Trigger>
-      </Tabs.List>
+     <!-- Tabs -->
+     <Tabs.Root bind:value={activeTab}>
+       <Tabs.List class="grid w-full grid-cols-4 gap-1">
+         <Tabs.Trigger value="overview" class="text-xs sm:text-sm">
+           <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+           </svg>
+           Overview
+         </Tabs.Trigger>
+         <Tabs.Trigger value="orders" class="text-xs sm:text-sm">
+           <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+           </svg>
+           Orders
+         </Tabs.Trigger>
+         <Tabs.Trigger value="emails" class="text-xs sm:text-sm">
+           <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+           </svg>
+           Emails
+         </Tabs.Trigger>
+         <Tabs.Trigger value="documents" class="text-xs sm:text-sm">
+           <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+           </svg>
+           Documents
+         </Tabs.Trigger>
+       </Tabs.List>
 
       <Tabs.Content value="overview" class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -540,64 +572,34 @@
             </div>
           </Card.Header>
 <Card.Content>
-            {#if clientOrders.length === 0}
-              <div class="text-center py-8">
-                <lucide:shopping-cart class="h-12 w-12 mx-auto text-muted-foreground mb-4"></lucide:shopping-cart>
-                <h3 class="text-lg font-medium mb-2">No orders yet</h3>
-                <p class="text-muted-foreground mb-4">
-                  This client hasn't placed any orders yet. Create their first order to get started.
-                </p>
-                <Button onclick={handleNewOrder}>
-                  <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                  </svg>
-                  Create First Order
-                </Button>
-              </div>
-            {:else}
-              <div class="space-y-4">
-                 {#each clientOrders as order}
-                    <div class="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors group" role="button" tabindex="0" onclick={() => handleOrderClick(order)} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { handleOrderClick(order); e.preventDefault(); } }}>
-                     <div class="flex-1">
-                       <div class="flex items-center gap-2">
-                         <h4 class="font-medium text-foreground group-hover:text-primary transition-colors">{order.title}</h4>
-                         <lucide:external-link class="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"></lucide:external-link>
-                       </div>
-                       <p class="text-sm text-muted-foreground">
-                         Order #{order.id} • {formatDate(order.createdAt.toDate())}
-                       </p>
-                     </div>
-                     <div class="flex items-center gap-4">
-                       <div class="text-right">
-                         <p class="font-medium text-foreground">{formatCurrency(order.totalAmount)}</p>
-                         <Select.Root
-                           type="single"
-                           value={order.status}
-                           onValueChange={(value) => handleOrderStatusChange(order.id, value)}
-                         >
-                           <Select.Trigger class="w-32 h-8">
-                             <div class="flex items-center justify-center w-full">
-                               <Badge variant={getStatusBadge(order.status)} class="text-xs">
-                                 {order.status.replace('_', ' ')}
-                               </Badge>
-                             </div>
-                           </Select.Trigger>
-                           <Select.Content>
-                             <Select.Item value="draft">Draft</Select.Item>
-                             <Select.Item value="quote">Quote</Select.Item>
-                             <Select.Item value="generated">Generated</Select.Item>
-                             <Select.Item value="sent">Sent</Select.Item>
-                             <Select.Item value="partially_paid">Partially Paid</Select.Item>
-                             <Select.Item value="paid">Paid</Select.Item>
-                             <Select.Item value="overdue">Overdue</Select.Item>
-                           </Select.Content>
-                         </Select.Root>
-                       </div>
-                     </div>
-                   </div>
-                 {/each}
+             {#if clientOrders.length === 0}
+               <div class="text-center py-8">
+                 <lucide:shopping-cart class="h-12 w-12 mx-auto text-muted-foreground mb-4"></lucide:shopping-cart>
+                 <h3 class="text-lg font-medium mb-2">No orders yet</h3>
+                 <p class="text-muted-foreground mb-4">
+                   This client hasn't placed any orders yet. Create their first order to get started.
+                 </p>
+                 <Button onclick={handleNewOrder}>
+                   <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                   </svg>
+                   Create First Order
+                 </Button>
                </div>
-            {/if}
+             {:else}
+               <div class="space-y-3">
+                  {#each clientOrders as order}
+                    {@const isExpanded = expandedOrders.has(order.id)}
+                    <OrderCard
+                      {order}
+                      {isExpanded}
+                      onToggle={() => toggleOrderExpanded(order.id)}
+                      onClick={() => handleOrderClick(order)}
+                      onRecordPayment={handleRecordPayment}
+                    />
+                  {/each}
+                </div>
+             {/if}
          </Card.Content>
         </Card.Root>
       </Tabs.Content>
