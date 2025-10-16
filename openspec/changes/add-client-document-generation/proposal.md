@@ -5,7 +5,7 @@ The client detail page currently allows users to select document templates but d
 ## What Changes
 
 - Add document generation functionality to DocumentSendModal that populates templates with client data
-- Create client data mapping function to transform client profile into template variables  
+- Create client data mapping function to transform client profile into template variables
 - Add preview functionality before sending generated documents
 - Enhance document generation to support client-specific placeholders
 - Add loading states and error handling for document generation process

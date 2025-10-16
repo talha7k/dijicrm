@@ -26,7 +26,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       throw error(400, "SMTP configuration is required and must be enabled");
     }
 
-    if (!smtpConfig || typeof smtpConfig !== 'object' || !smtpConfig.auth) {
+    if (!smtpConfig || typeof smtpConfig !== "object" || !smtpConfig.auth) {
       throw error(400, "Invalid or incomplete SMTP configuration provided.");
     }
 
@@ -115,7 +115,7 @@ Sent from TK-Crm at ${new Date().toLocaleString()}
     console.error("SMTP test email error:", err);
 
     // Re-throw SvelteKit HttpErrors
-    if (typeof err === 'object' && err !== null && 'status' in err) {
+    if (typeof err === "object" && err !== null && "status" in err) {
       throw err;
     }
 

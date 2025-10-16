@@ -63,17 +63,17 @@ async function generateClientData(
     {
       firstName: "Alice",
       lastName: "Johnson",
-      email: `alice-${Date.now()}@sampleclient.com`,
+      email: "info@dijitize.com",
     },
     {
       firstName: "Bob",
       lastName: "Smith",
-      email: `bob-${Date.now()}@sampleclient.com`,
+      email: "info@dijitize.com",
     },
     {
       firstName: "Carol",
       lastName: "Williams",
-      email: `carol-${Date.now()}@sampleclient.com`,
+      email: "info@dijitize.com",
     },
   ];
 

@@ -65,6 +65,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     const companyRef = await db!.collection("companies").add(companyData);
 
+    // Create company member entry for the owner
+    const memberData = {
+      userId: user.uid,
+      companyId: companyRef.id,
+      role: "owner",
+      joinedAt: Timestamp.now(),
+      isActive: true,
+      permissions: ["read", "write", "admin", "delete"],
+    };
+
+    await db!.collection("companyMembers").add(memberData);
+    console.log(
+      `Created company member entry for owner ${user.uid} in company ${companyRef.id}`,
+    );
+
     return json({
       success: true,
       company: {

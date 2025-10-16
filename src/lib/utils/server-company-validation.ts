@@ -16,6 +16,8 @@ export async function validateCompanyAccess(
     const db = getDb();
     if (!db) throw new Error("Database not initialized");
 
+    console.log(`Checking access for user ${userId} to company ${companyId}`);
+
     // Check if user is a member of the company
     const memberDoc = await db
       .collection("companyMembers")
@@ -24,7 +26,38 @@ export async function validateCompanyAccess(
       .limit(1)
       .get();
 
-    return !memberDoc.empty;
+    const hasAccess = !memberDoc.empty;
+    console.log(`User ${userId} access to company ${companyId}: ${hasAccess}`);
+
+    if (!hasAccess) {
+      // Let's check what companies this user actually has access to
+      const allUserMemberships = await db
+        .collection("companyMembers")
+        .where("userId", "==", userId)
+        .get();
+
+      console.log(
+        `User ${userId} has access to companies:`,
+        allUserMemberships.docs.map((doc) => doc.data().companyId),
+      );
+
+      // Also check the user's profile to see what company they should be associated with
+      const userDoc = await db.collection("users").doc(userId).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        if (userData) {
+          console.log(`User ${userId} profile:`, {
+            currentCompanyId: userData.currentCompanyId,
+            companyAssociations: userData.companyAssociations,
+            role: userData.role,
+          });
+        }
+      } else {
+        console.log(`User ${userId} profile not found in users collection`);
+      }
+    }
+
+    return hasAccess;
   } catch (error) {
     console.error("Error validating company access:", error);
     return false;

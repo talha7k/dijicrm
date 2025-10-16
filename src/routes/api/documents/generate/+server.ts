@@ -30,17 +30,23 @@ async function generatePdfFromHtml(
 
 export const POST = async ({ request, locals }: RequestEvent) => {
   try {
+    console.log("Document generation API called");
+
     // Get Firestore database instance
     const db = getDb();
 
     // Get user from locals (set by auth hooks)
     const user = locals.user;
+    console.log("User from locals:", user?.uid || "undefined");
+
     if (!user || !user.uid) {
       throw error(401, "Unauthorized");
     }
 
     const body = await request.json();
     const { templateId, data, format = "pdf", companyId } = body;
+
+    console.log("Request body:", { templateId, format, companyId });
 
     if (!templateId || !data || !companyId) {
       throw error(
@@ -50,7 +56,14 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     }
 
     // Validate user has access to the company
+    console.log(
+      "Checking company access for user:",
+      user.uid,
+      "to company:",
+      companyId,
+    );
     await requireCompanyAccess(user.uid, companyId, "generate documents");
+    console.log("Company access validated");
 
     // Load company branding if companyId is provided
     let branding: CompanyBranding | undefined;
