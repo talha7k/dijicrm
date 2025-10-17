@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getRedirectResult } from 'firebase/auth';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { handlePostAuthentication } from '$lib/services/authService';
+	import { getAuth } from 'firebase/auth';
 
 	import SignInWithGoogle from '$lib/components/auth/google-sign-in.svelte';
 	import SignInForm from '$lib/components/auth/sign-in-form.svelte';
@@ -12,71 +11,17 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { app } from '$lib/stores/app';
 
-	let checkingRedirect = $state(true);
+	let checkingRedirect = $state(false);
 
+	// We no longer need to check for redirect results since we handle authentication
+	// directly in the auth components and use session cookies
 	onMount(async () => {
 		if (!browser) return;
 
 		console.log('Sign-in page mounted, current URL:', window.location.href);
-		console.log('Checking for redirect result...');
-
-		try {
-			const { auth } = await import('$lib/firebase');
-
-			// Check for redirect result first
-			const result = await getRedirectResult(auth);
-
-			if (result) {
-				console.log('Redirect result found:', result.user);
-				// Handle the authentication result directly
-				await handlePostAuthentication(result.user);
-
-				// Trigger initService navigation logic
-				const { app } = await import('$lib/stores/app');
-				const { userProfile } = await import('$lib/stores/user');
-				const { companyContext, initializeFromUser } = await import('$lib/stores/companyContext');
-				const { get } = await import('svelte/store');
-
-				// Update app state
-				app.update((s) => ({ ...s, authenticated: true }));
-
-				// Check user profile and redirect accordingly
-				const profile = get(userProfile);
-				if (profile.data && !profile.data.onboardingCompleted) {
-					// Redirect to onboarding
-					setTimeout(() => window.location.href = '/onboarding', 0);
-				} else if (profile.data) {
-					// Try to initialize company context
-					try {
-						await initializeFromUser();
-						const company = get(companyContext);
-						if (company.data) {
-							// User has company access, go to dashboard
-							setTimeout(() => window.location.href = '/dashboard', 0);
-						} else {
-							// No company access, go to onboarding
-							setTimeout(() => window.location.href = '/onboarding', 0);
-						}
-					} catch {
-						// Error with company context, go to onboarding
-						setTimeout(() => window.location.href = '/onboarding', 0);
-					}
-				}
-
-				toast.success('Successfully signed in with Google!');
-			} else {
-				console.log('No redirect result found');
-			}
-		} catch (error) {
-			console.error('Error checking redirect:', error);
-			if (error instanceof Error) {
-				toast.error(error.message);
-			} else {
-				toast.error('An error occurred during sign-in');
-			}
-		} finally {
-			checkingRedirect = false;
-		}
+		
+		// Set checkingRedirect to false immediately since we're not checking redirect results
+		checkingRedirect = false;
 	});
 </script>
 

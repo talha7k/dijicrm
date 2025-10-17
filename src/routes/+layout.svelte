@@ -7,7 +7,8 @@
 	import Loading from '$lib/components/ui/loading/loading.svelte';
 
 	let { children } = $props();
-
+	
+	// Initialize app state - client-side initialization
 	initializeApp();
 </script>
 

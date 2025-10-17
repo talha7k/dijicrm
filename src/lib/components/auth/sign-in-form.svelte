@@ -8,6 +8,25 @@
 	import * as Form from '../ui/form/index.js';
 	import { toast } from 'svelte-sonner';
 	import { initializeApp, resetInitialization } from '$lib/services/initService';
+	import { auth } from '$lib/firebase';
+
+	// Function to create session cookie
+	async function createSessionCookie(idToken: string) {
+		const response = await fetch('/api/session', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ idToken }),
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.error || 'Failed to create session');
+		}
+
+		return response.json();
+	}
 
 	let formData = $state({
 		email: '',
@@ -53,7 +72,15 @@
 			}
 
 			// Sign in
-			await firekitAuth.signInWithEmail(formData.email, formData.password);
+			const userCredential = await firekitAuth.signInWithEmail(formData.email, formData.password);
+			
+			// Create session cookie after successful sign-in
+			if (userCredential?.user) {
+				// Get the ID token from the authenticated user
+				const idToken = await auth.currentUser!.getIdToken();
+				await createSessionCookie(idToken);
+			}
+			
 			toast.success('Signed in successfully');
 			resetInitialization();
 			await initializeApp();

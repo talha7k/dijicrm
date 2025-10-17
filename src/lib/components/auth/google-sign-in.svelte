@@ -15,6 +15,24 @@
 
 	let isLoading = $state(false);
 
+	// Function to create session cookie
+	async function createSessionCookie(idToken: string) {
+		const response = await fetch('/api/session', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ idToken }),
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.error || 'Failed to create session');
+		}
+
+		return response.json();
+	}
+
 	async function signInWithGoogle() {
 		if (isLoading) return;
 
@@ -35,6 +53,10 @@
 
 			// Handle post-authentication
 			await handlePostAuthentication(result.user);
+
+			// Create session cookie via API using the ID token from the result
+			const idToken = await result.user.getIdToken();
+			await createSessionCookie(idToken);
 
 			// Trigger initService navigation logic
 			const { app } = await import('$lib/stores/app');

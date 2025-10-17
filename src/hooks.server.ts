@@ -30,35 +30,35 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
   }
 
-  // Get auth token from header
-  const authHeader = event.request.headers.get("authorization");
-
-  console.log("Auth header present:", !!authHeader);
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
+  // Check for session cookie in request
+  const sessionCookie = event.cookies.get("__session");
+  
+  if (!sessionCookie) {
+    // No cookie exists - treat as logged out user
+    event.locals.user = undefined;
+  } else {
     try {
-      // Extract token from header
-      const token = authHeader.split(" ")[1];
-      console.log("Token extracted, length:", token.length);
-
-      // Verify token with Firebase Admin
+      // Verify session cookie with Firebase Admin
       const auth = getAuthAdmin();
-      if (!auth) throw new Error("Firebase Auth not initialized");
-      console.log("Firebase Admin initialized, verifying token...");
-      const decodedToken = await auth.verifyIdToken(token);
-      console.log("Token verified successfully for user:", decodedToken.uid);
-
-      // Set user in locals
-      event.locals.user = {
-        uid: decodedToken.uid,
-        email: decodedToken.email,
-        displayName: decodedToken.name || null,
-        photoURL: decodedToken.picture || null,
-      };
-      console.log("User set in locals:", event.locals.user.uid);
+      if (!auth) {
+        console.error("Firebase Auth not initialized");
+        event.locals.user = undefined;
+      } else {
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie, true); // true to check if revoked
+        
+        // Set user in locals with essential information
+        event.locals.user = {
+          uid: decodedClaims.uid,
+          email: decodedClaims.email || undefined,
+          displayName: decodedClaims.name || null,
+          photoURL: decodedClaims.picture || null,
+        };
+      }
     } catch (error) {
-      // Invalid token - continue without user
-      console.warn("Invalid auth token:", error);
+      // Invalid/Expired cookie - continue without user and delete the invalid cookie
+      console.warn("Invalid session cookie:", error);
+      event.locals.user = undefined;
+      event.cookies.delete("__session", { path: "/" });
     }
   }
 

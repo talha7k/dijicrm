@@ -1,98 +1,67 @@
-import { get } from "svelte/store";
-import { onAuthStateChanged, getRedirectResult } from "firebase/auth";
-import { auth } from "$lib/firebase";
-import { userProfile } from "$lib/stores/user";
-import { companyContext, initializeFromUser } from "$lib/stores/companyContext";
-import { handlePostAuthentication } from "$lib/services/authService";
 import { app } from "$lib/stores/app";
-import { goto } from "$app/navigation";
-import { smtpConfigStore } from "$lib/stores/smtpConfig";
+import { userProfile } from "$lib/stores/user";
+import { companyContext } from "$lib/stores/companyContext";
+import type { UserProfile } from "$lib/types/user";
+import type { Company } from "$lib/types/company";
+import type { CompanyMember } from "$lib/types/companyMember";
 
 let initializationPromise: Promise<void> | null = null;
 
-function initialize(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    app.set({
-      initializing: true,
-      authenticated: false,
-      profileReady: false,
-      companyReady: false,
-      error: null,
-    });
+// Initialize with server-side data that was passed down
+type ServerSessionData = {
+  profile: UserProfile;
+  company: Company;
+  membership: CompanyMember;
+};
 
-    onAuthStateChanged(auth, async (user) => {
-      try {
-        if (user) {
-          app.update((s) => ({ ...s, authenticated: true }));
+export function initializeAppFromServerData(data: ServerSessionData): void {
+  // Set app state to indicate user is authenticated and ready
+  app.set({
+    initializing: false,
+    authenticated: true,
+    profileReady: true,
+    companyReady: true,
+    error: null,
+  });
 
-          // Always fetch fresh profile data
-          await handlePostAuthentication(user);
+  // Set the user profile data
+  userProfile.set({
+    data: data.profile,
+    loading: false,
+    error: null,
+    update: async () => {} // This will be replaced with actual update function if needed
+  });
 
-          const profile = get(userProfile);
-          if (profile.data) {
-            app.update((s) => ({ ...s, profileReady: true }));
-
-            // Check if onboarding is completed
-            if (!profile.data.onboardingCompleted) {
-              // Only redirect after full initialization is complete
-              app.update((s) => ({
-                ...s,
-                initializing: false,
-                companyReady: false,
-              }));
-              // Use setTimeout to ensure the app state is fully updated before navigation
-              setTimeout(() => goto("/onboarding"), 0);
-              return;
-            }
-
-            // Always initialize company context fresh
-            await initializeFromUser();
-
-            const company = get(companyContext);
-            if (company.data) {
-              app.update((s) => ({ ...s, companyReady: true }));
-            } else if (company.error) {
-              // Check if the error is due to no company associations
-              if (company.error.includes("No company associations found")) {
-                // Redirect to onboarding for users without company access
-                app.update((s) => ({
-                  ...s,
-                  initializing: false,
-                  companyReady: false,
-                }));
-                // Use setTimeout to ensure the app state is fully updated before navigation
-                setTimeout(() => goto("/onboarding"), 0);
-                return;
-              }
-            }
-          }
-        } else {
-          app.set({
-            initializing: false,
-            authenticated: false,
-            profileReady: false,
-            companyReady: false,
-            error: null,
-          });
-        }
-        app.update((s) => ({ ...s, initializing: false }));
-        resolve();
-      } catch (error) {
-        app.update((s) => ({
-          ...s,
-          initializing: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        }));
-        reject(error);
-      }
+  // Set the company context data
+  import("$lib/stores/companyContext").then(({ companyContextData }) => {
+    companyContextData.set({
+      data: {
+        companyId: data.profile.currentCompanyId || data.company.code,
+        company: data.company,
+        role: data.membership.role,
+        permissions: data.membership.permissions
+      },
+      loading: false,
+      error: null
     });
   });
 }
 
 export function initializeApp(): Promise<void> {
+  // Initialize with minimal state for the client, but the server-side data
+  // will override this when the (app) layout is loaded
   if (!initializationPromise) {
-    initializationPromise = initialize();
+    // Set initial state as non-initializing to avoid getting stuck
+    app.set({
+      initializing: false,
+      authenticated: false,
+      profileReady: false,
+      companyReady: false,
+      error: null,
+    });
+    initializationPromise = Promise.resolve();
   }
+  
   return initializationPromise;
 }
 

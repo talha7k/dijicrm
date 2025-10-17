@@ -8,6 +8,7 @@ import {
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import type { UserProfile } from "$lib/types/user";
+import type { CompanyMember } from "$lib/types/companyMember";
 
 export interface OnboardingData {
   role: "client" | "company-member" | "create-company";
@@ -100,7 +101,7 @@ export async function createUserProfile(
     }
 
     // Create user profile
-    const userProfile: any = {
+    const UserProfile: any = {
       uid: user.uid,
       email: user.email!,
       displayName: user.displayName || null,
@@ -132,7 +133,7 @@ export async function createUserProfile(
         {
           companyId: companyId,
           role: getCompanyRole(onboardingData.role),
-          joinedAt: new Date(),
+          joinedAt: new Date(), // Use regular Date instead of serverTimestamp for arrays
         },
       ],
 
@@ -151,15 +152,31 @@ export async function createUserProfile(
     console.log("User profile to be saved:", {
       uid: user.uid,
       companyId,
-      role: userProfile.role,
+      role: UserProfile.role,
     });
 
     // Save user profile
     const userRef = doc(db, "users", user.uid);
-    transaction.set(userRef, userProfile);
+    transaction.set(userRef, UserProfile);
 
-    console.log("User profile saved successfully");
-    return userProfile;
+    // Create the corresponding membership document in the company's members subcollection
+    const membershipRef = doc(collection(db, `companies/${companyId}/members`), user.uid);
+    const membershipData: any = {
+      id: `${user.uid}-${companyId}`,
+      userId: user.uid,
+      companyId: companyId,
+      role: getCompanyRole(onboardingData.role),
+      joinedAt: serverTimestamp(), // This is OK outside of arrays
+      status: "active",
+      permissions: getDefaultPermissions(onboardingData.role),
+      invitedBy: onboardingData.role === "create-company" ? user.uid : undefined, // Owner invited themselves
+    };
+
+    transaction.set(membershipRef, membershipData);
+    console.log("Company membership created for user:", user.uid, "in company:", companyId);
+
+    console.log("User profile and membership saved successfully");
+    return UserProfile;
   });
 }
 

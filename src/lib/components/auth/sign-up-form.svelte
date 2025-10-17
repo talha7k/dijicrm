@@ -7,6 +7,25 @@
 	import Button from '../ui/button/button.svelte';
 	import Checkbox from '../ui/checkbox/checkbox.svelte';
 	import { goto } from '$app/navigation';
+	import { auth } from '$lib/firebase';
+
+	// Function to create session cookie
+	async function createSessionCookie(idToken: string) {
+		const response = await fetch('/api/session', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ idToken }),
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData.error || 'Failed to create session');
+		}
+
+		return response.json();
+	}
 
 	interface Props {
 		invitationToken?: string | null;
@@ -66,6 +85,10 @@
 				const firebaseUser = userCredential.user as any; // Type assertion for Firebase User
 				await createBasicUserProfile(firebaseUser);
 				console.log("Basic profile created during sign-up for:", firebaseUser.uid);
+				
+				// Get the ID token to create session cookie
+				const idToken = await auth.currentUser!.getIdToken();
+				await createSessionCookie(idToken);
 			}
 			
 			toast.success('Account created successfully');

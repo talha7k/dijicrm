@@ -7,8 +7,26 @@
   import * as Sidebar from "$lib/components/ui/sidebar";
   import { isSidebarOpen } from "$lib/stores/sidebar";
   import { app } from "$lib/stores/app";
-
-  let { children } = $props();
+  import { initializeAppFromServerData } from "$lib/services/initService";
+  import type { UserProfile } from "$lib/types/user";
+  import type { Company } from "$lib/types/company";
+  import type { CompanyMember } from "$lib/types/companyMember";
+  
+  // Stage 3: Populating the Svelte Stores
+  type SessionData = {
+    profile: UserProfile;
+    company: Company;
+    membership: CompanyMember;
+  };
+  
+  // Receive server data - this will only be present if user passed server-side checks
+  let { data, children } = $props<{ data: SessionData; children: any }>();
+  
+  // Initialize app with server-side data when available
+  // This will set authenticated: true, profileReady: true, companyReady: true
+  if (data?.profile && data?.company && data?.membership) {
+    initializeAppFromServerData(data);
+  }
 </script>
 
 {#if $app.initializing}
@@ -21,11 +39,11 @@
     </div>
   </div>
 {:else if !$app.authenticated}
-  <!-- Will redirect to sign-in via effect -->
+  <!-- Will redirect to sign-in via server-side redirect -->
 {:else if !$app.profileReady}
-  <!-- Will redirect to onboarding via effect -->
+  <!-- Will redirect to onboarding via server-side redirect -->
 {:else if !$app.companyReady}
-  <!-- Will redirect to onboarding via effect -->
+  <!-- Will redirect to onboarding via server-side redirect -->
 {:else}
   <Sidebar.Provider bind:open={$isSidebarOpen}>
     <AppSidebar variant="inset" />
