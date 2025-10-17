@@ -16,6 +16,7 @@
    import { documentTemplatesStore } from '$lib/stores/documentTemplates';
    import { companyContext } from '$lib/stores/companyContext';
    import ConfirmDialog from '$lib/components/shared/confirm-dialog.svelte';
+   import TemplatePreviewDialog from '$lib/components/shared/template-preview-dialog.svelte';
    import type { DocumentTemplate } from '$lib/types/document';
 
    let mounted = $state(false);
@@ -23,10 +24,9 @@
    let selectedType = $state('all');
    let showSampleDialog = $state(false);
    let showEditDialog = $state(false);
-   let showPreviewDialog = $state(false);
-   let templateToEdit = $state<DocumentTemplate | null>(null);
-   let templateToPreview = $state<DocumentTemplate | null>(null);
-   let previewHtml = $state('');
+    let showPreviewDialog = $state(false);
+    let templateToEdit = $state<DocumentTemplate | null>(null);
+    let templateToPreview = $state<DocumentTemplate | null>(null);
 
    // Dialog state
    let showConfirmDialog = $state(false);
@@ -292,22 +292,12 @@
 
 
 
-async function handleTemplatePreview(template: DocumentTemplate) {
-     templateToPreview = template;
-     await generatePreviewHtml(template);
-     showPreviewDialog = true;
-   }
+ function handleTemplatePreview(template: DocumentTemplate) {
+      templateToPreview = template;
+      showPreviewDialog = true;
+    }
 
-   async function generatePreviewHtml(template: DocumentTemplate) {
-     try {
-       const { generatePreviewData, renderTemplate } = await import('$lib/utils/template-validation');
-       const previewData = await generatePreviewData(template);
-       previewHtml = renderTemplate(template, previewData);
-     } catch (error) {
-       console.error('Error generating preview:', error);
-       previewHtml = '<div class="text-red-500 p-4">Error generating preview</div>';
-     }
-   }
+
 
 function handleEditTemplate(template: DocumentTemplate) {
      templateToEdit = template;
@@ -594,37 +584,8 @@ function handleDeleteTemplate(template: any) {
       </DialogContent>
     </Dialog>
 
-    <!-- Preview Template Dialog -->
-    <Dialog bind:open={showPreviewDialog}>
-      <DialogContent class="max-w-4xl max-h-[80vh] overflow-auto">
-        <DialogHeader>
-          <DialogTitle>Template Preview</DialogTitle>
-          <DialogDescription>
-            Preview of how the document will appear when generated
-          </DialogDescription>
-        </DialogHeader>
-        <div class="mt-4">
-          <div class="border rounded-lg p-6 bg-white shadow-sm min-h-[600px] relative">
-            <style>
-              .order-container { max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif; }
-              .order-header { margin-bottom: 30px; }
-              .company-info h2 { margin: 0 0 10px 0; font-size: 18px; }
-              .company-info p { margin: 5px 0; }
-              .billing-info { margin-bottom: 30px; }
-              .bill-to h3 { margin: 0 0 10px 0; font-size: 16px; }
-              .order-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-              .order-table th, .order-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              .order-table th { background-color: #f5f5f5; font-weight: bold; }
-              .totals { text-align: right; margin-bottom: 30px; }
-              .total-row { margin-bottom: 5px; }
-              .total-row.total { font-weight: bold; font-size: 18px; }
-              .order-footer { margin-top: 40px; text-align: center; }
-            </style>
-            {@html previewHtml}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+     <!-- Preview Template Dialog -->
+     <TemplatePreviewDialog bind:open={showPreviewDialog} template={templateToPreview} />
 
     <!-- Confirm Dialog -->
     <ConfirmDialog

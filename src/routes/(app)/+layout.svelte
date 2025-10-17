@@ -14,7 +14,12 @@
   $effect(() => {
     if (!$app.initializing && !$app.authenticated) {
       goto("/sign-in");
-    } else if (!$app.initializing && $app.authenticated && $app.profileReady && !$app.companyReady) {
+    } else if (
+      !$app.initializing &&
+      $app.authenticated &&
+      $app.profileReady &&
+      !$app.companyReady
+    ) {
       // User is authenticated but needs company setup
       goto("/onboarding");
     }
@@ -24,7 +29,9 @@
 {#if $app.initializing}
   <div class="flex h-full w-full items-center justify-center">
     <div class="text-center">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+      <div
+        class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"
+      ></div>
       <p class="text-muted-foreground">Setting up your workspace...</p>
     </div>
   </div>
@@ -37,9 +44,9 @@
 {:else}
   <Sidebar.Provider bind:open={$isSidebarOpen}>
     <AppSidebar variant="inset" />
-    <Sidebar.Inset>
+    <Sidebar.Inset class="rounded-tl-2xl border-l border-t">
       <header
-        class="flex h-16 shrink-0 items-center justify-between gap-2 border-b"
+        class="flex h-16 shrink-0 items-center justify-between gap-2 border-b pl-2"
       >
         <div class="flex items-center gap-2 px-3">
           <AutoBreadcrumb />
@@ -50,7 +57,7 @@
           <UserAvatarDropdown />
         </div>
       </header>
-      <div class="flex flex-1 flex-col gap-4 p-4">
+      <div class="flex flex-1 flex-col gap-4 p-4 pl-5">
         {@render children()}
       </div>
     </Sidebar.Inset>

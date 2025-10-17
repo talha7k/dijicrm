@@ -14,6 +14,9 @@
 		if (!url) return false;
 		const currentPath = $page.url.pathname;
 		
+		// Debug logging (remove in production)
+		console.log('Active check:', { currentPath, url, isActive: currentPath === url || (url !== '/' && currentPath.startsWith(url) && (currentPath.charAt(url.length) === '' || currentPath.charAt(url.length) === '/')) });
+		
 		// Exact match
 		if (currentPath === url) return true;
 		
@@ -102,6 +105,15 @@
 	:global([data-sidebar="menu-button"]) {
 		transition: background-color 150ms ease-in-out, color 150ms ease-in-out !important;
 	}
+	
+	/* Override base active styles with more specific selectors */
+	:global([data-sidebar="menu-button"][data-active="true"]) {
+		background-color: hsl(142.1 70.6% 45.3%) !important;
+		color: white !important;
+		font-weight: 600 !important;
+		box-shadow: inset 0 0 0 2px hsl(142.1 70.6% 35%), 0 0 8px hsl(142.1 70.6% 30%);
+		position: relative;
+	}
 
 	/* Add ripple effect on click */
 	:global([data-sidebar="menu-button"]:active),
@@ -145,16 +157,19 @@
 	
 	/* Active state with enhanced hover */
 	:global([data-sidebar="menu-button"][data-active="true"]) {
-		background-color: hsl(var(--sidebar-accent)) !important;
-		color: hsl(var(--sidebar-accent-foreground)) !important;
+		background-color: hsl(142.1 70.6% 45.3%) !important;
+		color: white !important;
 		font-weight: 600 !important;
-		box-shadow: inset 0 0 0 2px hsl(var(--sidebar-primary) / 0.3);
+		box-shadow: inset 0 0 0 2px hsl(142.1 70.6% 35%), 0 0 8px hsl(142.1 70.6% 30%);
+		position: relative;
+		border-left: 4px solid #10b981 !important;
+		padding-left: calc(0.5rem - 4px) !important;
 	}
 	
 	:global([data-sidebar="menu-button"][data-active="true"]:hover) {
-		background-color: hsl(var(--sidebar-primary)) !important;
-		color: hsl(var(--sidebar-primary-foreground)) !important;
-		box-shadow: inset 0 0 0 2px hsl(var(--sidebar-primary) / 0.5), 0 0 12px hsl(var(--sidebar-primary) / 0.3), 0 4px 16px hsl(var(--sidebar-primary) / 0.2);
+		background-color: hsl(142.1 75% 40%) !important;
+		color: white !important;
+		box-shadow: inset 0 0 0 2px #10b981, 0 0 12px hsl(142.1 70.6% 30%), 0 4px 16px hsl(142.1 70.6% 25%);
 		transform: translateY(-2px);
 	}
 	
@@ -168,16 +183,17 @@
 	}
 	
 	:global([data-sidebar="menu-sub-button"][data-active="true"]) {
-		background-color: hsl(var(--sidebar-accent)) !important;
-		color: hsl(var(--sidebar-accent-foreground)) !important;
+		background-color: hsl(142.1 70.6% 45.3%) !important;
+		color: white !important;
 		font-weight: 600 !important;
-		box-shadow: inset 0 0 0 1px hsl(var(--sidebar-primary) / 0.3);
+		box-shadow: inset 0 0 0 1px hsl(142.1 70.6% 35%), 0 0 6px hsl(142.1 70.6% 30%);
+		position: relative;
 	}
 	
 	:global([data-sidebar="menu-sub-button"][data-active="true"]:hover) {
-		background-color: hsl(var(--sidebar-primary)) !important;
-		color: hsl(var(--sidebar-primary-foreground)) !important;
-		box-shadow: inset 0 0 0 1px hsl(var(--sidebar-primary) / 0.5), 0 0 8px hsl(var(--sidebar-primary) / 0.3), 0 2px 8px hsl(var(--sidebar-primary) / 0.2);
+		background-color: hsl(142.1 75% 40%) !important;
+		color: white !important;
+		box-shadow: inset 0 0 0 1px #10b981, 0 0 8px hsl(142.1 70.6% 30%), 0 2px 8px hsl(142.1 70.6% 25%);
 		transform: translateX(4px);
 	}
 	
@@ -206,5 +222,24 @@
 	:global([data-sidebar="menu-button"]:hover .chevron-icon) {
 		filter: brightness(1.4) drop-shadow(0 0 4px hsl(var(--sidebar-accent-foreground) / 0.5));
 		transform: scale(1.15) rotate(5deg);
+	}
+	
+
+	
+	/* Collapsed state active indicators */
+	:global([data-sidebar="menu-button"][data-active="true"]) {
+		background-color: hsl(142.1 70.6% 45.3%) !important;
+		color: white !important;
+	}
+	
+	/* Ensure collapsed state centers icons properly */
+	:global([data-collapsible="icon"] [data-sidebar="menu-button"]) {
+		justify-content: center !important;
+		padding-left: 0.5rem !important;
+		padding-right: 0.5rem !important;
+	}
+	
+	:global([data-collapsible="icon"] [data-sidebar="menu-button"] > span) {
+		display: none !important;
 	}
 </style>
