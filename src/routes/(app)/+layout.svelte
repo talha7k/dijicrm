@@ -5,56 +5,30 @@
   import UserAvatarDropdown from "$lib/components/shared/user-avatar-dropdown.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar";
   import { isSidebarOpen } from "$lib/stores/sidebar";
-  import { app, isReady, shouldShowLoading } from "$lib/stores/app";
-  import { initializeAppFromServerData, initializeApp } from "$lib/services/initService";
-  import { setupNavigationGuards } from "$lib/services/navigationGuard";
+  import { initializeAuth, isLoading, authError, readyForApp } from "$lib/services/authService";
   import Loading from "$lib/components/ui/loading/loading.svelte";
-  import type { UserProfile } from "$lib/types/user";
-  import type { Company } from "$lib/types/company";
-  import type { CompanyMember } from "$lib/types/companyMember";
+  import { onMount } from "svelte";
   
-  // Stage 3: Populating the Svelte Stores
-  type SessionData = {
-    profile: UserProfile;
-    company: Company;
-    membership: CompanyMember;
-  };
+  let { children } = $props();
   
-  // Receive server data - this will only be present if user passed server-side checks
-  let { data, children } = $props<{ data: SessionData; children: any }>();
-  
-  // Initialize app with server-side data when available
-  // This will set authenticated: true, profileReady: true, companyReady: true
-  if (data?.profile && data?.company && data?.membership) {
-    initializeAppFromServerData(data);
-  } else {
-    // Fallback initialization for client-side navigation
-    initializeApp();
-  }
-  
-  // Set up navigation guards for app routes
-  $effect(() => {
-    const unsubscribe = setupNavigationGuards();
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
+  // Initialize auth service when component mounts
+  onMount(() => {
+    initializeAuth();
   });
 </script>
 
-{#if $shouldShowLoading}
+{#if $isLoading}
   <div class="flex h-full w-full items-center justify-center">
-    <Loading message={$app.initializing ? "Initializing app..." : "Loading your workspace..."} size="lg" />
+    <Loading message="Initializing application..." size="lg" />
   </div>
-{:else if $app.error}
+{:else if $authError}
   <div class="flex h-full w-full items-center justify-center">
     <div class="text-center">
-      <p class="text-destructive mb-2">Error loading application</p>
-      <p class="text-sm text-muted-foreground">{$app.error}</p>
+      <p class="text-destructive mb-2">Authentication Error</p>
+      <p class="text-sm text-muted-foreground">{$authError}</p>
     </div>
   </div>
-{:else}
+{:else if $readyForApp}
   <Sidebar.Provider bind:open={$isSidebarOpen}>
     <AppSidebar variant="inset" />
     <Sidebar.Inset class="rounded-tl-2xl border-l border-t">
@@ -74,4 +48,9 @@
       </div>
     </Sidebar.Inset>
   </Sidebar.Provider>
+{:else}
+  <!-- User not ready for app - should be handled by auth layout redirects -->
+  <div class="flex h-full w-full items-center justify-center">
+    <Loading message="Preparing your workspace..." size="lg" />
+  </div>
 {/if}

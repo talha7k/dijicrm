@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { firekitUser } from 'svelte-firekit';
-	import { userProfile } from '$lib/stores/user';
+	import { authStore } from '$lib/services/authService';
 	import { app } from '$lib/stores/app';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
@@ -15,7 +15,7 @@
 	$effect(() => {
 		if (!$app.initializing && $app.authenticated) {
 			// If onboarding is already completed, redirect to appropriate dashboard
-			const profile = $userProfile.data;
+			const profile = $authStore.profile;
 			if (profile?.onboardingCompleted) {
 				if (profile.role === 'client') {
 					goto('/client-dashboard');

@@ -1,32 +1,11 @@
 <script lang="ts">
-	import { firekitAuth } from 'svelte-firekit';
 	import { signInSchema } from '../../schemas/sign-in.js';
 	import { Input } from '../ui/input/index.js';
 	import Button from '../ui/button/button.svelte';
 	import * as v from 'valibot';
-
-	import * as Form from '../ui/form/index.js';
 	import { toast } from 'svelte-sonner';
-	import { initializeApp, resetInitialization } from '$lib/services/initService';
-	import { auth } from '$lib/firebase';
-
-	// Function to create session cookie
-	async function createSessionCookie(idToken: string) {
-		const response = await fetch('/api/session', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify({ idToken }),
-		});
-
-		if (!response.ok) {
-			const errorData = await response.json();
-			throw new Error(errorData.error || 'Failed to create session');
-		}
-
-		return response.json();
-	}
+	import { signIn } from '$lib/services/authService';
+	import { goto } from '$app/navigation';
 
 	let formData = $state({
 		email: '',
@@ -79,19 +58,13 @@
 				return;
 			}
 
-			// Sign in
-			const userCredential = await firekitAuth.signInWithEmail(formData.email, formData.password);
-			
-			// Create session cookie after successful sign-in
-			if (userCredential?.user) {
-				// Get the ID token from the authenticated user
-				const idToken = await auth.currentUser!.getIdToken();
-				await createSessionCookie(idToken);
-			}
+			// Sign in using unified auth service
+			await signIn(formData.email, formData.password);
 			
 			toast.success('Signed in successfully');
-			resetInitialization();
-			await initializeApp();
+			
+			// Redirect to dashboard (layout will handle loading states)
+			goto('/dashboard', { replaceState: true });
 		} catch (error) {
 			if (error instanceof Error) {
 				toast.error(error.message);

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { firekitAuth } from 'svelte-firekit';
 	import { Input } from '../ui/input/index.js';
 	import { signUpSchema } from '../../schemas/sign-up.js';
 	import { toast } from 'svelte-sonner';
@@ -7,25 +6,7 @@
 	import Button from '../ui/button/button.svelte';
 	import Checkbox from '../ui/checkbox/checkbox.svelte';
 	import { goto } from '$app/navigation';
-	import { auth } from '$lib/firebase';
-
-	// Function to create session cookie
-	async function createSessionCookie(idToken: string) {
-		const response = await fetch('/api/session', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify({ idToken }),
-		});
-
-		if (!response.ok) {
-			const errorData = await response.json();
-			throw new Error(errorData.error || 'Failed to create session');
-		}
-
-		return response.json();
-	}
+	import { signUp } from '$lib/services/authService';
 
 	interface Props {
 		invitationToken?: string | null;
@@ -75,21 +56,9 @@
 			// TODO: Check if this is an invited client by querying database for invitation
 			// For now, skip this check
 
-			// Sign up
+			// Sign up using unified auth service
 			const displayName = `${formData.firstName} ${formData.lastName}`;
-			const userCredential = await firekitAuth.registerWithEmail(formData.email, formData.password, displayName);
-			
-			// Create basic profile immediately after successful registration
-			if (userCredential?.user) {
-				const { createBasicUserProfile } = await import('$lib/services/authService');
-				const firebaseUser = userCredential.user as any; // Type assertion for Firebase User
-				await createBasicUserProfile(firebaseUser);
-				console.log("Basic profile created during sign-up for:", firebaseUser.uid);
-				
-				// Get the ID token to create session cookie
-				const idToken = await auth.currentUser!.getIdToken();
-				await createSessionCookie(idToken);
-			}
+			await signUp(formData.email, formData.password, displayName);
 			
 			toast.success('Account created successfully');
 			goto('/onboarding');

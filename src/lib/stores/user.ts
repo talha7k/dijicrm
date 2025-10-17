@@ -1,45 +1,33 @@
 import { derived } from "svelte/store";
-import type { UserProfile } from "$lib/types/user";
+import { userProfile, profileComplete } from "$lib/services/authService";
 import {
   isProfileComplete,
   validateProfileStructure,
   type ValidationResult,
 } from "$lib/services/profileValidationService";
-import { persisted } from "svelte-persisted-store";
 
-type UserProfileStore = {
-  data: UserProfile | undefined;
-  loading: boolean;
-  error: any;
-  update: (data: Partial<UserProfile>) => Promise<void>;
-};
+// Re-export from unified auth service for backward compatibility
+export { userProfile, profileComplete };
 
-export const userProfile = persisted<UserProfileStore>("userProfile", {
-  data: undefined,
-  loading: true,
-  error: null,
-  update: async () => {},
-});
-
-// Derived store for profile completeness status
+// Derived store for profile completeness status (legacy compatibility)
 export const profileCompleteness = derived(userProfile, ($userProfile) => {
-  if (!$userProfile.data) {
+  if (!$userProfile) {
     return {
       isComplete: false,
-      isValidating: $userProfile.loading,
+      isValidating: false,
       validation: null as ValidationResult | null,
       hasMinimumFields: false,
     };
   }
 
-  const validation = validateProfileStructure($userProfile.data);
-  const isComplete = isProfileComplete($userProfile.data);
+  const validation = validateProfileStructure($userProfile);
+  const isComplete = isProfileComplete($userProfile);
 
   return {
     isComplete,
-    isValidating: $userProfile.loading,
+    isValidating: false,
     validation,
-    hasMinimumFields: validation.isValid, // Since isProfileComplete uses validateProfileStructure
+    hasMinimumFields: validation.isValid,
   };
 });
 

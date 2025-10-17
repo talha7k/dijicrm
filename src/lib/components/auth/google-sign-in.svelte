@@ -1,16 +1,17 @@
 <script lang="ts">
-	import { signInWithPopup, GoogleAuthProvider, getAuth } from 'firebase/auth';
+	import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 	import { toast } from 'svelte-sonner';
-
 	import Button from '../ui/button/button.svelte';
-	import { handlePostAuthentication } from '$lib/services/authService';
+	import { goto } from '$app/navigation';
 
 	let {
 		label = 'Sign in with',
-		disabled = false
+		disabled = false,
+		onIsLoadingChange
 	}: {
 		label: string;
 		disabled?: boolean;
+		onIsLoadingChange?: (isLoading: boolean) => void;
 	} = $props();
 
 	let isLoading = $state(false);
@@ -38,6 +39,10 @@
 
 		try {
 			isLoading = true;
+			// Notify parent of loading state change
+			if (onIsLoadingChange) {
+				onIsLoadingChange(isLoading);
+			}
 
 			// Get Firebase Auth instance
 			const { auth } = await import('$lib/firebase');
@@ -51,47 +56,21 @@
 			const result = await signInWithPopup(auth, provider);
 			console.log('Popup result:', result);
 
-			// Handle post-authentication
-			await handlePostAuthentication(result.user);
-
 			// Create session cookie via API using the ID token from the result
-				const idToken = await result.user.getIdToken();
-				await createSessionCookie(idToken);
+			const idToken = await result.user.getIdToken();
+			await createSessionCookie(idToken);
 
-			// Trigger initService navigation logic
-			const { app } = await import('$lib/stores/app');
-			const { userProfile } = await import('$lib/stores/user');
-			const { companyContext, initializeFromUser } = await import('$lib/stores/companyContext');
-			const { get } = await import('svelte/store');
-
-			// Update app state
-			app.update((s) => ({ ...s, authenticated: true }));
-
-			// Check user profile and redirect accordingly
-			const profile = get(userProfile);
-			if (profile.data && !profile.data.onboardingCompleted) {
-				// Redirect to onboarding
-				setTimeout(() => window.location.href = '/onboarding', 0);
-			} else if (profile.data) {
-				// Try to initialize company context
-				try {
-					await initializeFromUser();
-					const company = get(companyContext);
-					if (company.data) {
-						// User has company access, go to dashboard
-						setTimeout(() => window.location.href = '/dashboard', 0);
-					} else {
-						// No company access, go to onboarding
-						setTimeout(() => window.location.href = '/onboarding', 0);
-					}
-				} catch {
-					// Error with company context, go to onboarding
-					setTimeout(() => window.location.href = '/onboarding', 0);
-				}
-			}
-
+			// The auth state listener will handle the rest automatically
 			toast.success('Successfully signed in with Google!');
+			
+			// Redirect to dashboard (layout will handle loading states)
+			goto('/dashboard', { replaceState: true });
+
 			isLoading = false;
+			// Notify parent of loading state change
+			if (onIsLoadingChange) {
+				onIsLoadingChange(isLoading);
+			}
 
 		} catch (error) {
 			console.error('Google sign-in error:', error);
@@ -101,6 +80,10 @@
 				toast.error('An error occurred during sign-in');
 			}
 			isLoading = false;
+			// Notify parent of loading state change
+			if (onIsLoadingChange) {
+				onIsLoadingChange(isLoading);
+			}
 		}
 	}
 </script>

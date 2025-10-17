@@ -1,4 +1,4 @@
-import { userProfile } from "$lib/stores/user";
+import { authStore, AuthStatus } from "$lib/services/authService";
 import { companyContext, activeCompanyId } from "$lib/stores/companyContext";
 import { get } from "svelte/store";
 import { goto } from "$app/navigation";
@@ -8,8 +8,8 @@ import { isProfileComplete } from "$lib/services/profileValidationService";
  * Check if the current user has the required role
  */
 export function hasRole(requiredRole: "client" | "company"): boolean {
-  const user = get(userProfile);
-  return user.data?.role === requiredRole;
+  const auth = get(authStore);
+  return auth.profile?.role === requiredRole;
 }
 
 /**
@@ -66,8 +66,8 @@ export function requireCompany(): boolean {
  * Guard function for complete profile requirement
  */
 export function requireCompleteProfile(): boolean {
-  const profile = get(userProfile);
-  if (!profile.data || !isProfileComplete(profile.data)) {
+  const auth = get(authStore);
+  if (!auth.profile || !isProfileComplete(auth.profile)) {
     goto("/onboarding");
     return false;
   }
@@ -85,8 +85,8 @@ export function redirectToOnboarding(): void {
  * Check if current user has a complete profile
  */
 export function hasCompleteProfile(): boolean {
-  const profile = get(userProfile);
-  return profile.data ? isProfileComplete(profile.data) : false;
+  const auth = get(authStore);
+  return auth.profile ? isProfileComplete(auth.profile) : false;
 }
 
 /**
@@ -98,12 +98,12 @@ export function getProfileStatus(): {
   isLoading: boolean;
   error: any;
 } {
-  const profile = get(userProfile);
+  const auth = get(authStore);
   return {
-    exists: profile.data !== null && profile.data !== undefined,
-    isComplete: profile.data ? isProfileComplete(profile.data) : false,
-    isLoading: profile.loading,
-    error: profile.error,
+    exists: auth.profile !== null && auth.profile !== undefined,
+    isComplete: auth.profile ? isProfileComplete(auth.profile) : false,
+    isLoading: auth.status === AuthStatus.AUTHENTICATING,
+    error: auth.error,
   };
 }
 

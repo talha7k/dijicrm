@@ -1,22 +1,16 @@
-import { writable, derived } from "svelte/store";
+import { derived } from "svelte/store";
+import { authStore, AuthStatus } from "$lib/services/authService";
 
-type AppState = {
-  initializing: boolean;
-  authenticated: boolean;
-  profileReady: boolean;
-  companyReady: boolean;
-  error: string | null;
-};
+// Simplified app state - now just a thin wrapper around auth service
+export const app = derived(authStore, ($authStore) => ({
+  initializing: $authStore.status === AuthStatus.INITIALIZING,
+  authenticated: $authStore.status === AuthStatus.AUTHENTICATED,
+  profileReady: !!$authStore.profile,
+  companyReady: !!$authStore.profile && !!$authStore.profile.currentCompanyId,
+  error: $authStore.error,
+}));
 
-export const app = writable<AppState>({
-  initializing: true,
-  authenticated: false,
-  profileReady: false,
-  companyReady: false,
-  error: null,
-});
-
-// Unified loading state - true if any critical part is loading
+// Legacy derived stores for backward compatibility
 export const isLoading = derived(
   app,
   ($app) =>
@@ -24,7 +18,6 @@ export const isLoading = derived(
     ($app.authenticated && (!$app.profileReady || !$app.companyReady)),
 );
 
-// Ready state - true when app is fully ready to show content
 export const isReady = derived(
   app,
   ($app) =>
@@ -35,7 +28,6 @@ export const isReady = derived(
     !$app.error,
 );
 
-// Should show loading UI - simplified logic
 export const shouldShowLoading = derived(
   app,
   ($app) =>

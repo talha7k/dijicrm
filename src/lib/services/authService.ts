@@ -1,17 +1,135 @@
 import type { User } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "$lib/firebase";
-import { auth } from "$lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { auth, db } from "$lib/firebase";
 import type { UserProfile } from "$lib/types/user";
-import { userProfile } from "$lib/stores/user";
+import { derived } from "svelte/store";
+import { persisted } from "svelte-persisted-store";
 import { get } from "svelte/store";
-import { companyContext } from "$lib/stores/companyContext";
-import { documentTemplatesStore } from "$lib/stores/documentTemplates";
-import { clientDocumentsStore } from "$lib/stores/clientDocuments";
-import { clientManagementStore } from "$lib/stores/clientManagement";
-import { companyMetricsStore } from "$lib/stores/companyMetrics";
 
-export async function createBasicUserProfile(user: User): Promise<UserProfile> {
+// Auth status enum for clear state management
+export enum AuthStatus {
+  INITIALIZING = "initializing",
+  UNAUTHENTICATED = "unauthenticated",
+  AUTHENTICATING = "authenticating",
+  AUTHENTICATED = "authenticated",
+  ERROR = "error",
+}
+
+// Core auth state interface
+interface AuthState {
+  status: AuthStatus;
+  user: User | null;
+  profile: UserProfile | null;
+  error: string | null;
+  lastActivity: number;
+}
+
+// Create the unified auth store
+export const authStore = persisted<AuthState>("authState", {
+  status: AuthStatus.INITIALIZING,
+  user: null,
+  profile: null,
+  error: null,
+  lastActivity: Date.now(),
+});
+
+// Derived stores for convenient access
+export const isAuthenticated = derived(
+  authStore,
+  ($auth) => $auth.status === AuthStatus.AUTHENTICATED,
+);
+export const isInitializing = derived(
+  authStore,
+  ($auth) => $auth.status === AuthStatus.INITIALIZING,
+);
+export const isLoading = derived(
+  authStore,
+  ($auth) =>
+    $auth.status === AuthStatus.INITIALIZING ||
+    $auth.status === AuthStatus.AUTHENTICATING,
+);
+export const authError = derived(authStore, ($auth) => $auth.error);
+export const currentUser = derived(authStore, ($auth) => $auth.user);
+export const userProfile = derived(authStore, ($auth) => $auth.profile);
+
+// Auth state transition helpers
+function setAuthState(
+  status: AuthStatus,
+  user: User | null = null,
+  profile: UserProfile | null = null,
+  error: string | null = null,
+) {
+  authStore.update((state) => ({
+    ...state,
+    status,
+    user,
+    profile,
+    error,
+    lastActivity: Date.now(),
+  }));
+}
+
+// Initialize auth service - sets up Firebase auth listener
+export async function initializeAuth(): Promise<void> {
+  try {
+    setAuthState(AuthStatus.INITIALIZING);
+
+    // Set up Firebase auth state listener
+    auth.onAuthStateChanged(
+      async (firebaseUser) => {
+        if (firebaseUser) {
+          setAuthState(AuthStatus.AUTHENTICATING, firebaseUser);
+          await handleAuthenticatedUser(firebaseUser);
+        } else {
+          setAuthState(AuthStatus.UNAUTHENTICATED);
+        }
+      },
+      (error) => {
+        console.error("Auth state listener error:", error);
+        setAuthState(AuthStatus.ERROR, null, null, error.message);
+      },
+    );
+  } catch (error) {
+    console.error("Auth initialization error:", error);
+    setAuthState(
+      AuthStatus.ERROR,
+      null,
+      null,
+      error instanceof Error ? error.message : "Unknown error",
+    );
+  }
+}
+
+// Handle authenticated user - fetch or create profile
+async function handleAuthenticatedUser(user: User): Promise<void> {
+  try {
+    const profile = await fetchOrCreateUserProfile(user);
+    setAuthState(AuthStatus.AUTHENTICATED, user, profile);
+  } catch (error) {
+    console.error("Error handling authenticated user:", error);
+    setAuthState(
+      AuthStatus.ERROR,
+      user,
+      null,
+      error instanceof Error ? error.message : "Profile fetch failed",
+    );
+  }
+}
+
+// Fetch existing profile or create new one
+async function fetchOrCreateUserProfile(user: User): Promise<UserProfile> {
+  const userRef = doc(db, "users", user.uid);
+  const userSnap = await getDoc(userRef);
+
+  if (userSnap.exists()) {
+    return userSnap.data() as UserProfile;
+  } else {
+    return await createBasicUserProfile(user);
+  }
+}
+
+// Create basic user profile for new users
+async function createBasicUserProfile(user: User): Promise<UserProfile> {
   const { Timestamp } = await import("@firebase/firestore");
 
   const basicProfile: UserProfile = {
@@ -45,44 +163,108 @@ export async function createBasicUserProfile(user: User): Promise<UserProfile> {
   return basicProfile;
 }
 
-export async function handlePostAuthentication(user: User): Promise<void> {
-  if (!user) {
-    throw new Error("No user provided to handlePostAuthentication");
-  }
-
-  // Check if we already have the user data in persisted store
-  const currentProfile = get(userProfile);
-  if (currentProfile.data && currentProfile.data.uid === user.uid) {
-    // Update loading state but don't re-fetch
-    userProfile.update((s) => ({
-      ...s,
-      loading: false,
-      error: null,
-    }));
-    return;
-  }
-
-  const userRef = doc(db, "users", user.uid);
-  const userSnap = await getDoc(userRef);
-
-  if (userSnap.exists()) {
-    userProfile.update((s) => ({
-      ...s,
-      data: userSnap.data() as UserProfile,
-      loading: false,
-      error: null,
-    }));
-  } else {
-    const newUserProfile = await createBasicUserProfile(user);
-    userProfile.update((s) => ({
-      ...s,
-      data: newUserProfile,
-      loading: false,
-      error: null,
-    }));
+// Sign in function
+export async function signIn(email: string, password: string): Promise<void> {
+  try {
+    setAuthState(AuthStatus.AUTHENTICATING);
+    const { signInWithEmailAndPassword } = await import("firebase/auth");
+    await signInWithEmailAndPassword(auth, email, password);
+    // Auth state listener will handle the rest
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Sign in failed";
+    setAuthState(AuthStatus.ERROR, null, null, errorMessage);
+    throw error;
   }
 }
 
+// Sign up function
+export async function signUp(
+  email: string,
+  password: string,
+  displayName?: string,
+): Promise<void> {
+  try {
+    setAuthState(AuthStatus.AUTHENTICATING);
+    const { createUserWithEmailAndPassword } = await import("firebase/auth");
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password,
+    );
+
+    if (displayName) {
+      const { updateProfile } = await import("firebase/auth");
+      await updateProfile(userCredential.user, { displayName });
+    }
+
+    // Auth state listener will handle profile creation
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Sign up failed";
+    setAuthState(AuthStatus.ERROR, null, null, errorMessage);
+    throw error;
+  }
+}
+
+// Sign out function
+export async function signOut(): Promise<void> {
+  try {
+    await auth.signOut();
+    // Auth state listener will handle state reset
+  } catch (error) {
+    console.error("Sign out error:", error);
+    // Force state reset even if Firebase sign out fails
+    setAuthState(AuthStatus.UNAUTHENTICATED);
+  }
+}
+
+// Alias for signOut for backward compatibility
+export const handleLogout = signOut;
+
+// Reset password function
+export async function resetPassword(email: string): Promise<void> {
+  try {
+    const { sendPasswordResetEmail } = await import("firebase/auth");
+    await sendPasswordResetEmail(auth, email);
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Password reset failed";
+    throw new Error(errorMessage);
+  }
+}
+
+// Update user profile
+export async function updateUserProfile(
+  updates: Partial<UserProfile>,
+): Promise<void> {
+  try {
+    const currentState = get(authStore);
+    if (!currentState.user || !currentState.profile) {
+      throw new Error("No authenticated user found");
+    }
+
+    const userRef = doc(db, "users", currentState.user.uid);
+    const { Timestamp } = await import("@firebase/firestore");
+
+    const updatedProfile = {
+      ...currentState.profile,
+      ...updates,
+      updatedAt: Timestamp.now(),
+    };
+
+    await setDoc(userRef, updatedProfile, { merge: true });
+
+    // Update local state
+    setAuthState(AuthStatus.AUTHENTICATED, currentState.user, updatedProfile);
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Profile update failed";
+    throw new Error(errorMessage);
+  }
+}
+
+// Check if user profile exists
 export async function checkUserProfileExists(uid: string): Promise<boolean> {
   try {
     const userRef = doc(db, "users", uid);
@@ -93,69 +275,45 @@ export async function checkUserProfileExists(uid: string): Promise<boolean> {
   }
 }
 
-/**
- * Properly handle user logout by cleaning up all listeners and stores
- */
-export async function handleLogout(): Promise<void> {
-  // First call Firebase signOut to clear the authentication state
-  await auth.signOut();
-
-  // Clean up company context (this will also clean up any active listeners)
-  const companyContextValue = get(companyContext);
-  if (companyContextValue && typeof companyContextValue.reset === "function") {
-    companyContextValue.reset();
-  }
-
-  // Clean up document templates store
-  if (
-    documentTemplatesStore &&
-    typeof documentTemplatesStore.unsubscribe === "function"
-  ) {
-    documentTemplatesStore.unsubscribe();
-  }
-
-  // Clean up client documents store
-  if (
-    clientDocumentsStore &&
-    typeof clientDocumentsStore.unsubscribe === "function"
-  ) {
-    clientDocumentsStore.unsubscribe();
-  }
-
-  // Clean up client management store
-  if (
-    clientManagementStore &&
-    typeof clientManagementStore.unsubscribe === "function"
-  ) {
-    clientManagementStore.unsubscribe();
-  }
-
-  // Clean up company metrics store
-  if (
-    companyMetricsStore &&
-    typeof companyMetricsStore.unsubscribe === "function"
-  ) {
-    companyMetricsStore.unsubscribe();
-  }
-
-  // Reset user profile store
-  userProfile.set({
-    data: undefined,
-    loading: false,
-    error: null,
-    update: async () => {},
-  });
-
-  // Reset app state to indicate user is no longer authenticated
-  import("$lib/stores/app").then(({ app }) => {
-    app.update((state) => ({
-      ...state,
-      authenticated: false,
-      profileReady: false,
-      companyReady: false,
-      error: null,
-    }));
-  });
-
-  // Additional cleanup can be added here as needed
+// Get current auth state (synchronous)
+export function getCurrentAuthState(): AuthState {
+  return get(authStore);
 }
+
+// Clear auth state (for testing or forced logout)
+export function clearAuthState(): void {
+  setAuthState(AuthStatus.UNAUTHENTICATED);
+}
+
+// Refresh user data
+export async function refreshUserData(): Promise<void> {
+  const currentState = get(authStore);
+  if (currentState.user) {
+    await handleAuthenticatedUser(currentState.user);
+  }
+}
+
+// Utility function to check if profile is complete
+export function isProfileComplete(profile: UserProfile | null): boolean {
+  if (!profile) return false;
+
+  return !!(
+    profile.displayName &&
+    profile.email &&
+    profile.role &&
+    profile.metadata?.accountStatus === "active"
+  );
+}
+
+// Derived store for profile completeness
+export const profileComplete = derived(authStore, ($auth) =>
+  isProfileComplete($auth.profile),
+);
+
+// Derived store for ready state (authenticated + profile complete)
+export const readyForApp = derived(
+  authStore,
+  ($auth) =>
+    $auth.status === AuthStatus.AUTHENTICATED &&
+    isProfileComplete($auth.profile),
+);
