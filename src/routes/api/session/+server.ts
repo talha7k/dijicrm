@@ -2,7 +2,6 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getAuthAdmin } from '$lib/firebase-admin';
 
-// This API endpoint is kept for compatibility but you can now use bearer tokens directly
 export const POST: RequestHandler = async ({ request, cookies, url }) => {
   try {
     const { idToken } = await request.json();
@@ -39,6 +38,3 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
     return json({ error: 'Failed to create session' }, { status: 500 });
   }
 };
-
-// For bearer token authentication, you can now make direct calls to your API endpoints
-// with the Authorization: Bearer <token> header

@@ -15,7 +15,7 @@
   import { smtpConfigStore } from "$lib/stores/smtpConfig";
 import { companyContext } from "$lib/stores/companyContext";
 import { get } from "svelte/store";
-import { authenticatedFetch } from "$lib/utils/api";
+import { authenticatedFetch } from "$lib/utils/authUtils";
   import AlertDialog from "$lib/components/shared/alert-dialog.svelte";
   import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
 

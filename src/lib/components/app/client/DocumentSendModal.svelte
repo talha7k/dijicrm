@@ -14,7 +14,7 @@
  import { smtpConfigStore } from "$lib/stores/smtpConfig";
  import { get } from "svelte/store";
  import { mapClientDataToTemplate } from "$lib/utils/client-data-mapping";
- import { authenticatedFetch } from "$lib/utils/api";
+ import { authenticatedFetch } from "$lib/utils/authUtils";
  import { downloadFileAsBase64 } from "$lib/services/firebaseStorage";
   import type { UserProfile } from "$lib/types/user";
   import { toast } from "svelte-sonner";

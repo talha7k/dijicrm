@@ -1,38 +1,18 @@
-import { auth } from "$lib/firebase";
-
 /**
- * Creates headers with Authorization token for authenticated API calls
- * @returns Record<string, string> - Headers object with Content-Type and Authorization if user is available
+ * Creates headers for authenticated API calls using cookies
+ * @returns Record<string, string> - Headers object with Content-Type
  */
 export async function createAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
 
-  // Wait for auth state to be ready
-  let user = auth.currentUser;
-
-  if (!user) {
-    // If user is not immediately available, wait a bit for auth to initialize
-    await new Promise<void>((resolve) => {
-      const unsubscribe = auth.onAuthStateChanged((authUser) => {
-        unsubscribe();
-        user = authUser;
-        resolve();
-      });
-    });
-  }
-
-  if (user) {
-    const token = await user.getIdToken();
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
   return headers;
 }
 
 /**
  * Makes an authenticated fetch request with proper headers
+ * The authentication is handled by cookies, which are automatically sent with fetch requests
  * @param url - The URL to fetch
  * @param options - Fetch options (method, body, etc.)
  * @returns Promise<Response> - The fetch response
@@ -45,6 +25,7 @@ export async function authenticatedFetch(
 
   return fetch(url, {
     ...options,
+    credentials: 'include', // Include cookies in the request
     headers: {
       ...headers,
       ...options.headers, // Allow overriding headers

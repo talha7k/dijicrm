@@ -5,28 +5,19 @@ import { Timestamp } from "firebase-admin/firestore";
 import type { Company } from "$lib/types/company";
 import type { CompanyMember } from "$lib/types/companyMember";
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     const db = getDb();
     if (!db) throw new Error("Database not initialized");
     const auth = getAuthAdmin();
     if (!auth) throw new Error("Auth not initialized");
 
-    // Get current user from Authorization header
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    // Get current user from locals (set by hooks.server.ts)
+    if (!locals.user) {
       throw error(401, "Unauthorized");
     }
 
-    const token = authHeader.substring(7);
-    let decodedToken;
-    try {
-      decodedToken = await auth.verifyIdToken(token);
-    } catch (err) {
-      throw error(401, "Invalid token");
-    }
-
-    const user = decodedToken;
+    const user = locals.user;
 
     const { companyCode, role = "member" } = await request.json();
 

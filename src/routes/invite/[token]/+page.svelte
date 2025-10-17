@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { firekitAuth } from 'svelte-firekit';
-  import { authenticatedFetch } from '$lib/utils/api';
+  import { authenticatedFetch } from '$lib/utils/authUtils';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';

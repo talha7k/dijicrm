@@ -1,5 +1,5 @@
 import { writable } from "svelte/store";
-import { authenticatedFetch } from "$lib/utils/api";
+import { authenticatedFetch } from "$lib/utils/authUtils";
 import { toast } from "svelte-sonner";
 
 interface DocumentGenerationState {

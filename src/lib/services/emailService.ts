@@ -1,6 +1,6 @@
 import type { GeneratedDocument, DocumentDelivery } from "$lib/types/document";
 import { db } from "$lib/firebase";
-import { authenticatedFetch } from "$lib/utils/api";
+import { authenticatedFetch } from "$lib/utils/authUtils";
 import { get } from "svelte/store";
 import { companyContext } from "$lib/stores/companyContext";
 import {
