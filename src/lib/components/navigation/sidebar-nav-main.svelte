@@ -194,13 +194,25 @@
 		transform: translateX(4px);
 	}
 	
-	/* Group label hover effect */
+	/* Group label no hover effect - keep default cursor and no effects */
+	:global([data-sidebar="group-label"]) {
+		cursor: default !important;
+		pointer-events: none !important;
+		/* Remove any interactive styling */
+		user-select: none;
+		-webkit-user-select: none;
+		-moz-user-select: none;
+		-ms-user-select: none;
+	}
+	
 	:global([data-sidebar="group-label"]:hover) {
-		background-color: hsl(var(--sidebar-accent) / 0.5) !important;
-		color: hsl(var(--sidebar-foreground)) !important;
-		transform: translateX(2px);
-		box-shadow: inset 0 0 0 1px hsl(var(--sidebar-border) / 0.3);
-		transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+		cursor: default !important;
+		pointer-events: none !important;
+		/* Remove any hover effects - keep as default */
+		background-color: initial !important;
+		transform: none !important;
+		box-shadow: none !important;
+		color: initial !important;
 	}
 	
 	/* Smooth icon transitions on hover */
