@@ -4,7 +4,7 @@
   import Icon from "@iconify/svelte";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import DarkModeToggle from "$lib/components/shared/dark-mode-toggle.svelte";
-  import { marketingNavItems, siteConfig } from "../../../../config";
+  import { marketingNavItems, siteConfig } from "../../../config";
   import { firekitUser } from "svelte-firekit";
   import { page } from "$app/state";
   let path = $derived(page.url.pathname);
@@ -15,7 +15,7 @@
     new Array(marketingNavItems.length).fill(null),
   );
   let activeIndex = $derived(
-    marketingNavItems.findIndex((item) => !item.items && path === item.url),
+    marketingNavItems.findIndex((item: any) => !item.items && path === item.url),
   );
   let indicatorStyle = $state("");
 
@@ -127,7 +127,7 @@
             {/each}
             {#if indicatorStyle}
               <div
-                class="hidden md:block absolute top-0 bottom-0 bg-primary rounded-md transition-all duration-300 ease-in-out pointer-events-none"
+                class="hidden md:block absolute top-0 bottom-0 bg-primary rounded-md transition-[background-color] duration-200 ease-in-out pointer-events-none"
                 style={indicatorStyle}
               ></div>
             {/if}
@@ -150,3 +150,22 @@
     </nav>
   </header>
 </div>
+
+<style>
+  /* Prevent layout shifts in navigation indicator */
+  .absolute.top-0.bottom-0.bg-primary {
+    transition: background-color 200ms ease-in-out !important;
+  }
+  
+  /* Ensure stable button positioning */
+  .relative.flex.flex-col.items-center .z-10 {
+    position: relative !important;
+  }
+  
+
+  
+  /* Override any transform transitions that could cause layout shifts */
+  .relative.flex.flex-col.items-center * {
+    transition-property: color, background-color !important;
+  }
+</style>

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import MainFooter from '$lib/components/marketing/nav/main-footer.svelte';
-	import MainNav from '$lib/components/marketing/nav/main-nav.svelte';
+	import MainFooter from '$lib/components/navigation/marketing-footer.svelte';
+	import MainNav from '$lib/components/navigation/marketing-header-nav.svelte';
 	let { children } = $props();
 </script>
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import AppSidebar from "$lib/components/app/nav/app-sidebar.svelte";
+  import AppSidebar from "$lib/components/navigation/app-sidebar.svelte";
   import AutoBreadcrumb from "$lib/components/shared/auto-breadcrumb.svelte";
   import DarkModeToggle from "$lib/components/shared/dark-mode-toggle.svelte";
   import UserAvatarDropdown from "$lib/components/shared/user-avatar-dropdown.svelte";

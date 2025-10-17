@@ -2,9 +2,9 @@
  import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { useSidebar } from '$lib/components/ui/sidebar/context.svelte.js';
 	import type { ComponentProps } from 'svelte';
-	import { siteConfig } from '../../../../config';
-	import NavMain from './nav-main.svelte';
-	import NavUser from './nav-user.svelte';
+	import { siteConfig } from '../../../config';
+	import NavMain from './sidebar-nav-main.svelte';
+	import NavUser from './sidebar-user-nav.svelte';
 
 	const sidebar = useSidebar();
 

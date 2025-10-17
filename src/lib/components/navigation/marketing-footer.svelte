@@ -1,5 +1,5 @@
 <script>
-	import { marketingNavItems, siteConfig } from '../../../../config';
+	import { marketingNavItems, siteConfig } from '../../../config';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import Icon from '@iconify/svelte';
 	import { Button, buttonVariants } from '$lib/components/ui/button';
