@@ -8,7 +8,7 @@
 
 	const sidebar = useSidebar();
 
-	import { isSidebarOpen } from '$lib/stores/sidebar';
+ 	import { isSidebarOpen, isUserDropdownOpen } from '$lib/stores/sidebar';
 	let {
 		ref = $bindable(null),
 		collapsible = 'icon',
@@ -16,7 +16,7 @@
 	}: ComponentProps<typeof Sidebar.Root> = $props();
 </script>
 
-<div role="banner" onmouseenter={() => isSidebarOpen.set(true)} onmouseleave={() => isSidebarOpen.set(false)}>
+<div role="banner" onmouseenter={() => isSidebarOpen.set(true)} onmouseleave={() => { if (!$isUserDropdownOpen) isSidebarOpen.set(false); }}>
 	<Sidebar.Root bind:ref {collapsible} {...restProps}>
 		<Sidebar.Header>
 		<Sidebar.Menu>

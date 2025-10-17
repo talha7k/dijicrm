@@ -5,6 +5,7 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
 	import { userProfile } from '$lib/stores/user';
+	import { isUserDropdownOpen } from '$lib/stores/sidebar';
 	import { getInitials } from '$lib/utils';
 	import Icon from '@iconify/svelte';
 	import { firekitAuth } from 'svelte-firekit';
@@ -39,19 +40,19 @@
 {#if user}
 	<Sidebar.Menu class="rounded-lg bg-cover bg-center ">
 		<Sidebar.MenuItem>
-			<DropdownMenu.Root>
+			<DropdownMenu.Root bind:open={$isUserDropdownOpen}>
 				<DropdownMenu.Trigger>
 					{#snippet child({ props })}
 						<Sidebar.MenuButton
 							size="lg"
-							class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+							class="group data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground data-[state=collapsed]:justify-center group-data-[collapsible=icon]:p-1!"
 							{...props}
 						>
-							<Avatar.Root class="h-8 w-8 rounded-lg">
+							<Avatar.Root class="h-8 w-8 rounded-lg group-data-[state=collapsed]:h-6 group-data-[state=collapsed]:w-6">
 								{#if user.photoURL && !imageError}
-									<Avatar.Image 
-										class="rounded-full" 
-										src={user.photoURL} 
+									<Avatar.Image
+										class="rounded-full"
+										src={user.photoURL}
 										alt={user.displayName}
 										onerror={handleImageError}
 										onload={handleImageLoad}
@@ -62,19 +63,21 @@
 									{getInitials(user.displayName)}
 								</Avatar.Fallback>
 							</Avatar.Root>
-							<div
-								class="text-stroke grid flex-1 rounded-md p-1 text-left text-sm leading-tight opacity-80"
-							>
-								<span class="truncate font-semibold">{user.displayName}</span>
-								<span class="truncate text-xs">{user.email}</span>
-							</div>
-							<Icon icon="lucide:chevrons-up-down" class="ml-auto size-4" />
+							{#if sidebar.open}
+								<div
+									class="text-stroke grid flex-1 rounded-md p-1 text-left text-sm leading-tight opacity-80"
+								>
+									<span class="truncate font-semibold">{user.displayName}</span>
+									<span class="truncate text-xs">{user.email}</span>
+								</div>
+							{/if}
+							<Icon icon="lucide:chevrons-up-down" class="ml-auto size-4 group-data-[state=collapsed]:hidden" />
 						</Sidebar.MenuButton>
 					{/snippet}
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Content
 					class="w-[--bits-dropdown-menu-anchor-width] min-w-56 rounded-lg"
-					side={sidebar.isMobile ? 'bottom' : 'right'}
+					side={sidebar.isMobile ? 'bottom' : 'top'}
 					align="end"
 					sideOffset={4}
 				>
@@ -82,9 +85,9 @@
 						<div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
 							<Avatar.Root class="h-8 w-8 rounded-lg">
 								{#if user.photoURL && !imageError}
-									<Avatar.Image 
-										class="rounded-full" 
-										src={user.photoURL} 
+									<Avatar.Image
+										class="rounded-full"
+										src={user.photoURL}
 										alt={user.displayName}
 										onerror={handleImageError}
 										onload={handleImageLoad}

@@ -169,6 +169,17 @@
     </CardContent>
   </Card>
 
+  <!-- Actions -->
+  <div class="flex justify-end gap-2">
+    <Button variant="outline" onclick={() => dispatch('cancel')}>
+      Cancel
+    </Button>
+    <Button onclick={handleSave}>
+      <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
+      Create Template
+    </Button>
+  </div>
+
   <!-- HTML Editor -->
   <Card>
     <CardHeader>
@@ -202,17 +213,6 @@
       {/if}
     </CardContent>
   </Card>
-
-  <!-- Actions -->
-  <div class="flex justify-end gap-2">
-    <Button variant="outline" onclick={() => dispatch('cancel')}>
-      Cancel
-    </Button>
-    <Button onclick={handleSave}>
-      <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
-      Create Template
-    </Button>
-  </div>
 
   <!-- Preview Modal -->
   <TemplatePreviewDialog bind:open={showPreviewModal} template={templateToPreview} />

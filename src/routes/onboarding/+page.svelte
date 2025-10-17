@@ -106,9 +106,9 @@
 		{#if currentStep === 1}
 			<!-- Welcome Step -->
 			<div class="text-center space-y-4">
-				<div class="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-					<h3 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">What happens next?</h3>
-					<p class="text-blue-700 dark:text-blue-300 text-sm">
+				<div class="bg-primary/10 border border-primary/20 rounded-lg p-4">
+					<h3 class="font-semibold text-primary mb-2">What happens next?</h3>
+					<p class="text-primary/80 text-sm">
 						We'll help you choose your role and set up your company or join an existing one.
 						This will only take a few minutes.
 					</p>
