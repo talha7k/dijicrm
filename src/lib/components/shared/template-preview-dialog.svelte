@@ -96,7 +96,7 @@ ${renderedHtml}
 </script>
 
 <Dialog bind:open>
-  <DialogContent class="max-w-4xl h-[80vh] overflow-y-auto flex flex-col">
+  <DialogContent class="!max-w-6xl h-[90vh] overflow-y-auto flex flex-col">
     <DialogHeader>
       <DialogTitle>Template Preview</DialogTitle>
       <DialogDescription>

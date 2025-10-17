@@ -11,6 +11,7 @@
   import { validateTemplate, generatePreviewData, renderTemplate } from '$lib/utils/template-validation';
   import AlertDialog from './alert-dialog.svelte';
   import ConfirmDialog from './confirm-dialog.svelte';
+  import TemplatePreviewDialog from './template-preview-dialog.svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -45,6 +46,7 @@
   let alertMessage = $state('');
   let confirmTitle = $state('');
   let confirmMessage = $state('');
+  let templateToPreview = $state(null);
 
   const onconfirm = () => {
     const updatedTemplate = {
@@ -85,8 +87,12 @@
 
 
 
-  async function handlePreview() {
-    await generatePreviewHtml();
+  function handlePreview() {
+    templateToPreview = {
+      ...template,
+      htmlContent: htmlEditor,
+      type: template.type as 'custom' | 'order' | 'legal' | 'business'
+    };
     showPreviewModal = true;
   }
 
@@ -174,10 +180,6 @@
           </CardDescription>
         </div>
         <div class="flex gap-2">
-          <Button variant="outline" onclick={() => previewMode = !previewMode}>
-            <Icon icon="lucide:eye" class="h-4 w-4 mr-2" />
-            {previewMode ? 'Edit' : 'Preview'}
-          </Button>
           <Button variant="outline" onclick={handlePreview}>
             <Icon icon="lucide:play" class="h-4 w-4 mr-2" />
             Preview Document
@@ -213,36 +215,7 @@
   </div>
 
   <!-- Preview Modal -->
-  <Dialog bind:open={showPreviewModal}>
-    <DialogContent class="max-w-4xl max-h-[80vh] overflow-auto">
-      <DialogHeader>
-        <DialogTitle>Document Preview</DialogTitle>
-        <DialogDescription>
-          Preview of how the document will appear when generated
-        </DialogDescription>
-      </DialogHeader>
-      <div class="mt-4">
-        <div class="border rounded-lg p-6 bg-white shadow-sm min-h-[600px] relative">
-          <style>
-            .order-container { max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif; }
-            .order-header { margin-bottom: 30px; }
-            .company-info h2 { margin: 0 0 10px 0; font-size: 18px; }
-            .company-info p { margin: 5px 0; }
-            .billing-info { margin-bottom: 30px; }
-            .bill-to h3 { margin: 0 0 10px 0; font-size: 16px; }
-            .order-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .order-table th, .order-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            .order-table th { background-color: #f5f5f5; font-weight: bold; }
-            .totals { text-align: right; margin-bottom: 30px; }
-            .total-row { margin-bottom: 5px; }
-            .total-row.total { font-weight: bold; font-size: 18px; }
-            .order-footer { margin-top: 40px; text-align: center; }
-          </style>
-          {@html generatePreviewHtml()}
-        </div>
-      </div>
-    </DialogContent>
-  </Dialog>
+  <TemplatePreviewDialog bind:open={showPreviewModal} template={templateToPreview} />
 
   <!-- Alert Dialog -->
   <AlertDialog
