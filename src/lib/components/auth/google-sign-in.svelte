@@ -35,7 +35,41 @@
 
 			// Handle post-authentication
 			await handlePostAuthentication(result.user);
+
+			// Trigger initService navigation logic
+			const { app } = await import('$lib/stores/app');
+			const { userProfile } = await import('$lib/stores/user');
+			const { companyContext, initializeFromUser } = await import('$lib/stores/companyContext');
+			const { get } = await import('svelte/store');
+
+			// Update app state
+			app.update((s) => ({ ...s, authenticated: true }));
+
+			// Check user profile and redirect accordingly
+			const profile = get(userProfile);
+			if (profile.data && !profile.data.onboardingCompleted) {
+				// Redirect to onboarding
+				setTimeout(() => window.location.href = '/onboarding', 0);
+			} else if (profile.data) {
+				// Try to initialize company context
+				try {
+					await initializeFromUser();
+					const company = get(companyContext);
+					if (company.data) {
+						// User has company access, go to dashboard
+						setTimeout(() => window.location.href = '/dashboard', 0);
+					} else {
+						// No company access, go to onboarding
+						setTimeout(() => window.location.href = '/onboarding', 0);
+					}
+				} catch {
+					// Error with company context, go to onboarding
+					setTimeout(() => window.location.href = '/onboarding', 0);
+				}
+			}
+
 			toast.success('Successfully signed in with Google!');
+			isLoading = false;
 
 		} catch (error) {
 			console.error('Google sign-in error:', error);

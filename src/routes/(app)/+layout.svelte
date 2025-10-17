@@ -7,23 +7,8 @@
   import * as Sidebar from "$lib/components/ui/sidebar";
   import { isSidebarOpen } from "$lib/stores/sidebar";
   import { app } from "$lib/stores/app";
-  import { goto } from "$app/navigation";
 
   let { children } = $props();
-
-  $effect(() => {
-    if (!$app.initializing && !$app.authenticated) {
-      goto("/sign-in");
-    } else if (
-      !$app.initializing &&
-      $app.authenticated &&
-      $app.profileReady &&
-      !$app.companyReady
-    ) {
-      // User is authenticated but needs company setup
-      goto("/onboarding");
-    }
-  });
 </script>
 
 {#if $app.initializing}
