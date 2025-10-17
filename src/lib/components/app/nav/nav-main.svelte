@@ -5,8 +5,27 @@
 	import { clientNavItems, companyNavItems } from '../../../../config';
 	import { isSidebarOpen } from '$lib/stores/sidebar';
 	import { userProfile } from '$lib/stores/user';
+	import { page } from '$app/stores';
 
 	let navItems = $derived($userProfile.data?.role === 'client' ? clientNavItems : companyNavItems);
+
+	// Function to check if a URL is active
+	function isActive(url: string): boolean {
+		if (!url) return false;
+		const currentPath = $page.url.pathname;
+		
+		// Exact match
+		if (currentPath === url) return true;
+		
+		// Check if current path starts with the URL (for nested routes)
+		if (url !== '/' && currentPath.startsWith(url)) {
+			// Make sure we're not matching partial segments
+			const nextChar = currentPath.charAt(url.length);
+			return nextChar === '' || nextChar === '/';
+		}
+		
+		return false;
+	}
 </script>
 
 {#each navItems as mainItem (mainItem.title)}
@@ -21,7 +40,7 @@
 							<Sidebar.MenuItem {...props}>
 								<Collapsible.Trigger>
 									{#snippet child({ props })}
-										<Sidebar.MenuButton {...props}>
+										<Sidebar.MenuButton {...props} isActive={isActive(item.url || '')}>
 											{#snippet tooltipContent()}
 												{item.title}
 											{/snippet}
@@ -41,7 +60,7 @@
 										<Sidebar.MenuSub>
 											{#each item.items as subItem (subItem.title)}
 												<Sidebar.MenuSubItem>
-													<Sidebar.MenuSubButton>
+													<Sidebar.MenuSubButton isActive={isActive(subItem.url || '')}>
 														{#snippet child({ props })}
 															<a href={subItem.url} {...props} onclick={() => isSidebarOpen.set(false)}>
 																<span>{subItem.title}</span>
@@ -60,7 +79,7 @@
 			{:else}
 				<Sidebar.Menu>
 					<Sidebar.MenuItem>
-						<Sidebar.MenuButton>
+						<Sidebar.MenuButton isActive={isActive(item.url || '')}>
 							{#snippet child({ props })}
 								<a href={item.url} {...props} onclick={() => isSidebarOpen.set(false)}>
 									{#if item.icon}
@@ -77,3 +96,26 @@
 		</Sidebar.GroupContent>
 	</Sidebar.Group>
 {/each}
+
+<style>
+	/* Prevent layout-shifting transitions in navigation */
+	:global([data-sidebar="menu-button"]) {
+		transition: background-color 150ms ease-in-out, color 150ms ease-in-out !important;
+	}
+	
+	/* Ensure stable positioning for active indicators */
+	:global([data-sidebar="menu-item"]) {
+		position: relative;
+	}
+	
+	/* Prevent any width/height/padding transitions that cause layout shifts */
+	:global([data-sidebar="menu-button"] *) {
+		transition: none !important;
+	}
+	
+	/* Only allow color transitions */
+	:global([data-sidebar="menu-button"]:hover),
+	:global([data-sidebar="menu-button"][data-active="true"]) {
+		transition: background-color 150ms ease-in-out, color 150ms ease-in-out !important;
+	}
+</style>
