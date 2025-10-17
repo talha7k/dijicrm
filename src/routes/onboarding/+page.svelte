@@ -56,8 +56,14 @@
 	}
 
 	// Handle company code validation
-	function handleCompanyValidated(event: CustomEvent<{ code: string }>) {
+	function handleCompanyValidated(event: CustomEvent<{ code: string; invitation?: any; company?: any }>) {
 		onboardingData.companyCode = event.detail.code;
+		if (event.detail.invitation) {
+			onboardingData.invitation = event.detail.invitation;
+		}
+		if (event.detail.company) {
+			onboardingData.company = event.detail.company;
+		}
 		currentStep = 3;
 	}
 
@@ -102,7 +108,7 @@
 		switch (currentStep) {
 			case 1: return 'Let\'s get your account set up so you can start managing your orders.';
 			case 2: return selectedRole === 'client' ? 'Enter your invitation code to join a company.' :
-						   selectedRole === 'company-member' ? 'Enter your company code to join an organization.' :
+						   selectedRole === 'company-member' ? 'Enter your invitation code to join an organization.' :
 						   'Provide details for your new company.';
 			case 3: return 'Your account is being set up. This will only take a moment.';
 			default: return 'Let\'s get your account set up so you can start managing your orders.';

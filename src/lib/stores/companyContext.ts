@@ -118,17 +118,39 @@ const switchCompany = async (companyId: string) => {
     },
     (error) => {
       console.error("Error listening to company data:", error);
-      companyContextData.update((s) => ({
-        ...s,
-        data: null,
-        loading: false,
-        error: `Failed to listen to company data: ${error.message}`,
-      }));
-      app.update((state) => ({
-        ...state,
-        companyReady: false,
-        error: `Failed to listen to company data: ${error.message}`,
-      }));
+
+      // If we have server data, don't set error states that would trigger redirects
+      // Just log the error and continue with existing server data
+      const currentContext = get(companyContextData);
+      if (currentContext.hasServerData && currentContext.data) {
+        console.warn(
+          "Company data listener failed, but using server-side data:",
+          error.message,
+        );
+        companyContextData.update((s) => ({
+          ...s,
+          loading: false,
+          // Keep existing data, don't set error
+        }));
+        app.update((state) => ({
+          ...state,
+          companyReady: true, // Keep company ready since we have server data
+          error: null, // Clear any error
+        }));
+      } else {
+        // No server data available, set error states
+        companyContextData.update((s) => ({
+          ...s,
+          data: null,
+          loading: false,
+          error: `Failed to listen to company data: ${error.message}`,
+        }));
+        app.update((state) => ({
+          ...state,
+          companyReady: false,
+          error: `Failed to listen to company data: ${error.message}`,
+        }));
+      }
     },
   );
 

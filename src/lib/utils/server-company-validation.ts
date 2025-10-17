@@ -112,11 +112,13 @@ export async function requireCompanyAccess(
   companyId: string,
   action: string = "perform this action",
 ): Promise<void> {
+  console.log(`requireCompanyAccess called for user ${userId}, company ${companyId}, action: ${action}`);
   const hasAccess = await validateCompanyAccess(userId, companyId);
+  console.log(`Access validation result for user ${userId}: ${hasAccess}`);
   if (!hasAccess) {
-    throw new Error(
-      `User ${userId} does not have access to company ${companyId} to ${action}`,
-    );
+    const errorMessage = `User ${userId} does not have access to company ${companyId} to ${action}`;
+    console.error(errorMessage);
+    throw new Error(errorMessage);
   }
 }
 

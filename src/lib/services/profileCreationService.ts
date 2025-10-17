@@ -5,6 +5,10 @@ import {
   collection,
   serverTimestamp,
   runTransaction,
+  query,
+  where,
+  getDocs,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import type { UserProfile } from "$lib/types/user";
@@ -184,9 +188,36 @@ export async function createUserProfile(
       companyId,
     );
 
+
+
     console.log("User profile and membership saved successfully");
     return UserProfile;
   });
+
+  // Mark invitation as used if applicable (outside transaction)
+  if (onboardingData.invitationCode) {
+    try {
+      const invitationsRef = collection(db, "invitations");
+      const invitationQuery = query(
+        invitationsRef, 
+        where("code", "==", onboardingData.invitationCode)
+      );
+      const invitationSnapshot = await getDocs(invitationQuery);
+      
+      if (!invitationSnapshot.empty) {
+        const invitationDoc = invitationSnapshot.docs[0];
+        await updateDoc(invitationDoc.ref, {
+          status: "used",
+          usedBy: user.uid,
+          usedAt: serverTimestamp(),
+        });
+        console.log("Invitation marked as used:", onboardingData.invitationCode);
+      }
+    } catch (error) {
+      console.error("Error marking invitation as used:", error);
+      // Don't fail the onboarding if invitation marking fails
+    }
+  }
 }
 
 /**
@@ -211,20 +242,36 @@ async function resolveCompanyId(
     return data.company.id;
   }
 
-  if (onboardingData.role === "company-member" && onboardingData.companyCode) {
-    // Validate company code and return company ID
-    const response = await fetch("/api/companies/validate-code", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: onboardingData.companyCode }),
-    });
+  if (onboardingData.role === "company-member") {
+    if (onboardingData.invitationCode) {
+      // Validate invitation code and return associated company ID
+      const response = await fetch("/api/invitations/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: onboardingData.invitationCode }),
+      });
 
-    if (!response.ok) {
-      throw new Error("Invalid company code");
+      if (!response.ok) {
+        throw new Error("Invalid invitation code");
+      }
+
+      const data = await response.json();
+      return data.company.id;
+    } else if (onboardingData.companyCode) {
+      // Validate company code and return company ID
+      const response = await fetch("/api/companies/validate-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: onboardingData.companyCode }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Invalid company code");
+      }
+
+      const data = await response.json();
+      return data.company.id;
     }
-
-    const data = await response.json();
-    return data.company.id;
   }
 
   throw new Error("Unable to resolve company ID from onboarding data");

@@ -112,7 +112,11 @@ export class SMTPService {
 
       return { success: true, config };
     } catch (error) {
-      console.error("Error loading SMTP config:", error);
+      // Log as debug info since this is expected behavior when SMTP is not configured
+      console.debug(
+        "SMTP config not accessible (using mock email service):",
+        error,
+      );
       // Return success with null config instead of throwing error
       // This allows graceful handling when permissions are denied or config doesn't exist
       return { success: true, config: null };

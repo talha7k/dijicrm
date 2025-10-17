@@ -10,5 +10,5 @@ export interface Invitation {
   usedAt?: Timestamp;
   status: "active" | "used" | "expired";
   email?: string; // Email address of the invited user
-  role: "client"; // For now, invitations are for clients
+  role: "client" | "company-member"; // Role for the invited user
 }

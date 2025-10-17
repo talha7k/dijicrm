@@ -59,7 +59,7 @@
 
       const createdProfile = await createUserProfile(firekitUser.user as User, {
         role: selectedRole!,
-        invitationCode: onboardingData.invitationCode,
+        invitationCode: onboardingData.invitationCode || onboardingData.companyCode,
         companyCode: onboardingData.companyCode,
         companyName: onboardingData.companyName,
         companyDescription: onboardingData.companyDescription,
@@ -142,7 +142,7 @@
       case 'client':
         return `Joined company using invitation code: ${onboardingData.invitationCode}`;
       case 'company-member':
-        return `Joined company using code: ${onboardingData.companyCode}`;
+        return `Joined company using invitation code: ${onboardingData.invitationCode || onboardingData.companyCode}`;
       case 'create-company':
         return `Created company "${onboardingData.companyName}"`;
       default:
