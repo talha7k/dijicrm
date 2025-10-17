@@ -15,19 +15,21 @@ type CompanyContextData = {
   data: CompanyContext | null;
   loading: boolean;
   error: any;
+  hasServerData: boolean; // Flag to indicate if data came from server validation
 };
 
 export const companyContextData = writable<CompanyContextData>({
   data: null,
   loading: true,
   error: null,
+  hasServerData: false,
 });
 
 let companyUnsubscribe: (() => void) | null = null;
 
 const switchCompany = async (companyId: string) => {
   companyContextData.update((s) => ({ ...s, loading: true, error: null }));
-  app.update(state => ({ ...state, companyReady: false, error: null })); // Set company as not ready during switch
+  app.update((state) => ({ ...state, companyReady: false, error: null })); // Set company as not ready during switch
 
   const $userProfile = get(userProfile);
   if (!$userProfile.data) {
@@ -36,7 +38,11 @@ const switchCompany = async (companyId: string) => {
       loading: false,
       error: "No user profile",
     }));
-    app.update(state => ({ ...state, companyReady: false, error: "No user profile" }));
+    app.update((state) => ({
+      ...state,
+      companyReady: false,
+      error: "No user profile",
+    }));
     return;
   }
 
@@ -47,7 +53,11 @@ const switchCompany = async (companyId: string) => {
       loading: false,
       error: "Access denied",
     }));
-    app.update(state => ({ ...state, companyReady: false, error: "Access denied" }));
+    app.update((state) => ({
+      ...state,
+      companyReady: false,
+      error: "Access denied",
+    }));
     return;
   }
 
@@ -58,7 +68,11 @@ const switchCompany = async (companyId: string) => {
       loading: false,
       error: "Invalid role",
     }));
-    app.update(state => ({ ...state, companyReady: false, error: "Invalid role" }));
+    app.update((state) => ({
+      ...state,
+      companyReady: false,
+      error: "Invalid role",
+    }));
     return;
   }
 
@@ -81,12 +95,12 @@ const switchCompany = async (companyId: string) => {
           loading: false,
           error: null,
         }));
-        
+
         // Update app store to reflect successful company loading
-        app.update(state => ({ 
-          ...state, 
-          companyReady: true, 
-          error: null 
+        app.update((state) => ({
+          ...state,
+          companyReady: true,
+          error: null,
         }));
       } else {
         companyContextData.update((s) => ({
@@ -95,7 +109,11 @@ const switchCompany = async (companyId: string) => {
           loading: false,
           error: "Company not found",
         }));
-        app.update(state => ({ ...state, companyReady: false, error: "Company not found" }));
+        app.update((state) => ({
+          ...state,
+          companyReady: false,
+          error: "Company not found",
+        }));
       }
     },
     (error) => {
@@ -106,10 +124,10 @@ const switchCompany = async (companyId: string) => {
         loading: false,
         error: `Failed to listen to company data: ${error.message}`,
       }));
-      app.update(state => ({ 
-        ...state, 
-        companyReady: false, 
-        error: `Failed to listen to company data: ${error.message}` 
+      app.update((state) => ({
+        ...state,
+        companyReady: false,
+        error: `Failed to listen to company data: ${error.message}`,
       }));
     },
   );
@@ -125,6 +143,22 @@ const switchCompany = async (companyId: string) => {
 export const initializeFromUser = async () => {
   const $userProfile = get(userProfile);
   const currentContext = get(companyContextData);
+
+  // If we already have valid context from server validation, skip client-side validation
+  if (
+    currentContext.data &&
+    currentContext.hasServerData &&
+    $userProfile.data &&
+    currentContext.data.companyId === $userProfile.data.currentCompanyId
+  ) {
+    // Initialize SMTP configuration if not already done
+    try {
+      await smtpConfigStore.initialize();
+    } catch (smtpError) {
+      console.warn("Failed to initialize SMTP configuration:", smtpError);
+    }
+    return;
+  }
 
   // If we already have valid context for the same company, just ensure SMTP is initialized
   if (
@@ -145,7 +179,7 @@ export const initializeFromUser = async () => {
   companyContextData.update((s) => ({ ...s, loading: true, error: null }));
 
   // Update app store to indicate company is not ready during initialization
-  app.update(state => ({ ...state, companyReady: false }));
+  app.update((state) => ({ ...state, companyReady: false }));
 
   if ($userProfile.error) {
     companyContextData.update((s) => ({
@@ -154,7 +188,11 @@ export const initializeFromUser = async () => {
       loading: false,
       error: `Profile error: ${$userProfile.error}`,
     }));
-    app.update(state => ({ ...state, companyReady: false, error: `Profile error: ${$userProfile.error}` }));
+    app.update((state) => ({
+      ...state,
+      companyReady: false,
+      error: `Profile error: ${$userProfile.error}`,
+    }));
     throw new Error(`Profile error: ${$userProfile.error}`);
   }
 
@@ -165,7 +203,11 @@ export const initializeFromUser = async () => {
       loading: false,
       error: "No user profile data available",
     }));
-    app.update(state => ({ ...state, companyReady: false, error: "No user profile data available" }));
+    app.update((state) => ({
+      ...state,
+      companyReady: false,
+      error: "No user profile data available",
+    }));
     throw new Error("No user profile data available");
   }
 
@@ -184,7 +226,11 @@ export const initializeFromUser = async () => {
       loading: false,
       error: "No company associations found.",
     }));
-    app.update(state => ({ ...state, companyReady: false, error: "No company associations found." }));
+    app.update((state) => ({
+      ...state,
+      companyReady: false,
+      error: "No company associations found.",
+    }));
     throw new Error("No company associations found.");
   }
 
@@ -206,7 +252,7 @@ export const initializeFromUser = async () => {
     }
 
     // On successful initialization, update app store
-    app.update(state => ({ ...state, companyReady: true, error: null }));
+    app.update((state) => ({ ...state, companyReady: true, error: null }));
   } catch (error) {
     companyContextData.update((s) => ({
       ...s,
@@ -214,7 +260,11 @@ export const initializeFromUser = async () => {
       loading: false,
       error: `Failed to initialize company context: ${error}`,
     }));
-    app.update(state => ({ ...state, companyReady: false, error: `Failed to initialize company context: ${error}` }));
+    app.update((state) => ({
+      ...state,
+      companyReady: false,
+      error: `Failed to initialize company context: ${error}`,
+    }));
     throw error;
   }
 };
@@ -226,13 +276,18 @@ const reset = () => {
     companyUnsubscribe = null;
   }
 
-  companyContextData.set({ data: null, loading: false, error: null });
-  app.update(state => ({ ...state, companyReady: false, error: null }));
+  companyContextData.set({
+    data: null,
+    loading: false,
+    error: null,
+    hasServerData: false,
+  });
+  app.update((state) => ({ ...state, companyReady: false, error: null }));
 };
 
 const retryInitialization = async () => {
   companyContextData.update((s) => ({ ...s, error: null, loading: true }));
-  app.update(state => ({ ...state, companyReady: false, error: null }));
+  app.update((state) => ({ ...state, companyReady: false, error: null }));
   try {
     await initializeFromUser();
   } catch (error) {
@@ -241,10 +296,10 @@ const retryInitialization = async () => {
       loading: false,
       error: `Retry failed: ${error}`,
     }));
-    app.update(state => ({ 
-      ...state, 
-      companyReady: false, 
-      error: `Retry failed: ${error}`
+    app.update((state) => ({
+      ...state,
+      companyReady: false,
+      error: `Retry failed: ${error}`,
     }));
     throw error;
   }

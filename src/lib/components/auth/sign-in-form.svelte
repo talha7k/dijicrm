@@ -116,6 +116,7 @@
 			bind:value={formData.email}
 			placeholder="you@email.com"
 			disabled={isSubmitting}
+			autocomplete="email"
 		/>
 		{#if errors.email}
 			<p class="text-sm text-destructive">{errors.email}</p>
@@ -134,6 +135,7 @@
 			placeholder="*********"
 			type="password"
 			disabled={isSubmitting}
+			autocomplete="current-password"
 		/>
 		{#if errors.password}
 			<p class="text-sm text-destructive">{errors.password}</p>

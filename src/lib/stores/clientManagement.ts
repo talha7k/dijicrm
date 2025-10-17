@@ -37,14 +37,14 @@ function createClientManagementStore() {
 
   return {
     subscribe: store.subscribe,
-    
+
     unsubscribe: () => {
       // Clean up the listener
       if (unsubscribe) {
         unsubscribe();
         unsubscribe = null;
       }
-      
+
       // Clear store data
       store.set({
         clients: [],

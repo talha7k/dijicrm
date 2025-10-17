@@ -90,7 +90,7 @@
         Or
       </div>
 
-      <SignInForm onIsSubmittingChange={(isSubmitting) => formSubmitting = isSubmitting} />
+      <SignInForm onIsSubmittingChange={(isSubmitting: boolean) => formSubmitting = isSubmitting} />
     </Card.Content>
   </Card.Root>
 {/if}

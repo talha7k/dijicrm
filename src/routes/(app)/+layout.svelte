@@ -5,8 +5,10 @@
   import UserAvatarDropdown from "$lib/components/shared/user-avatar-dropdown.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar";
   import { isSidebarOpen } from "$lib/stores/sidebar";
-  import { app, isReady } from "$lib/stores/app";
-  import { initializeAppFromServerData } from "$lib/services/initService";
+  import { app, isReady, shouldShowLoading } from "$lib/stores/app";
+  import { initializeAppFromServerData, initializeApp } from "$lib/services/initService";
+  import { setupNavigationGuards } from "$lib/services/navigationGuard";
+  import Loading from "$lib/components/ui/loading/loading.svelte";
   import type { UserProfile } from "$lib/types/user";
   import type { Company } from "$lib/types/company";
   import type { CompanyMember } from "$lib/types/companyMember";
@@ -25,11 +27,33 @@
   // This will set authenticated: true, profileReady: true, companyReady: true
   if (data?.profile && data?.company && data?.membership) {
     initializeAppFromServerData(data);
+  } else {
+    // Fallback initialization for client-side navigation
+    initializeApp();
   }
+  
+  // Set up navigation guards for app routes
+  $effect(() => {
+    const unsubscribe = setupNavigationGuards();
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  });
 </script>
 
-{#if !$isReady}
-  <!-- Let root layout handle loading state -->
+{#if $shouldShowLoading}
+  <div class="flex h-full w-full items-center justify-center">
+    <Loading message={$app.initializing ? "Initializing app..." : "Loading your workspace..."} size="lg" />
+  </div>
+{:else if $app.error}
+  <div class="flex h-full w-full items-center justify-center">
+    <div class="text-center">
+      <p class="text-destructive mb-2">Error loading application</p>
+      <p class="text-sm text-muted-foreground">{$app.error}</p>
+    </div>
+  </div>
 {:else}
   <Sidebar.Provider bind:open={$isSidebarOpen}>
     <AppSidebar variant="inset" />

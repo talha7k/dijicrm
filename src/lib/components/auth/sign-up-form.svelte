@@ -114,6 +114,7 @@
 				bind:value={formData.firstName}
 				placeholder="John"
 				disabled={isSubmitting}
+				autocomplete="given-name"
 			/>
 			{#if errors.firstName}
 				<p class="text-sm text-destructive">{errors.firstName}</p>
@@ -126,6 +127,7 @@
 				bind:value={formData.lastName}
 				placeholder="Smith"
 				disabled={isSubmitting}
+				autocomplete="family-name"
 			/>
 			{#if errors.lastName}
 				<p class="text-sm text-destructive">{errors.lastName}</p>
@@ -139,6 +141,7 @@
 			bind:value={formData.email}
 			placeholder="you@email.com"
 			disabled={isSubmitting}
+			autocomplete="email"
 		/>
 		{#if errors.email}
 			<p class="text-sm text-destructive">{errors.email}</p>

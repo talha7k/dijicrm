@@ -43,6 +43,7 @@ export function initializeAppFromServerData(data: ServerSessionData): void {
       },
       loading: false,
       error: null,
+      hasServerData: true, // Mark that this data came from server validation
     });
 
     // After setting up the data, perform background validation to catch any inconsistencies

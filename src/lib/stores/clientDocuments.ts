@@ -262,12 +262,12 @@ function createClientDocumentsStore() {
         unsubscribeDeliveries();
         unsubscribeDeliveries = null;
       }
-      
+
       // Also unsubscribe from user profile
       if (unsubscribeUser) {
         unsubscribeUser();
       }
-      
+
       // Clear store data
       store.set({
         documents: [],

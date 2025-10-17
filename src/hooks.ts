@@ -1,9 +1,12 @@
-import { browser } from '$app/environment';
-import { goto } from '$app/navigation';
-import { app } from '$lib/stores/app';
-import { userProfile } from '$lib/stores/user';
-import { get } from 'svelte/store';
-import { companyContext } from '$lib/stores/companyContext';
+import { browser } from "$app/environment";
+import { goto } from "$app/navigation";
+import { app } from "$lib/stores/app";
+import { userProfile } from "$lib/stores/user";
+import {
+  companyContextData,
+  initializeFromUser,
+} from "$lib/stores/companyContext";
+import { get } from "svelte/store";
 
 let hasCheckedAuthState = false;
 
@@ -16,21 +19,23 @@ export async function handleNavigate() {
   // Only run after initial check to prevent infinite loops
   if (!hasCheckedAuthState) {
     hasCheckedAuthState = true;
-    
+
     // Check authentication state and redirect if needed
     const appState = get(app);
     const userState = get(userProfile);
-    const companyState = get(companyContext);
-    
+    const companyState = get(companyContextData);
+
     // If user is authenticated but doesn't have company context, try to initialize
     if (appState.authenticated && !appState.companyReady) {
       try {
-        await companyContext.initializeFromUser();
+        await initializeFromUser();
       } catch (error) {
         // If initialization fails, redirect to onboarding
-        console.log('Company context initialization failed, redirecting to onboarding');
+        console.log(
+          "Company context initialization failed, redirecting to onboarding",
+        );
         setTimeout(() => {
-          goto('/onboarding');
+          goto("/onboarding");
         }, 0);
       }
     }

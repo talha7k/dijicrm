@@ -32,7 +32,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   // Check for session cookie in request
   const sessionCookie = event.cookies.get("__session");
-  
+
   if (!sessionCookie) {
     // No session cookie exists - treat as logged out user
     event.locals.user = undefined;
@@ -44,8 +44,11 @@ export const handle: Handle = async ({ event, resolve }) => {
         console.error("Firebase Auth not initialized");
         event.locals.user = undefined;
       } else {
-        const decodedClaims = await auth.verifySessionCookie(sessionCookie, true); // true to check if revoked
-        
+        const decodedClaims = await auth.verifySessionCookie(
+          sessionCookie,
+          true,
+        ); // true to check if revoked
+
         // Set user in locals with essential information
         event.locals.user = {
           uid: decodedClaims.uid,

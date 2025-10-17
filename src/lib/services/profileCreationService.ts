@@ -160,7 +160,10 @@ export async function createUserProfile(
     transaction.set(userRef, UserProfile);
 
     // Create the corresponding membership document in the company's members subcollection
-    const membershipRef = doc(collection(db, `companies/${companyId}/members`), user.uid);
+    const membershipRef = doc(
+      collection(db, `companies/${companyId}/members`),
+      user.uid,
+    );
     const membershipData: any = {
       id: `${user.uid}-${companyId}`,
       userId: user.uid,
@@ -169,11 +172,17 @@ export async function createUserProfile(
       joinedAt: serverTimestamp(), // This is OK outside of arrays
       status: "active",
       permissions: getDefaultPermissions(onboardingData.role),
-      invitedBy: onboardingData.role === "create-company" ? user.uid : undefined, // Owner invited themselves
+      invitedBy:
+        onboardingData.role === "create-company" ? user.uid : undefined, // Owner invited themselves
     };
 
     transaction.set(membershipRef, membershipData);
-    console.log("Company membership created for user:", user.uid, "in company:", companyId);
+    console.log(
+      "Company membership created for user:",
+      user.uid,
+      "in company:",
+      companyId,
+    );
 
     console.log("User profile and membership saved successfully");
     return UserProfile;

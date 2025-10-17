@@ -99,51 +99,63 @@ export async function checkUserProfileExists(uid: string): Promise<boolean> {
 export async function handleLogout(): Promise<void> {
   // First call Firebase signOut to clear the authentication state
   await auth.signOut();
-  
+
   // Clean up company context (this will also clean up any active listeners)
   const companyContextValue = get(companyContext);
-  if (companyContextValue && typeof companyContextValue.reset === 'function') {
+  if (companyContextValue && typeof companyContextValue.reset === "function") {
     companyContextValue.reset();
   }
-  
+
   // Clean up document templates store
-  if (documentTemplatesStore && typeof documentTemplatesStore.unsubscribe === 'function') {
+  if (
+    documentTemplatesStore &&
+    typeof documentTemplatesStore.unsubscribe === "function"
+  ) {
     documentTemplatesStore.unsubscribe();
   }
-  
+
   // Clean up client documents store
-  if (clientDocumentsStore && typeof clientDocumentsStore.unsubscribe === 'function') {
+  if (
+    clientDocumentsStore &&
+    typeof clientDocumentsStore.unsubscribe === "function"
+  ) {
     clientDocumentsStore.unsubscribe();
   }
-  
+
   // Clean up client management store
-  if (clientManagementStore && typeof clientManagementStore.unsubscribe === 'function') {
+  if (
+    clientManagementStore &&
+    typeof clientManagementStore.unsubscribe === "function"
+  ) {
     clientManagementStore.unsubscribe();
   }
-  
+
   // Clean up company metrics store
-  if (companyMetricsStore && typeof companyMetricsStore.unsubscribe === 'function') {
+  if (
+    companyMetricsStore &&
+    typeof companyMetricsStore.unsubscribe === "function"
+  ) {
     companyMetricsStore.unsubscribe();
   }
-  
+
   // Reset user profile store
   userProfile.set({
     data: undefined,
     loading: false,
     error: null,
-    update: async () => {}
+    update: async () => {},
   });
-  
+
   // Reset app state to indicate user is no longer authenticated
   import("$lib/stores/app").then(({ app }) => {
-    app.update(state => ({
+    app.update((state) => ({
       ...state,
       authenticated: false,
       profileReady: false,
       companyReady: false,
-      error: null
+      error: null,
     }));
   });
-  
+
   // Additional cleanup can be added here as needed
 }

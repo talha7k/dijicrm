@@ -25,7 +25,7 @@ export async function authenticatedFetch(
 
   return fetch(url, {
     ...options,
-    credentials: 'include', // Include cookies in the request
+    credentials: "include", // Include cookies in the request
     headers: {
       ...headers,
       ...options.headers, // Allow overriding headers

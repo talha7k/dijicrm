@@ -50,13 +50,13 @@ function createCompanyMetricsStore() {
 
   return {
     subscribe: store.subscribe,
-    
+
     unsubscribe: () => {
       // Clean up all listeners
       clientsUnsubscribe?.();
       ordersUnsubscribe?.();
       paymentsUnsubscribe?.();
-      
+
       // Clear store data
       store.set({
         data: null,

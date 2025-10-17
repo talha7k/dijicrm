@@ -52,8 +52,8 @@ function createSMTPConfigStore() {
           }));
 
           console.log("SMTP configuration loaded and applied");
-        } else {
-          // No config found or error - email service will use mock mode
+        } else if (result.success && !result.config) {
+          // No config found - email service will use mock mode
           store.update((state) => ({
             ...state,
             config: null,
@@ -62,6 +62,18 @@ function createSMTPConfigStore() {
           }));
 
           console.log("No SMTP configuration found, using mock email service");
+        } else {
+          // Error loading config - treat as no config and use mock mode
+          store.update((state) => ({
+            ...state,
+            config: null,
+            loading: false,
+            initialized: true,
+          }));
+
+          console.log(
+            "Error loading SMTP configuration, using mock email service",
+          );
         }
       } catch (error) {
         console.error("Failed to initialize SMTP config:", error);

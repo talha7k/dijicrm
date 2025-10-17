@@ -113,7 +113,9 @@ export class SMTPService {
       return { success: true, config };
     } catch (error) {
       console.error("Error loading SMTP config:", error);
-      throw new Error("Failed to load SMTP configuration");
+      // Return success with null config instead of throwing error
+      // This allows graceful handling when permissions are denied or config doesn't exist
+      return { success: true, config: null };
     }
   }
 
