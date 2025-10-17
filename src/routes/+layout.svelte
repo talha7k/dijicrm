@@ -1,7 +1,8 @@
 <script lang="ts">
 	import '../app.css';
 	import { initializeApp } from '$lib/services/initService';
-	import { app } from '$lib/stores/app';
+	import { app, shouldShowLoading } from '$lib/stores/app';
+	import { setupNavigationGuards } from '$lib/services/navigationGuard';
 	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import Loading from '$lib/components/ui/loading/loading.svelte';
@@ -10,15 +11,25 @@
 	
 	// Initialize app state - client-side initialization
 	initializeApp();
+	
+	// Set up navigation guards to redirect users when needed
+	$effect(() => {
+		const unsubscribe = setupNavigationGuards();
+		return () => {
+			if (unsubscribe) {
+				unsubscribe();
+			}
+		};
+	});
 </script>
 
 <div class="h-dvh">
 	<Toaster />
 	<ModeWatcher />
 
-	{#if $app.initializing}
+	{#if $shouldShowLoading}
 		<div class="flex h-full w-full items-center justify-center">
-			<Loading message="Initializing app..." size="lg" />
+			<Loading message={$app.initializing ? "Initializing app..." : "Loading your workspace..."} size="lg" />
 		</div>
 	{:else if $app.error}
 		<div class="flex h-full w-full items-center justify-center">

@@ -14,13 +14,7 @@
 	const companyData = $derived($companyContext.data);
 	const completeness = $derived($profileCompleteness);
 
-	// Debug logging
-	$effect(() => {
-		console.log("CompanyInformation: userData:", userData);
-		console.log("CompanyInformation: companyData:", companyData);
-		console.log("CompanyInformation: completeness:", completeness);
-		console.log("CompanyInformation: companyContext loading:", $companyContext.loading);
-	});
+
 
 	// Helper function to get company name from associations
 	function getCompanyName(companyId: string): string {
@@ -79,11 +73,8 @@
 						loading: false,
 						error: null
 					}));
-					console.log('Profile refreshed successfully');
-
 					// After refreshing profile, try to initialize company context
 					setTimeout(() => {
-						console.log('CompanyInformation: Re-initializing company context after profile refresh');
 						get(companyContext).initializeFromUser();
 					}, 100);
 				} else {

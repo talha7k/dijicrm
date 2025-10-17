@@ -1,5 +1,6 @@
   <script lang="ts">
     import { goto } from "$app/navigation";
+    import { get } from "svelte/store";
     import { firekitAuth } from "svelte-firekit";
     import { userProfile } from "$lib/stores/user";
     import { app } from "$lib/stores/app";
@@ -16,25 +17,35 @@
     }
 
     async function handleLogout() {
-      await firekitAuth.signOut();
-      
-      // Clear local stores
-      userProfile.update(() => ({
-        data: undefined,
-        loading: false,
-        error: null,
-        update: async () => {},
-      }));
-      
-      app.update(() => ({
-        initializing: false,
-        authenticated: false,
-        profileReady: false,
-        companyReady: false,
-        error: null,
-      }));
-      
-      goto("/sign-in");
+      // Reset company context to clear any active listeners BEFORE signing out
+      import("$lib/stores/companyContext").then(async ({ companyContext }) => {
+        const context = get(companyContext);
+        context.reset();
+        
+        // Small delay to ensure listeners are cleaned up
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        await firekitAuth.signOut();
+        
+        // Clear local stores
+        userProfile.update(() => ({
+          data: undefined,
+          loading: false,
+          error: null,
+          update: async () => {},
+        }));
+        
+        // Reset app state
+        app.update(() => ({
+          initializing: false,
+          authenticated: false,
+          profileReady: false,
+          companyReady: false,
+          error: null,
+        }));
+        
+        goto("/sign-in");
+      });
     }
 
     function handleImageError() {

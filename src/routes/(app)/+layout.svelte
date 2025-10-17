@@ -5,7 +5,7 @@
   import UserAvatarDropdown from "$lib/components/shared/user-avatar-dropdown.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar";
   import { isSidebarOpen } from "$lib/stores/sidebar";
-  import { app } from "$lib/stores/app";
+  import { app, isReady } from "$lib/stores/app";
   import { initializeAppFromServerData } from "$lib/services/initService";
   import type { UserProfile } from "$lib/types/user";
   import type { Company } from "$lib/types/company";
@@ -28,21 +28,8 @@
   }
 </script>
 
-{#if $app.initializing}
-  <div class="flex h-full w-full items-center justify-center">
-    <div class="text-center">
-      <div
-        class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"
-      ></div>
-      <p class="text-muted-foreground">Setting up your workspace...</p>
-    </div>
-  </div>
-{:else if !$app.authenticated}
-  <!-- Will redirect to sign-in via server-side redirect -->
-{:else if !$app.profileReady}
-  <!-- Will redirect to onboarding via server-side redirect -->
-{:else if !$app.companyReady}
-  <!-- Will redirect to onboarding via server-side redirect -->
+{#if !$isReady}
+  <!-- Let root layout handle loading state -->
 {:else}
   <Sidebar.Provider bind:open={$isSidebarOpen}>
     <AppSidebar variant="inset" />

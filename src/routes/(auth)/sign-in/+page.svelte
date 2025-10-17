@@ -12,6 +12,8 @@
 	import { get } from 'svelte/store';
 
 	let checkingStatus = $state(false);
+	let authenticating = $state(false);
+	let formSubmitting = $state(false);
 
 	// Create a reactive variable to track authentication state
 	let isAuthenticated = $state(false);
@@ -20,6 +22,10 @@
 	$effect(() => {
 		const unsubscribe = app.subscribe((state) => {
 			isAuthenticated = state.authenticated;
+			// If we're authenticated, stop showing the authenticating state
+			if (state.authenticated) {
+				authenticating = false;
+			}
 		});
 		
 		// Clean up subscription
@@ -47,20 +53,27 @@
 	$effect(() => {
 		if (isAuthenticated) {
 			console.log('App state authenticated, redirecting to dashboard...');
+			authenticating = true; // Show loading during redirect
 			setTimeout(() => goto('/dashboard', { replaceState: true }), 0);
 		}
 	});
 </script>
 
-{#if checkingStatus}
+{#if checkingStatus || authenticating || formSubmitting}
   <div class="flex h-full w-full items-center justify-center">
     <div class="text-center">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-      <p class="text-muted-foreground">Checking authentication status...</p>
+      <p class="text-muted-foreground">
+        {checkingStatus 
+          ? 'Checking authentication status...' 
+          : authenticating
+            ? 'Redirecting to dashboard...'
+            : 'Signing in...'}
+      </p>
     </div>
   </div>
 {:else}
-  <Card.Root class="sm:w-[448px]">
+  <Card.Root class="sm:w-[448px] relative">
     <Card.Header>
       <Card.Title class="text-center text-2xl">Sign in</Card.Title>
       <Card.Description class="text-center">
@@ -77,7 +90,7 @@
         Or
       </div>
 
-      <SignInForm />
+      <SignInForm onIsSubmittingChange={(isSubmitting) => formSubmitting = isSubmitting} />
     </Card.Content>
   </Card.Root>
 {/if}

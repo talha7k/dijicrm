@@ -40,9 +40,17 @@
 
 	let isSubmitting = $state(false);
 
+	// Define callback prop to notify parent of state changes
+	let { onIsSubmittingChange } = $props();
+
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 		isSubmitting = true;
+		
+		// Notify parent of state change
+		if (onIsSubmittingChange) {
+			onIsSubmittingChange(isSubmitting);
+		}
 
 		// Clear previous errors
 		errors = { email: '', password: '' };
@@ -92,6 +100,10 @@
 			}
 		} finally {
 			isSubmitting = false;
+			// Notify parent of state change
+			if (onIsSubmittingChange) {
+				onIsSubmittingChange(isSubmitting);
+			}
 		}
 	}
 </script>

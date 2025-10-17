@@ -133,7 +133,7 @@ export async function createUserProfile(
         {
           companyId: companyId,
           role: getCompanyRole(onboardingData.role),
-          joinedAt: new Date(), // Use regular Date instead of serverTimestamp for arrays
+          joinedAt: new Date(), // Use JavaScript Date - Firestore SDK will convert to Timestamp during transaction
         },
       ],
 
