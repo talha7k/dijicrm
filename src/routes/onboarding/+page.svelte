@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { firekitUser } from 'svelte-firekit';
 	import { userProfile } from '$lib/stores/user';
+	import { app } from '$lib/stores/app';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import OnboardingRoleSelection from '$lib/components/onboarding/onboarding-role-selection.svelte';
@@ -9,6 +10,21 @@
 	import OnboardingMemberSetup from '$lib/components/onboarding/onboarding-member-setup.svelte';
 	import OnboardingCompanyCreation from '$lib/components/onboarding/onboarding-company-creation.svelte';
 	import OnboardingComplete from '$lib/components/onboarding/onboarding-complete.svelte';
+
+	// Redirect if onboarding is already completed (auth is handled by layout)
+	$effect(() => {
+		if (!$app.initializing && $app.authenticated) {
+			// If onboarding is already completed, redirect to appropriate dashboard
+			const profile = $userProfile.data;
+			if (profile?.onboardingCompleted) {
+				if (profile.role === 'client') {
+					goto('/client-dashboard');
+				} else {
+					goto('/dashboard');
+				}
+			}
+		}
+	});
 
 	// Get user info for personalization
 	let user = $derived(firekitUser.user);

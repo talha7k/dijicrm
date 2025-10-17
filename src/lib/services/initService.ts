@@ -34,12 +34,14 @@ function initialize(): Promise<void> {
 
             // Check if onboarding is completed
             if (!profile.data.onboardingCompleted) {
+              // Only redirect after full initialization is complete
               app.update((s) => ({
                 ...s,
                 initializing: false,
                 companyReady: false,
               }));
-              goto("/onboarding");
+              // Use setTimeout to ensure the app state is fully updated before navigation
+              setTimeout(() => goto("/onboarding"), 0);
               return;
             }
 
@@ -58,7 +60,8 @@ function initialize(): Promise<void> {
                   initializing: false,
                   companyReady: false,
                 }));
-                goto("/onboarding");
+                // Use setTimeout to ensure the app state is fully updated before navigation
+                setTimeout(() => goto("/onboarding"), 0);
                 return;
               }
             }
