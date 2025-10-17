@@ -50,6 +50,20 @@ function createCompanyMetricsStore() {
 
   return {
     subscribe: store.subscribe,
+    
+    unsubscribe: () => {
+      // Clean up all listeners
+      clientsUnsubscribe?.();
+      ordersUnsubscribe?.();
+      paymentsUnsubscribe?.();
+      
+      // Clear store data
+      store.set({
+        data: null,
+        loading: false,
+        error: null,
+      });
+    },
 
     loadMetrics: async (companyId: string) => {
       store.update((state) => ({ ...state, loading: true, error: null }));

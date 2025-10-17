@@ -8,7 +8,7 @@
 	import { isUserDropdownOpen } from '$lib/stores/sidebar';
 	import { getInitials } from '$lib/utils';
 	import Icon from '@iconify/svelte';
-	import { firekitAuth } from 'svelte-firekit';
+	import { handleLogout } from '$lib/services/authService';
 
 	let user = $derived($userProfile.data);
 	let imageError = $state(false);
@@ -32,34 +32,8 @@
 	});
 
 	async function logOut() {
-		// Reset company context to clear any active listeners BEFORE signing out
-		import("$lib/stores/companyContext").then(async ({ companyContext }) => {
-			companyContext.reset();
-			
-			// Small delay to ensure listeners are cleaned up
-			await new Promise(resolve => setTimeout(resolve, 50));
-			
-			await firekitAuth.signOut();
-			
-			// Clear local stores
-			userProfile.update(() => ({
-				data: undefined,
-				loading: false,
-				error: null,
-				update: async () => {},
-			}));
-			
-			// Reset app state
-			app.update(() => ({
-				initializing: false,
-				authenticated: false,
-				profileReady: false,
-				companyReady: false,
-				error: null,
-			}));
-			
-			goto('/');
-		});
+		await handleLogout();
+		goto('/');
 	}
 </script>
 

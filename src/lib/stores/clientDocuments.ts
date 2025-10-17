@@ -248,6 +248,35 @@ function createClientDocumentsStore() {
 
   return {
     subscribe: store.subscribe,
+    unsubscribe: () => {
+      // Clean up all listeners
+      if (unsubscribeDocuments) {
+        unsubscribeDocuments();
+        unsubscribeDocuments = null;
+      }
+      if (unsubscribeClientUploaded) {
+        unsubscribeClientUploaded();
+        unsubscribeClientUploaded = null;
+      }
+      if (unsubscribeDeliveries) {
+        unsubscribeDeliveries();
+        unsubscribeDeliveries = null;
+      }
+      
+      // Also unsubscribe from user profile
+      if (unsubscribeUser) {
+        unsubscribeUser();
+      }
+      
+      // Clear store data
+      store.set({
+        documents: [],
+        clientUploadedDocuments: [],
+        deliveries: [],
+        loading: false,
+        error: null,
+      });
+    },
     loadClientDocuments,
     markAsViewed,
     getDocumentsByStatus,

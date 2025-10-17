@@ -37,6 +37,22 @@ function createClientManagementStore() {
 
   return {
     subscribe: store.subscribe,
+    
+    unsubscribe: () => {
+      // Clean up the listener
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+      
+      // Clear store data
+      store.set({
+        clients: [],
+        loading: false,
+        error: null,
+        orderCounts: {},
+      });
+    },
 
     // Load invoice counts for all clients
     async loadInvoiceCounts() {

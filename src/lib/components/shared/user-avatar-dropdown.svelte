@@ -1,12 +1,11 @@
   <script lang="ts">
     import { goto } from "$app/navigation";
-    import { get } from "svelte/store";
-    import { firekitAuth } from "svelte-firekit";
-    import { userProfile } from "$lib/stores/user";
-    import { app } from "$lib/stores/app";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
     import * as Avatar from "$lib/components/ui/avatar";
     import { Button } from "$lib/components/ui/button";
+    import { handleLogout } from "$lib/services/authService";
+    import { userProfile } from "$lib/stores/user";
+    import { get } from "svelte/store";
 
     let open = $state(false);
     let imageError = $state(false);
@@ -16,36 +15,9 @@
       goto("/account");
     }
 
-    async function handleLogout() {
-      // Reset company context to clear any active listeners BEFORE signing out
-      import("$lib/stores/companyContext").then(async ({ companyContext }) => {
-        const context = get(companyContext);
-        context.reset();
-        
-        // Small delay to ensure listeners are cleaned up
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        await firekitAuth.signOut();
-        
-        // Clear local stores
-        userProfile.update(() => ({
-          data: undefined,
-          loading: false,
-          error: null,
-          update: async () => {},
-        }));
-        
-        // Reset app state
-        app.update(() => ({
-          initializing: false,
-          authenticated: false,
-          profileReady: false,
-          companyReady: false,
-          error: null,
-        }));
-        
-        goto("/sign-in");
-      });
+    async function logout() {
+      await handleLogout();
+      goto("/sign-in");
     }
 
     function handleImageError() {
@@ -73,17 +45,17 @@
           {...props}
         >
           <Avatar.Root class="h-8 w-8">
-            {#if $userProfile.data?.photoURL && !imageError}
+            {#if get(userProfile)?.data?.photoURL && !imageError}
               <Avatar.Image
-                src={$userProfile.data.photoURL}
-                alt={$userProfile.data.displayName || "User"}
+                src={get(userProfile)?.data?.photoURL}
+                alt={get(userProfile)?.data?.displayName || "User"}
                 onerror={handleImageError}
                 onload={handleImageLoad}
                 style={imageLoaded ? 'opacity: 1' : 'opacity: 0'}
               />
             {/if}
             <Avatar.Fallback style={imageLoaded && !imageError ? 'opacity: 0' : 'opacity: 100'}>
-              {$userProfile.data?.displayName?.charAt(0)?.toUpperCase() || "U"}
+              {get(userProfile)?.data?.displayName?.charAt(0)?.toUpperCase() || "U"}
             </Avatar.Fallback>
           </Avatar.Root>
         </Button>
@@ -93,10 +65,10 @@
     <DropdownMenu.Label class="font-normal">
       <div class="flex flex-col space-y-1">
         <p class="text-sm font-medium leading-none">
-          {$userProfile.data?.displayName || "User"}
+          {get(userProfile)?.data?.displayName || "User"}
         </p>
         <p class="text-xs leading-none text-muted-foreground">
-          {$userProfile.data?.email}
+          {get(userProfile)?.data?.email}
         </p>
       </div>
     </DropdownMenu.Label>
@@ -104,7 +76,7 @@
     <DropdownMenu.Item onclick={handleAccount}>
       Account
     </DropdownMenu.Item>
-    <DropdownMenu.Item onclick={handleLogout}>
+    <DropdownMenu.Item onclick={logout}>
       Log out
     </DropdownMenu.Item>
   </DropdownMenu.Content>

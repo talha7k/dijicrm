@@ -33,6 +33,13 @@ function createDocumentTemplatesStore() {
   return {
     subscribe: store.subscribe,
 
+    unsubscribe: () => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+    },
+
     loadTemplates: async () => {
       store.update((state) => ({ ...state, loading: true, error: null }));
 
