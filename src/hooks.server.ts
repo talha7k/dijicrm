@@ -34,7 +34,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   const sessionCookie = event.cookies.get("__session");
   
   if (!sessionCookie) {
-    // No cookie exists - treat as logged out user
+    // No session cookie exists - treat as logged out user
     event.locals.user = undefined;
   } else {
     try {
@@ -56,7 +56,6 @@ export const handle: Handle = async ({ event, resolve }) => {
       }
     } catch (error) {
       // Invalid/Expired cookie - continue without user and delete the invalid cookie
-      console.warn("Invalid session cookie:", error);
       event.locals.user = undefined;
       event.cookies.delete("__session", { path: "/" });
     }

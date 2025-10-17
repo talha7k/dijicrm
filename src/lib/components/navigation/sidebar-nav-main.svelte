@@ -14,9 +14,6 @@
 		if (!url) return false;
 		const currentPath = $page.url.pathname;
 		
-		// Debug logging (remove in production)
-		console.log('Active check:', { currentPath, url, isActive: currentPath === url || (url !== '/' && currentPath.startsWith(url) && (currentPath.charAt(url.length) === '' || currentPath.charAt(url.length) === '/')) });
-		
 		// Exact match
 		if (currentPath === url) return true;
 		

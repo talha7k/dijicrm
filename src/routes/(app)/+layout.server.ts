@@ -3,6 +3,28 @@ import { getDb } from '$lib/firebase-admin';
 import type { UserProfile } from '$lib/types/user';
 import type { Company } from '$lib/types/company';
 import type { CompanyMember } from '$lib/types/companyMember';
+import { Timestamp } from 'firebase-admin/firestore';
+
+// Helper function to convert Firestore Timestamps to ISO strings for serialization
+function convertTimestamps(obj: any): any {
+  if (obj && typeof obj === 'object') {
+    if (obj._seconds !== undefined && obj._nanoseconds !== undefined) {
+      // This looks like a Firestore Timestamp
+      return new Date(obj._seconds * 1000 + obj._nanoseconds / 1000000).toISOString();
+    }
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => convertTimestamps(item));
+    }
+    
+    const converted: any = {};
+    for (const key in obj) {
+      converted[key] = convertTimestamps(obj[key]);
+    }
+    return converted;
+  }
+  return obj;
+}
 
 export const load: ServerLoad = async ({ locals }) => {
   try {
@@ -46,7 +68,9 @@ export const load: ServerLoad = async ({ locals }) => {
 
     let userProfile: UserProfile;
     try {
-      userProfile = userDoc.data() as UserProfile;
+      const rawProfile = userDoc.data();
+      // Convert any Timestamps in the user profile to ISO strings
+      userProfile = convertTimestamps(rawProfile) as UserProfile;
     } catch (error) {
       console.error('Error parsing user profile data:', error);
       throw redirect(302, '/sign-in');
@@ -96,7 +120,9 @@ export const load: ServerLoad = async ({ locals }) => {
 
     let company: Company;
     try {
-      company = companyDoc.data() as Company;
+      const rawCompany = companyDoc.data();
+      // Convert any Timestamps in the company to ISO strings
+      company = convertTimestamps(rawCompany) as Company;
     } catch (error) {
       console.error('Error parsing company data:', error);
       throw redirect(302, '/onboarding');
@@ -122,7 +148,9 @@ export const load: ServerLoad = async ({ locals }) => {
 
     let membership: CompanyMember;
     try {
-      membership = memberDoc.data() as CompanyMember;
+      const rawMembership = memberDoc.data();
+      // Convert any Timestamps in the membership to ISO strings
+      membership = convertTimestamps(rawMembership) as CompanyMember;
     } catch (error) {
       console.error('Error parsing membership data:', error);
       throw redirect(302, '/onboarding');

@@ -55,8 +55,8 @@
 			await handlePostAuthentication(result.user);
 
 			// Create session cookie via API using the ID token from the result
-			const idToken = await result.user.getIdToken();
-			await createSessionCookie(idToken);
+				const idToken = await result.user.getIdToken();
+				await createSessionCookie(idToken);
 
 			// Trigger initService navigation logic
 			const { app } = await import('$lib/stores/app');

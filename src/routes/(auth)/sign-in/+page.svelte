@@ -3,33 +3,60 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { getAuth } from 'firebase/auth';
 
 	import SignInWithGoogle from '$lib/components/auth/google-sign-in.svelte';
 	import SignInForm from '$lib/components/auth/sign-in-form.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { app } from '$lib/stores/app';
+	import { get } from 'svelte/store';
 
-	let checkingRedirect = $state(false);
+	let checkingStatus = $state(false);
 
-	// We no longer need to check for redirect results since we handle authentication
-	// directly in the auth components and use session cookies
+	// Create a reactive variable to track authentication state
+	let isAuthenticated = $state(false);
+
+	// Update the reactive variable when the store changes
+	$effect(() => {
+		const unsubscribe = app.subscribe((state) => {
+			isAuthenticated = state.authenticated;
+		});
+		
+		// Clean up subscription
+		return () => unsubscribe();
+	});
+
 	onMount(async () => {
 		if (!browser) return;
 
 		console.log('Sign-in page mounted, current URL:', window.location.href);
 		
-		// Set checkingRedirect to false immediately since we're not checking redirect results
-		checkingRedirect = false;
+		checkingStatus = true;
+
+		// Check for authentication state
+		const appState = get(app);
+		if (appState.authenticated) {
+			console.log('Already authenticated, redirecting to dashboard...');
+			setTimeout(() => goto('/dashboard', { replaceState: true }), 0);
+		}
+		
+		checkingStatus = false;
+	});
+
+	// React to changes in authentication state
+	$effect(() => {
+		if (isAuthenticated) {
+			console.log('App state authenticated, redirecting to dashboard...');
+			setTimeout(() => goto('/dashboard', { replaceState: true }), 0);
+		}
 	});
 </script>
 
-{#if checkingRedirect}
+{#if checkingStatus}
   <div class="flex h-full w-full items-center justify-center">
     <div class="text-center">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-      <p class="text-muted-foreground">Completing sign-in...</p>
+      <p class="text-muted-foreground">Checking authentication status...</p>
     </div>
   </div>
 {:else}
