@@ -28,11 +28,13 @@ export const companyContextData = writable<CompanyContextData>({
 
 let companyUnsubscribe: (() => void) | null = null;
 
-const switchCompany = async (companyId: string) => {
+const switchCompany = async (companyId: string, providedUser?: any) => {
   companyContextData.update((s) => ({ ...s, loading: true, error: null }));
 
   const $authStore = get(authStore);
-  if (!$authStore.profile) {
+  const user = providedUser || $authStore.profile;
+
+  if (!user) {
     companyContextData.update((s) => ({
       ...s,
       loading: false,
@@ -40,8 +42,6 @@ const switchCompany = async (companyId: string) => {
     }));
     return;
   }
-
-  const user = $authStore.profile;
   if (!hasCompanyAccess(user, companyId)) {
     companyContextData.update((s) => ({
       ...s,
@@ -81,45 +81,10 @@ const switchCompany = async (companyId: string) => {
           symbol: currency,
         });
 
-        // Load SMTP configuration from subcollection
-        let smtpConfig = null;
-        try {
-          const smtpDocRef = doc(db, `companies/${companyId}/smtp`, "config");
-          const smtpDoc = await getDoc(smtpDocRef);
-          if (smtpDoc.exists()) {
-            smtpConfig = smtpDoc.data();
-          }
-        } catch (error) {
-          console.warn("Failed to load SMTP config:", error);
-        }
-
-        // Load branding configuration from subcollection
-        let brandingConfig = null;
-        try {
-          const brandingDocRef = doc(
-            db,
-            `companies/${companyId}/branding`,
-            "config",
-          );
-          const brandingDoc = await getDoc(brandingDocRef);
-          if (brandingDoc.exists()) {
-            brandingConfig = brandingDoc.data();
-          }
-        } catch (error) {
-          console.warn("Failed to load branding config:", error);
-        }
-
-        // Load VAT configuration from subcollection
-        let vatConfig = null;
-        try {
-          const vatDocRef = doc(db, `companies/${companyId}/vat`, "config");
-          const vatDoc = await getDoc(vatDocRef);
-          if (vatDoc.exists()) {
-            vatConfig = vatDoc.data();
-          }
-        } catch (error) {
-          console.warn("Failed to load VAT config:", error);
-        }
+        // SMTP, branding, and VAT configs are now part of the main company document
+        const smtpConfig = company.smtpConfig || null;
+        const brandingConfig = company.brandingConfig || null;
+        const vatConfig = company.vatConfig || null;
 
         // Initialize VAT from subcollection or fallback to company settings
         if (vatConfig) {
@@ -192,25 +157,22 @@ export const initializeFromUser = async () => {
   const $authStore = get(authStore);
   const currentContext = get(companyContextData);
 
-  // If we already have valid context from server validation, use the centralized data
-  if (
-    currentContext.data &&
-    currentContext.hasServerData &&
-    $authStore.profile &&
-    currentContext.data.companyId === $authStore.profile.currentCompanyId
-  ) {
-    // SMTP and branding are now loaded in the real-time listener
-    return;
-  }
+  console.log("🏢 initializeFromUser called:", {
+    hasServerData: currentContext.hasServerData,
+    hasContextData: !!currentContext.data,
+    hasAuthProfile: !!$authStore.profile,
+    contextCompanyId: currentContext.data?.companyId,
+    authCompanyId: $authStore.profile?.currentCompanyId,
+  });
 
-  // If we already have valid context for the same company, use the centralized data
+  // If we already have valid context for the same company and listener is active, use existing data
   if (
     currentContext.data &&
     $authStore.profile &&
     currentContext.data.companyId === $authStore.profile.currentCompanyId &&
     companyUnsubscribe
   ) {
-    // SMTP and branding are now loaded in the real-time listener
+    // Real-time listener is already active, no need to reinitialize
     return;
   }
 
@@ -293,6 +255,59 @@ const retryInitialization = async () => {
   }
 };
 
+// Set up real-time listener without resetting existing data
+const setupRealtimeListener = async (companyId: string) => {
+  // Clean up previous listener
+  if (companyUnsubscribe) {
+    companyUnsubscribe();
+  }
+
+  // Set up real-time listener for company data and subcollections
+  const companyDocRef = doc(db, "companies", companyId);
+  companyUnsubscribe = onSnapshot(
+    companyDocRef,
+    async (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const company = docSnapshot.data() as Company;
+        const currentContext = get(companyContextData);
+
+        if (currentContext.data) {
+          // Update existing context with new company data
+          companyContextData.update((s) => ({
+            ...s,
+            data: {
+              ...s.data!,
+              company,
+              // Keep existing companyId, role, permissions
+            },
+            loading: false,
+          }));
+        }
+
+        // SMTP and branding configs are now part of the main company document
+        const smtpConfig = company.smtpConfig || null;
+        const brandingConfig = company.brandingConfig || null;
+
+        // Update context with SMTP and branding configs
+        companyContextData.update((s) => ({
+          ...s,
+          data: s.data
+            ? {
+                ...s.data,
+                smtpConfig,
+                brandingConfig,
+              }
+            : null,
+          loading: false,
+        }));
+      }
+    },
+    (error) => {
+      console.error("Error in real-time listener:", error);
+    },
+  );
+};
+
 export const companyContext = derived(
   companyContextData,
   ($companyContextData) => ({
@@ -301,6 +316,7 @@ export const companyContext = derived(
     initializeFromUser,
     reset,
     retryInitialization,
+    setupRealtimeListener,
   }),
 );
 

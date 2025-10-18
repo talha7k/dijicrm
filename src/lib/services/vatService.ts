@@ -6,11 +6,13 @@ import type { VatConfig } from "$lib/utils/vat";
  * Service for managing VAT configuration persistence in Firebase.
  *
  * This service handles the storage and retrieval of VAT settings for companies.
- * VAT configuration is now stored in a subcollection for consistency with other
- * company configurations.
+ * VAT configuration is stored in the main company document for optimal performance.
  *
- * Firebase Collection: companies/{companyId}/vat
- * Document ID: "config"
+ * Firebase Collection: companies/{companyId}
+ * Document Structure (stored in main company document as vatConfig):
+ * - vatConfig.rate: number
+ * - vatConfig.enabled: boolean
+ * - vatConfig.updatedAt: Date
  */
 export class VatService {
   /**
@@ -21,14 +23,16 @@ export class VatService {
     config: VatConfig,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const docRef = doc(db, `companies/${companyId}/vat`, "config");
+      const companyDocRef = doc(db, "companies", companyId);
 
       const storedConfig = {
-        ...config,
-        updatedAt: new Date(),
+        vatConfig: {
+          ...config,
+          updatedAt: new Date(),
+        },
       };
 
-      await setDoc(docRef, storedConfig);
+      await updateDoc(companyDocRef, storedConfig);
 
       return { success: true };
     } catch (error) {
@@ -50,18 +54,23 @@ export class VatService {
     companyId: string,
   ): Promise<{ success: boolean; config?: VatConfig; error?: string }> {
     try {
-      const docRef = doc(db, `companies/${companyId}/vat`, "config");
-      const docSnap = await getDoc(docRef);
+      const companyDocRef = doc(db, "companies", companyId);
+      const docSnap = await getDoc(companyDocRef);
 
       if (!docSnap.exists()) {
         return { success: true, config: undefined };
       }
 
-      const data = docSnap.data();
+      const companyData = docSnap.data();
+      const vatConfig = companyData?.vatConfig;
+
+      if (!vatConfig) {
+        return { success: true, config: undefined };
+      }
 
       const config: VatConfig = {
-        rate: data.rate || 0.15,
-        enabled: data.enabled !== false, // Default to true if not specified
+        rate: vatConfig.rate || 0.15,
+        enabled: vatConfig.enabled !== false, // Default to true if not specified
       };
 
       return { success: true, config };
@@ -85,26 +94,16 @@ export class VatService {
     updates: Partial<VatConfig>,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const docRef = doc(db, `companies/${companyId}/vat`, "config");
+      const companyDocRef = doc(db, "companies", companyId);
 
       const updateData = {
-        ...updates,
-        updatedAt: new Date(),
+        vatConfig: {
+          ...updates,
+          updatedAt: new Date(),
+        },
       };
 
-      // Check if document exists
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        // Update existing document
-        await updateDoc(docRef, updateData);
-      } else {
-        // Create new document
-        const newConfig: VatConfig = {
-          rate: updates.rate || 0.15,
-          enabled: updates.enabled !== false,
-        };
-        await setDoc(docRef, { ...newConfig, ...updateData });
-      }
+      await updateDoc(companyDocRef, updateData);
 
       return { success: true };
     } catch (error) {

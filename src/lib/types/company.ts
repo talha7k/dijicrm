@@ -18,6 +18,38 @@ export interface Company {
     vatAmount: number;
   };
 
+  // Company configurations (stored in main document)
+  smtpConfig?: {
+    enabled: boolean;
+    host: string;
+    port: string;
+    secure: boolean;
+    auth: {
+      user: string;
+      pass: string;
+    };
+    fromEmail: string;
+    fromName: string;
+  };
+
+  brandingConfig?: {
+    logoUrl?: string;
+    stampUrl?: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+    companyName?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+    website?: string;
+  };
+
+  vatConfig?: {
+    enabled: boolean;
+    rate: number;
+    registrationNumber?: string;
+  };
+
   // Metadata
   isActive: boolean;
   memberCount: number;

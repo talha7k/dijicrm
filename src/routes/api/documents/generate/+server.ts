@@ -241,13 +241,15 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     let branding: CompanyBranding | undefined;
     try {
       if (db) {
-        const brandingDoc = await db
-          .collection(`companies/${companyId}/branding`)
-          .doc("config")
+        const companyDoc = await db
+          .collection("companies")
+          .doc(companyId)
           .get();
-        if (brandingDoc.exists) {
-          const brandingData = brandingDoc.data();
-          branding = {
+        if (companyDoc.exists) {
+          const companyData = companyDoc.data();
+          const brandingData = companyData?.brandingConfig;
+          if (brandingData) {
+            branding = {
             logoUrl: brandingData?.logoUrl,
             stampImageUrl: brandingData?.stampImageUrl,
             stampPosition: brandingData?.stampPosition,
@@ -546,6 +548,9 @@ export const POST = async ({ request, locals }: RequestEvent) => {
       throw err; // Re-throw SvelteKit errors
     }
 
-    throw error(500, "Failed to generate document");
-  }
-};
+     throw error(500, "Failed to generate document");
+   } catch (mainError) {
+     console.error("Main document generation error:", mainError);
+     throw error(500, "Failed to generate document");
+   }
+ };

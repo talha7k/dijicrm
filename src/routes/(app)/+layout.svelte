@@ -5,54 +5,88 @@
   import UserAvatarDropdown from "$lib/components/shared/user-avatar-dropdown.svelte";
   import * as Sidebar from "$lib/components/ui/sidebar";
   import { isSidebarOpen } from "$lib/stores/sidebar";
-  import { initializeAuth, isLoading, authError, readyForApp, requiresOnboarding, isAuthenticated } from "$lib/services/authService";
+  import {
+    initializeAuth,
+    isLoading,
+    authError,
+    readyForApp,
+    requiresOnboarding,
+    isAuthenticated,
+  } from "$lib/services/authService";
   import Loading from "$lib/components/ui/loading/loading.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-   import { companyContextData } from "$lib/stores/companyContext";
-   import type { CompanyMember } from "$lib/types/companyMember";
-  
-  let { children, data }: { children: any; data: { profile: any; company: any; membership: CompanyMember } } = $props();
-  
+   import { companyContext, companyContextData } from "$lib/stores/companyContext";
+  import type { CompanyMember } from "$lib/types/companyMember";
+
+  let {
+    children,
+    data,
+  }: {
+    children: any;
+    data: { profile: any; company: any; membership: CompanyMember };
+  } = $props();
+
   // Initialize auth service when component mounts
   onMount(async () => {
-    console.log('🔍 Layout server data:', data);
-    console.log('🔍 Profile keys:', data?.profile ? Object.keys(data.profile) : 'No profile');
-    console.log('🔍 currentCompanyId:', data?.profile?.currentCompanyId);
-    
+    console.log("🔍 Layout server data:", data);
+    console.log(
+      "🔍 Profile keys:",
+      data?.profile ? Object.keys(data.profile) : "No profile"
+    );
+    console.log("🔍 currentCompanyId:", data?.profile?.currentCompanyId);
+
     initializeAuth();
-    
+
     // Initialize company context with server data
     if (data?.profile && data?.company && data?.membership) {
-      console.log('🏢 Initializing company context with server data:', {
+      console.log("🏢 Initializing company context with server data:", {
         companyId: data.profile.currentCompanyId,
         company: data.company.name,
-        role: data.membership.role
+        role: data.membership.role,
       });
-      
-       companyContextData.set({
-         data: {
-           companyId: data.profile.currentCompanyId,
-           company: data.company,
-           role: data.membership.role,
-           permissions: data.membership.permissions || []
-         },
-         loading: false,
-         error: null,
-         hasServerData: true
-       });
 
-        // All configurations are now loaded centrally in company context
-        // The company context real-time listener handles:
-        // - Currency config from company.settings.currency
-        // - VAT config from companies/{id}/vat subcollection
-        // - SMTP config from companies/{id}/smtp subcollection
-        // - Branding config from companies/{id}/branding subcollection
+      const companyId = data.profile.currentCompanyId;
+
+      // All configurations are now in the main company document from server data
+      const smtpConfig = data.company.smtpConfig || null;
+      const brandingConfig = data.company.brandingConfig || null;
+      const vatConfig = data.company.vatConfig || null;
+
+       console.log("📧 [LAYOUT] Full server company data:", data.company);
+       console.log("📧 [LAYOUT] SMTP config from server data:", !!smtpConfig);
+       console.log("📧 [LAYOUT] SMTP config details:", smtpConfig);
+       console.log(
+         "🎨 [LAYOUT] Branding config from server data:",
+         !!brandingConfig
+       );
+       console.log("💰 [LAYOUT] VAT config from server data:", !!vatConfig);
+
+      companyContextData.set({
+        data: {
+          companyId: data.profile.currentCompanyId,
+          company: data.company,
+          role: data.membership.role,
+          permissions: data.membership.permissions || [],
+          smtpConfig,
+          brandingConfig,
+          vatConfig,
+        },
+        loading: false,
+        error: null,
+        hasServerData: true,
+      });
+
+      // All configurations are now loaded centrally in company context during app init
+      // - Currency config from company.settings.currency
+      // - VAT config from companies/{id}/vat subcollection
+      // - SMTP config from companies/{id}/smtp subcollection
+      // - Branding config from companies/{id}/branding subcollection
     } else {
-      console.log('❌ Missing data for company context:', {
+      console.log("❌ Missing data for company context:", {
         hasProfile: !!data?.profile,
         hasCompany: !!data?.company,
-        hasMembership: !!data?.membership
+        hasMembership: !!data?.membership,
       });
     }
   });
@@ -83,8 +117,13 @@
       <p class="text-sm text-muted-foreground">{$authError}</p>
     </div>
   </div>
-{:else if $readyForApp && !$requiresOnboarding}
-  <Sidebar.Provider bind:open={$isSidebarOpen}>
+  {:else if $readyForApp && !$requiresOnboarding && $companyContext.loading}
+   <!-- Company context is loading -->
+   <div class="flex h-screen w-full items-center justify-center">
+     <Loading message="Loading company data..." size="lg" />
+   </div>
+  {:else if $readyForApp && !$requiresOnboarding && !$companyContext.loading}
+   <Sidebar.Provider bind:open={$isSidebarOpen}>
     <AppSidebar variant="inset" />
     <Sidebar.Inset class="rounded-tl-2xl border-l border-t">
       <header

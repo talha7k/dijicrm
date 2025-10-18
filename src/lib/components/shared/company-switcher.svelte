@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { userProfile } from '$lib/services/authService';
-  import { companyContext, activeCompanyId } from '$lib/stores/companyContext';
-  import { goto } from '$app/navigation';
-  import { get } from 'svelte/store';
-  import Icon from '@iconify/svelte';
+   import { userProfile, authStore, AuthStatus } from '$lib/services/authService';
+   import { companyContext, activeCompanyId } from '$lib/stores/companyContext';
+   import { goto } from '$app/navigation';
+   import { get } from 'svelte/store';
+   import Icon from '@iconify/svelte';
 
   let showDropdown = $state(false);
   let switching = $state(false);
@@ -13,29 +13,44 @@
   let currentCompany = $derived(companies.find((c: any) => c.companyId === currentCompanyId) || companies[0]);
   let companyContextData = $derived(get(companyContext));
 
-  async function switchCompany(companyId: string) {
-    if (companyId === currentCompanyId || switching) {
-      showDropdown = false;
-      return;
-    }
+   async function switchCompany(companyId: string) {
+     if (companyId === currentCompanyId || switching) {
+       showDropdown = false;
+       return;
+     }
 
-    try {
-      switching = true;
-      const context = get(companyContext);
-      
-      // Use the existing switchCompany function from companyContext
-      await context.switchCompany(companyId);
-      
-      // Navigate to dashboard to refresh the context
-      goto('/dashboard');
-    } catch (error) {
-      console.error('Failed to switch company:', error);
-      // TODO: Show error toast
-    } finally {
-      switching = false;
-      showDropdown = false;
-    }
-  }
+     try {
+       switching = true;
+
+       // Wait for auth to be ready before switching companies
+       const authState = get(authStore);
+       if (authState.status === AuthStatus.INITIALIZING || authState.status === AuthStatus.AUTHENTICATING || !authState.profile) {
+         console.log('Waiting for auth to be ready before switching companies...');
+         await new Promise<void>((resolve) => {
+           const unsubscribe = authStore.subscribe((state) => {
+             if (state.status !== AuthStatus.INITIALIZING && state.status !== AuthStatus.AUTHENTICATING && state.profile) {
+               unsubscribe();
+               resolve();
+             }
+           });
+         });
+       }
+
+       const context = get(companyContext);
+
+       // Use the existing switchCompany function from companyContext
+       await context.switchCompany(companyId);
+
+       // Navigate to dashboard to refresh the context
+       goto('/dashboard');
+     } catch (error) {
+       console.error('Failed to switch company:', error);
+       // TODO: Show error toast
+     } finally {
+       switching = false;
+       showDropdown = false;
+     }
+   }
 </script>
 
 <div class="company-switcher relative">

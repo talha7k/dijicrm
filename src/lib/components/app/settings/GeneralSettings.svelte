@@ -118,24 +118,7 @@
 
       const result = await response.json();
 
-      // Update the cached company context immediately to avoid stale data
-      const { companyContextData } = await import("$lib/stores/companyContext");
-      companyContextData.update((s: any) => {
-        if (s.data) {
-          return {
-            ...s,
-            data: {
-              ...s.data,
-              company: {
-                ...s.data.company,
-                settings: result.company.settings,
-                updatedAt: result.company.updatedAt,
-              }
-            }
-          };
-        }
-        return s;
-      });
+      // Note: Rely on Firebase listener for updates to avoid loops
 
       // Update local currency configuration
       currentCompanyCurrency = selectedCurrency;
@@ -180,24 +163,7 @@
 
       const result = await response.json();
 
-      // Update the cached company context immediately to avoid stale data
-      const { companyContextData } = await import("$lib/stores/companyContext");
-      companyContextData.update((s: any) => {
-        if (s.data) {
-          return {
-            ...s,
-            data: {
-              ...s.data,
-              company: {
-                ...s.data.company,
-                settings: result.company.settings,
-                updatedAt: result.company.updatedAt,
-              }
-            }
-          };
-        }
-        return s;
-      });
+      // Note: Rely on Firebase listener for updates to avoid loops
 
       // Update local VAT configuration
       currentVatAmount = vatAmount;
@@ -252,25 +218,7 @@
 
        const result = await response.json();
 
-       // Update the cached company context immediately to avoid stale data
-       const { companyContextData } = await import("$lib/stores/companyContext");
-       companyContextData.update((s: any) => {
-         if (s.data) {
-           return {
-             ...s,
-             data: {
-               ...s.data,
-               company: {
-                 ...s.data.company,
-                 name: result.company.name,
-                 vatNumber: result.company.vatNumber,
-                 updatedAt: result.company.updatedAt,
-               }
-             }
-           };
-         }
-         return s;
-       });
+        // Note: Rely on Firebase listener for updates to avoid loops
 
        // Update local temp state to match the saved value
        tempCompanyName = tempCompanyName.trim();

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { userProfile } from '$lib/services/authService';
-	import { profileCompleteness } from '$lib/stores/user';
-	import { companyContext, activeCompanyId } from '$lib/stores/companyContext';
+ 	import { userProfile, authStore, AuthStatus } from '$lib/services/authService';
+ 	import { profileCompleteness } from '$lib/stores/user';
+ 	import { companyContext, activeCompanyId } from '$lib/stores/companyContext';
 	import type { UserProfile } from '$lib/types/user';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
@@ -36,13 +36,27 @@
 		userData?.companyAssociations && userData.companyAssociations.length > 1
 	);
 
-	async function switchCompany(companyId: string) {
-		try {
-			await get(companyContext).switchCompany(companyId);
-		} catch (error) {
-			console.error('Failed to switch company:', error);
-		}
-	}
+ 	async function switchCompany(companyId: string) {
+ 		try {
+ 			// Wait for auth to be ready before switching companies
+ 			const authState = get(authStore);
+ 			if (authState.status === AuthStatus.INITIALIZING || authState.status === AuthStatus.AUTHENTICATING || !authState.profile) {
+ 				console.log('Waiting for auth to be ready before switching companies...');
+ 				await new Promise<void>((resolve) => {
+ 					const unsubscribe = authStore.subscribe((state) => {
+ 						if (state.status !== AuthStatus.INITIALIZING && state.status !== AuthStatus.AUTHENTICATING && state.profile) {
+ 							unsubscribe();
+ 							resolve();
+ 						}
+ 					});
+ 				});
+ 			}
+
+ 			await get(companyContext).switchCompany(companyId);
+ 		} catch (error) {
+ 			console.error('Failed to switch company:', error);
+ 		}
+ 	}
 
 	function goToOnboarding() {
 		goto('/onboarding');

@@ -11,9 +11,6 @@ import type {
 import { Timestamp } from "firebase/firestore";
 import { ImageProcessor } from "$lib/utils/imageCompression";
 
-// Collection name for company branding (now a subcollection of companies)
-const BRANDING_SUBCOLLECTION = "branding";
-
 /**
  * Service for managing company branding configuration and assets.
  *
@@ -45,21 +42,18 @@ export class BrandingService {
     branding: CompanyBranding,
   ): Promise<BrandingServiceResult> {
     try {
-      const docRef = doc(
-        db,
-        `companies/${companyId}/${BRANDING_SUBCOLLECTION}`,
-        "config",
-      );
+      const companyDocRef = doc(db, "companies", companyId);
       const now = Timestamp.now();
 
-      const storedBranding: StoredCompanyBranding = {
-        ...branding,
-        companyId,
-        createdAt: now,
-        updatedAt: now,
+      const storedBranding = {
+        brandingConfig: {
+          ...branding,
+          createdAt: now,
+          updatedAt: now,
+        },
       };
 
-      await setDoc(docRef, storedBranding);
+      await updateDoc(companyDocRef, storedBranding);
 
       return { success: true };
     } catch (error) {
@@ -79,21 +73,22 @@ export class BrandingService {
    */
   async loadBranding(companyId: string): Promise<BrandingServiceResult> {
     try {
-      const docRef = doc(
-        db,
-        `companies/${companyId}/${BRANDING_SUBCOLLECTION}`,
-        "config",
-      );
-      const docSnap = await getDoc(docRef);
+      const companyDocRef = doc(db, "companies", companyId);
+      const docSnap = await getDoc(companyDocRef);
 
       if (!docSnap.exists()) {
         return { success: true, branding: null };
       }
 
-      const data = docSnap.data() as StoredCompanyBranding;
+      const companyData = docSnap.data();
+      const brandingConfig = companyData?.brandingConfig;
+
+      if (!brandingConfig) {
+        return { success: true, branding: null };
+      }
 
       // Remove Firebase metadata from response
-      const { companyId: _, createdAt, updatedAt, ...branding } = data;
+      const { createdAt, updatedAt, ...branding } = brandingConfig;
 
       return { success: true, branding };
     } catch (error) {
@@ -116,33 +111,17 @@ export class BrandingService {
     updates: Partial<CompanyBranding>,
   ): Promise<BrandingServiceResult> {
     try {
-      const docRef = doc(
-        db,
-        `companies/${companyId}/${BRANDING_SUBCOLLECTION}`,
-        "config",
-      );
+      const companyDocRef = doc(db, "companies", companyId);
       const now = Timestamp.now();
 
-      const updateData: Partial<StoredCompanyBranding> = {
-        ...updates,
-        updatedAt: now,
+      const updateData = {
+        brandingConfig: {
+          ...updates,
+          updatedAt: now,
+        },
       };
 
-      // Check if document exists
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        // Update existing document
-        await updateDoc(docRef, updateData);
-      } else {
-        // Create new document with defaults
-        const storedBranding: StoredCompanyBranding = {
-          companyId,
-          createdAt: now,
-          updatedAt: now,
-          ...updates,
-        };
-        await setDoc(docRef, storedBranding);
-      }
+      await updateDoc(companyDocRef, updateData);
 
       return { success: true };
     } catch (error) {

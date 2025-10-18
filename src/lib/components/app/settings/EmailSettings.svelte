@@ -175,11 +175,14 @@
     }
   }
 
-  // Initialize from parent
+  // Initialize from parent - only on first load
+  let initialized = $state(false);
+  
   $effect(() => {
-    // Initialize SMTP config if available
-    if (data?.smtpConfig) {
+    // Initialize SMTP config if available and not yet initialized
+    if (data?.smtpConfig && !initialized) {
       smtpConfig = { ...smtpConfig, ...data.smtpConfig };
+      initialized = true;
     }
   });
 </script>

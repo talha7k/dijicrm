@@ -13,18 +13,19 @@
   import { toast } from 'svelte-sonner';
 
    import Icon from '@iconify/svelte';
-   import { requireCompany } from '$lib/utils/auth';
-   import { documentTemplatesStore } from '$lib/stores/documentTemplates';
-   import { companyContext } from '$lib/stores/companyContext';
+import { requireCompany } from '$lib/utils/auth';
+     import { documentTemplatesStore } from '$lib/stores/documentTemplates';
+     import { companyContext } from '$lib/stores/companyContext';
+     import { get } from 'svelte/store';
    import ConfirmDialog from '$lib/components/shared/confirm-dialog.svelte';
    import TemplatePreviewDialog from '$lib/components/shared/template-preview-dialog.svelte';
    import CustomVariableManagement from '$lib/components/app/template/CustomVariableManagement.svelte';
    import type { DocumentTemplate } from '$lib/types/document';
 
-  let mounted = $state(false);
-  let searchQuery = $state('');
-  let selectedType = $state('all');
-  let activeTab = $state('templates');
+   let mounted = $state(false);
+   let searchQuery = $state('');
+   let selectedType = $state('all');
+   let activeTab = $state('templates');
 
    let showPreviewDialog = $state(false);
     let templateToPreview = $state<DocumentTemplate | null>(null);
@@ -37,44 +38,36 @@
 
 
 
-   onMount(async () => {
-     mounted = true;
-     
-     // Wait for company context to be ready before loading templates
-     if (!$companyContext.data || $companyContext.loading) {
-       await new Promise<void>((resolve) => {
-         const unsubscribe = companyContext.subscribe((value) => {
-           if (value.data && !value.loading) {
-             unsubscribe();
-             resolve();
-           }
-         });
-       });
-     }
-     
-     documentTemplatesStore.loadTemplates();
-   });
-
-    // Watch for company context changes (for navigation between companies)
-    $effect(() => {
-      if (mounted && $companyContext.data && !$companyContext.loading) {
-        // Only reload if templates aren't already loaded or company changed
-        if (!$documentTemplatesStore.data || $documentTemplatesStore.data.length === 0) {
-          documentTemplatesStore.loadTemplates();
-        }
-      }
+    onMount(async () => {
+      mounted = true;
+      
+      // Simple pattern like orders page - just load templates
+      // The layout handles auth and company context
+      documentTemplatesStore.loadTemplates();
     });
 
-   let filteredTemplates = $state<DocumentTemplate[]>([]);
+   let templates = $state<DocumentTemplate[]>([]);
+    let filteredTemplates = $state<DocumentTemplate[]>([]);
 
-// Compute filtered templates when dependencies change
+    // Subscribe to store for real-time updates (like orders page)
     $effect(() => {
-      if (!$documentTemplatesStore.data) {
+      const unsubscribe = documentTemplatesStore.subscribe((state) => {
+        if (state.data) {
+          templates = state.data;
+        }
+      });
+      
+      return () => unsubscribe();
+    });
+
+    // Compute filtered templates when dependencies change
+    $effect(() => {
+      if (!templates) {
         filteredTemplates = [];
         return;
       }
 
-      const filtered = $documentTemplatesStore.data.filter((template: DocumentTemplate) => {
+      const filtered = templates.filter((template: DocumentTemplate) => {
         const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                               template.description?.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesType = selectedType === 'all' || template.type === selectedType;
@@ -271,8 +264,9 @@ function handleDeleteTemplate(template: any) {
              </Card>
            {/each}
           </div>
-         {/if}
-         </TabsContent>
+          {/if}
+          </div>
+        </TabsContent>
 
        <TabsContent value="variables" class="mt-6">
          <CustomVariableManagement />

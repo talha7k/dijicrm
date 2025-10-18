@@ -7,26 +7,23 @@ import type {
 } from "$lib/types/smtp";
 import { Timestamp } from "firebase/firestore";
 
-// Collection name for SMTP configurations (now a subcollection of companies)
-const SMTP_SUBCOLLECTION = "smtp";
-
 /**
  * Service for managing SMTP configuration persistence in Firebase.
  *
  * This service handles the storage and retrieval of SMTP email server configurations
  * for companies. Passwords are encrypted before storage for security.
  *
- * Firebase Collection: companies/{companyId}/smtp
- * Document Structure:
- * - host: string
- * - port: number
- * - username: string
- * - password: string (encrypted)
- * - fromEmail: string
- * - fromName: string
- * - enabled: boolean
- * - createdAt: Timestamp
- * - updatedAt: Timestamp
+ * Firebase Collection: companies/{companyId}
+ * Document Structure (stored in main company document as smtpConfig):
+ * - smtpConfig.host: string
+ * - smtpConfig.port: number
+ * - smtpConfig.auth.user: string
+ * - smtpConfig.auth.pass: string (encrypted)
+ * - smtpConfig.fromEmail: string
+ * - smtpConfig.fromName: string
+ * - smtpConfig.enabled: boolean
+ * - smtpConfig.createdAt: Timestamp
+ * - smtpConfig.updatedAt: Timestamp
  */
 export class SMTPService {
   /**
@@ -37,28 +34,23 @@ export class SMTPService {
     config: SMTPConfig,
   ): Promise<SMTPServiceResult> {
     try {
-      const docRef = doc(
-        db,
-        `companies/${companyId}/${SMTP_SUBCOLLECTION}`,
-        "config",
-      );
+      const companyDocRef = doc(db, "companies", companyId);
       const now = Timestamp.now();
 
       // Encrypt sensitive data (basic encryption for demo - in production use proper encryption)
       const encryptedPassword = this.encryptPassword(config.auth.pass);
 
-      const storedConfig: StoredSMTPConfig = {
-        ...config,
-        companyId,
-        createdAt: now,
-        updatedAt: now,
-        encryptedPassword,
+      const storedConfig = {
+        smtpConfig: {
+          ...config,
+          encryptedPassword,
+          createdAt: now,
+          updatedAt: now,
+        },
       };
 
-      // Remove plain password from storage
-      delete (storedConfig.auth as any).pass;
-
-      await setDoc(docRef, storedConfig);
+      // Update the main company document with SMTP config
+      await updateDoc(companyDocRef, storedConfig);
 
       return { success: true };
     } catch (error) {
@@ -78,37 +70,41 @@ export class SMTPService {
    */
   async loadSMTPConfig(companyId: string): Promise<SMTPServiceResult> {
     try {
-      const docRef = doc(
-        db,
-        `companies/${companyId}/${SMTP_SUBCOLLECTION}`,
-        "config",
-      );
-      const docSnap = await getDoc(docRef);
+      const companyDocRef = doc(db, "companies", companyId);
+      const docSnap = await getDoc(companyDocRef);
 
       if (!docSnap.exists()) {
         return { success: true, config: null };
       }
 
-      const data = docSnap.data() as StoredSMTPConfig;
+      const companyData = docSnap.data();
+      const smtpConfigData = companyData?.smtpConfig;
+
+      if (!smtpConfigData) {
+        return { success: true, config: null };
+      }
 
       // Decrypt password
-      console.log("Encrypted password found:", !!data.encryptedPassword);
+      console.log(
+        "Encrypted password found:",
+        !!smtpConfigData.encryptedPassword,
+      );
       const decryptedPassword = this.decryptPassword(
-        data.encryptedPassword || "",
+        smtpConfigData.encryptedPassword || "",
       );
       console.log("Password decrypted successfully:", !!decryptedPassword);
 
       const config: SMTPConfig = {
-        enabled: data.enabled,
-        host: data.host,
-        port: data.port,
-        secure: data.secure,
+        enabled: smtpConfigData.enabled,
+        host: smtpConfigData.host,
+        port: smtpConfigData.port,
+        secure: smtpConfigData.secure,
         auth: {
-          user: data.auth.user,
+          user: smtpConfigData.auth.user,
           pass: decryptedPassword,
         },
-        fromEmail: data.fromEmail,
-        fromName: data.fromName,
+        fromEmail: smtpConfigData.fromEmail,
+        fromName: smtpConfigData.fromName,
       };
 
       console.log("Final SMTP config:", {
@@ -137,25 +133,25 @@ export class SMTPService {
     config: Partial<SMTPConfig>,
   ): Promise<SMTPServiceResult> {
     try {
-      const docRef = doc(
-        db,
-        `companies/${companyId}/${SMTP_SUBCOLLECTION}`,
-        "config",
-      );
+      const companyDocRef = doc(db, "companies", companyId);
       const now = Timestamp.now();
 
-      const updateData: Partial<StoredSMTPConfig> = {
-        ...config,
-        updatedAt: now,
+      const updateData: any = {
+        smtpConfig: {
+          ...config,
+          updatedAt: now,
+        },
       };
 
       // Encrypt password if provided
       if (config.auth?.pass) {
-        updateData.encryptedPassword = this.encryptPassword(config.auth.pass);
-        delete (updateData.auth as any).pass;
+        updateData.smtpConfig.encryptedPassword = this.encryptPassword(
+          config.auth.pass,
+        );
+        delete updateData.smtpConfig.auth.pass;
       }
 
-      await updateDoc(docRef, updateData);
+      await updateDoc(companyDocRef, updateData);
 
       return { success: true };
     } catch (error) {
@@ -175,14 +171,10 @@ export class SMTPService {
    */
   async deleteSMTPConfig(companyId: string): Promise<SMTPServiceResult> {
     try {
-      const docRef = doc(
-        db,
-        `companies/${companyId}/${SMTP_SUBCOLLECTION}`,
-        "config",
-      );
-      await updateDoc(docRef, {
-        enabled: false,
-        updatedAt: Timestamp.now(),
+      const companyDocRef = doc(db, "companies", companyId);
+      await updateDoc(companyDocRef, {
+        "smtpConfig.enabled": false,
+        "smtpConfig.updatedAt": Timestamp.now(),
       });
 
       return { success: true };

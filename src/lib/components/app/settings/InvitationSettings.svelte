@@ -12,6 +12,7 @@
   import { get } from "svelte/store";
   import { authenticatedFetch } from "$lib/utils/authUtils";
   import { formatDateTime } from "$lib/utils/helpers";
+  import { onMount } from "svelte";
   import type { CompanyBranding } from "$lib/types/branding";
 
   interface Props {
@@ -49,32 +50,9 @@
   let newInvitationRole = $state<"client" | "company-member">("client");
   let activeTab = $state<"clients" | "members">("clients");
 
-  // Filtered invitations by role - use reactive variables instead of derived
-  let clientInvitations = $state<Array<any>>([]);
-  let memberInvitations = $state<Array<any>>([]);
-
-  // Update filtered invitations when main invitations change
-  $effect(() => {
-    console.log('🔄 Updating filtered invitations, total:', invitations.length);
-
-    const clients = invitations.filter(inv => {
-      console.log(`Checking invitation ${inv.code}: role="${inv.role}"`);
-      return inv.role === 'client';
-    });
-
-    const members = invitations.filter(inv => {
-      console.log(`Checking invitation ${inv.code}: role="${inv.role}"`);
-      return inv.role === 'company-member';
-    });
-
-    console.log('✅ Filtered results - Clients:', clients.length, 'Members:', members.length);
-
-    clientInvitations = clients;
-    memberInvitations = members;
-  });
-
-  // Debug reactivity
-  $inspect(invitations, clientInvitations, memberInvitations);
+  // Filtered invitations by role - use derived values to avoid infinite loops
+  const clientInvitations = $derived(invitations.filter(inv => inv.role === 'client'));
+  const memberInvitations = $derived(invitations.filter(inv => inv.role === 'company-member'));
 
   // Dialog state
   let showAlertDialog = $state(false);
@@ -259,7 +237,7 @@
   }
 
   // Initialize from parent
-  $effect(() => {
+  onMount(() => {
     // Load invitations when component is initialized
     loadInvitations();
   });
