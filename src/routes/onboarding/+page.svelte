@@ -74,12 +74,12 @@
 		console.log('📊 currentStep is now:', currentStep);
 	}
 
-	// Handle company creation
-	function handleCompanyCreated(event: CustomEvent<{ name: string; description: string }>) {
-		onboardingData.companyName = event.detail.name;
-		onboardingData.companyDescription = event.detail.description;
-		currentStep = 4;
-	}
+ 	// Handle company creation
+ 	function handleCompanyCreated(event: CustomEvent<{ name: string; description: string }>) {
+ 		onboardingData.companyName = event.detail.name;
+ 		onboardingData.companyDescription = event.detail.description;
+ 		currentStep = 3;
+ 	}
 
 	// Handle onboarding completion
 	function handleOnboardingComplete() {
@@ -91,12 +91,24 @@
 		}
 	}
 
-	// Go back to previous step
-	function goBack() {
-		if (currentStep > 1) {
-			currentStep = currentStep - 1;
-		}
-	}
+ 	// Go back to previous step
+ 	function goBack() {
+ 		if (currentStep > 1) {
+ 			currentStep = currentStep - 1;
+ 			// If going back from step 3, reset selections to allow re-choice
+ 			if (currentStep === 2) {
+ 				selectedRole = null;
+ 				onboardingData = {
+ 					invitationCode: '',
+ 					companyCode: '',
+ 					companyName: '',
+ 					companyDescription: '',
+ 					invitation: null,
+ 					company: null
+ 				};
+ 			}
+ 		}
+ 	}
 
 	// Get step title
 	function getStepTitle(): string {
@@ -123,13 +135,29 @@
 	}
 </script>
 
-<Card.Root class="w-full">
-	<Card.Header class="text-center">
-		<Card.Title class="text-2xl font-bold">{getStepTitle()}</Card.Title>
-		<Card.Description class="text-lg">
-			{getStepDescription()}
-		</Card.Description>
-	</Card.Header>
+ <Card.Root class="w-full max-w-5xl mx-auto">
+ 	<Card.Header class="text-center">
+ 		<div class="flex items-center justify-between w-full">
+ 			{#if currentStep > 1}
+ 				<Button onclick={goBack} variant="ghost" size="sm" class="w-10 h-10 rounded-full bg-muted hover:bg-muted/80 p-0">
+ 					<svg class="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+ 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+ 					</svg>
+ 				</Button>
+ 			{:else}
+ 				<div></div>
+ 			{/if}
+ 			<div class="flex-1 text-center">
+ 				<Card.Title class="text-2xl font-bold">{getStepTitle()}</Card.Title>
+ 				<Card.Description class="text-lg">
+ 					{getStepDescription()}
+ 				</Card.Description>
+ 			</div>
+ 			{#if currentStep > 1}
+ 				<div class="w-16"></div> <!-- Spacer for balance -->
+ 			{/if}
+ 		</div>
+ 	</Card.Header>
 
 	<Card.Content class="space-y-5">
 		{#if currentStep === 1}

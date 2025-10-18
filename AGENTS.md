@@ -51,3 +51,5 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - **TODO TRACKING**: Always create a todo list before starting a task to track progress and ensure all requirements are met
 - **COMMIT MESSAGES**: When committing changes, always write detailed commit messages that explain the purpose and impact of the changes
 - **STAGED FILES**: Before committing, check all staged files to understand the full context of what's being committed; only commit staged files, not all files
+- **SHADCN COMPONENTS**: Never modify UI files directly as they are Shadcn components and should not be touched. Always use the original Shadcn component system for any UI changes
+- **CONTEXT 7MCP**: Use context 7mcp for proper fixes; avoid using timeouts and hacky solutions in favor of proper, well-structured implementations

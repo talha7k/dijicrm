@@ -63,9 +63,47 @@ async function updateExistingProfile(
 ): Promise<UserProfile> {
   console.log("Updating existing profile with company information");
 
-  // Resolve company ID from invitation or company code
-  const companyId = await resolveCompanyId(onboardingData);
-  console.log("Resolved company ID:", companyId);
+  let companyId: string;
+
+  // Handle company creation or lookup based on role
+  if (onboardingData.role === "create-company") {
+    if (!onboardingData.companyName) {
+      throw new Error("Company name is required for company creation");
+    }
+
+    console.log(
+      "Creating new company for existing profile:",
+      onboardingData.companyName,
+    );
+
+    // Create new company
+    const companyData: CompanyData = {
+      name: onboardingData.companyName,
+      description: onboardingData.companyDescription || "",
+      ownerId: user.uid,
+      code: generateCompanyCode(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      isActive: true,
+      settings: {
+        timezone: "UTC",
+        currency: "USD",
+        language: "en",
+        emailNotifications: true,
+      },
+      memberCount: 1,
+    };
+
+    const companyRef = doc(collection(db, "companies"));
+    await setDoc(companyRef, companyData);
+    companyId = companyRef.id;
+
+    console.log("Company created with ID:", companyId);
+  } else {
+    // Resolve company ID from invitation or company code
+    companyId = await resolveCompanyId(onboardingData);
+    console.log("Resolved company ID:", companyId);
+  }
 
   const userRef = doc(db, "users", user.uid);
   const existingProfile = (await getDoc(userRef)).data() as UserProfile;

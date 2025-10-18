@@ -162,9 +162,9 @@
 </script>
 
 {#if user}
-	<div class="grid grid-cols-4">
-		<Label class="font-normal text-muted-foreground">Avatar</Label>
-		<div class="flex grid-cols-3 gap-4">
+ 	<div class="flex flex-col gap-4">
+ 		<Label class="font-normal text-muted-foreground">Avatar</Label>
+ 		<div class="flex gap-4">
 			<Avatar.Root class="size-16">
 				<Avatar.Image src={uploadState.imageUrl || user.photoURL} alt={user.displayName} />
 				<Avatar.Fallback>{getInitials(user.displayName)}</Avatar.Fallback>

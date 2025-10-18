@@ -181,10 +181,10 @@
 </script>
 
 {#if userData}
-	<div class="flex flex-col gap-6">
-		<!-- Basic Information -->
-		<div class="space-y-4">
-			<h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wide">Basic Information</h3>
+ 	<div class="flex flex-col gap-6">
+ 		<!-- Basic Information -->
+ 		<div class="space-y-4">
+ 			<h3 class="text-sm font-medium text-muted-foreground uppercase tracking-wide">Basic Information</h3>
 
 			<div class="grid grid-cols-4">
 				<Label class="font-normal text-muted-foreground">Display Name</Label>
