@@ -17,7 +17,12 @@
 
     async function logout() {
       await handleLogout();
-      goto("/sign-in");
+      // Clear session cookie
+      await fetch('/api/session', { method: 'DELETE' });
+      // Wait a moment for auth state to update, then redirect
+      setTimeout(() => {
+        goto("/sign-in", { replaceState: true });
+      }, 100);
     }
 
     function handleImageError() {

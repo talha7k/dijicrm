@@ -2,15 +2,17 @@
   import { createEventDispatcher } from 'svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { firekitUser, firekitDoc } from 'svelte-firekit';
-  import { createUserProfile, validateOnboardingData } from '$lib/services/profileCreationService';
+  import { completeUserOnboarding, validateOnboardingData } from '$lib/services/onboardingService';
   import { userProfile } from '$lib/stores/user';
   import { companyContext, initializeFromUser } from '$lib/stores/companyContext';
   import { app } from '$lib/stores/app';
+  import { authStore } from '$lib/services/authService';
   import type { User } from 'firebase/auth';
   import type { UserProfile } from '$lib/types/user';
   import { toast } from 'svelte-sonner';
   import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
   import { db } from '$lib/firebase';
+  import { refreshUserData } from '$lib/services/authService';
 
   let {
     selectedRole,
@@ -35,10 +37,12 @@
   let creationError = $state<string | null>(null);
 
   async function handleComplete() {
+    console.log('🚀 handleComplete called, isCreating:', isCreating);
     if (isCreating) return;
     creationError = null; // Reset error state
 
     try {
+      console.log('🚀 Starting onboarding completion...');
       isCreating = true;
 
       // Validate onboarding data before proceeding
@@ -57,7 +61,7 @@
 
       console.log('Starting profile creation with validated data');
 
-      const createdProfile = await createUserProfile(firekitUser.user as User, {
+      const createdProfile = await completeUserOnboarding(firekitUser.user as User, {
         role: selectedRole!,
         invitationCode: onboardingData.invitationCode || onboardingData.companyCode,
         companyCode: onboardingData.companyCode,
@@ -66,9 +70,18 @@
       });
 
       console.log('Profile creation completed successfully');
+      console.log('🔍 Created profile data:', {
+        uid: createdProfile.uid,
+        email: createdProfile.email,
+        companyAssociations: createdProfile.companyAssociations,
+        currentCompanyId: createdProfile.currentCompanyId,
+        onboardingCompleted: createdProfile.onboardingCompleted
+      });
 
-      // The unified auth service will automatically pick up the profile changes
-      // through the Firebase auth listener, so no manual store update needed
+      // Refresh the user data to ensure auth store is up to date
+      // This ensures the company context has access to the latest data
+      await refreshUserData();
+      console.log('✅ Auth store refreshed using refreshUserData service');
 
       console.log('Profile store updated with created data');
 
@@ -106,8 +119,9 @@
 
       // Wait a moment for everything to sync, then dispatch complete
       setTimeout(() => {
+        console.log('🚀 Dispatching complete event for redirect');
         dispatch('complete');
-      }, 1000);
+      }, 2000); // Increased delay to allow auth state to settle
     } catch (error) {
       console.error('Error creating profile:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -130,9 +144,9 @@
   function getSetupSummary(): string {
     switch (selectedRole) {
       case 'client':
-        return `Joined company using invitation code: ${onboardingData.invitationCode}`;
+        return `Joined ${onboardingData.company?.name || 'company'} using invitation code: ${onboardingData.invitationCode}`;
       case 'company-member':
-        return `Joined company using invitation code: ${onboardingData.invitationCode || onboardingData.companyCode}`;
+        return `Joined ${onboardingData.company?.name || 'company'} using invitation code: ${onboardingData.invitationCode}`;
       case 'create-company':
         return `Created company "${onboardingData.companyName}"`;
       default:

@@ -2,7 +2,7 @@
 	import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 	import { toast } from 'svelte-sonner';
 	import Button from '../ui/button/button.svelte';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 
 	let {
 		label = 'Sign in with',
@@ -15,6 +15,7 @@
 	} = $props();
 
 	let isLoading = $state(false);
+	let isRedirecting = $state(false);
 
 	// Function to create session cookie
 	async function createSessionCookie(idToken: string) {
@@ -60,36 +61,64 @@
 			const idToken = await result.user.getIdToken();
 			await createSessionCookie(idToken);
 
-			// The auth state listener will handle the rest automatically
+			// Show redirecting state
+			isRedirecting = true;
+			if (onIsLoadingChange) {
+				onIsLoadingChange(isLoading || isRedirecting);
+			}
+
+			// Wait for auth state to be fully updated
+			await new Promise(resolve => setTimeout(resolve, 300));
+			
+			// Invalidate all server data to refresh session validation
+			await invalidateAll();
+			
+			// Show success toast before navigation
 			toast.success('Successfully signed in with Google!');
 			
-			// Redirect to dashboard (layout will handle loading states)
+			// Navigate to dashboard (don't await as it will trigger page unload)
 			goto('/dashboard', { replaceState: true });
-
-			isLoading = false;
-			// Notify parent of loading state change
-			if (onIsLoadingChange) {
-				onIsLoadingChange(isLoading);
-			}
+			
+			// Don't reset loading states here since page will navigate away
 
 		} catch (error) {
 			console.error('Google sign-in error:', error);
-			if (error instanceof Error) {
-				toast.error(error.message);
+			console.log('Error type:', typeof error);
+			console.log('Error keys:', error ? Object.keys(error) : 'No error object');
+			
+			// Check if user cancelled the popup
+			const firebaseError = error as any;
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			
+			const isUserCancelled = 
+				firebaseError?.code === 'auth/popup-closed-by-user' ||
+				firebaseError?.code === 'auth/cancelled-popup-request' ||
+				errorMessage.includes('popup-closed-by-user') ||
+				errorMessage.includes('popup closed') ||
+				errorMessage.includes('cancelled') ||
+				errorMessage.includes('closed by user');
+			
+			if (isUserCancelled) {
+				// User cancelled - don't show error toast, just reset state
+				console.log('Google sign-in popup was cancelled by user');
+			} else if (error instanceof Error) {
+				toast.error(errorMessage);
 			} else {
 				toast.error('An error occurred during sign-in');
 			}
+			
 			isLoading = false;
+			isRedirecting = false;
 			// Notify parent of loading state change
 			if (onIsLoadingChange) {
-				onIsLoadingChange(isLoading);
+				onIsLoadingChange(isLoading || isRedirecting);
 			}
 		}
 	}
 </script>
 
-<Button onclick={signInWithGoogle} class="w-full gap-2" variant="outline" disabled={disabled || isLoading}>
-	{#if isLoading}
+<Button onclick={signInWithGoogle} class="w-full gap-2" variant="outline" disabled={disabled || isLoading || isRedirecting}>
+	{#if isLoading || isRedirecting}
 		<div class="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
 	{:else}
 		<svg
@@ -125,5 +154,5 @@
 			</defs>
 		</svg>
 	{/if}
-	{isLoading ? 'Signing in...' : `${label} Google`}
+	{isLoading ? 'Signing in...' : isRedirecting ? 'Redirecting...' : `${label} Google`}
 </Button>

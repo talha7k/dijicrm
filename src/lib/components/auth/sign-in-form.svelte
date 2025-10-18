@@ -5,7 +5,7 @@
 	import * as v from 'valibot';
 	import { toast } from 'svelte-sonner';
 	import { signIn } from '$lib/services/authService';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 
 	let formData = $state({
 		email: '',
@@ -18,6 +18,7 @@
 	});
 
 	let isSubmitting = $state(false);
+	let isRedirecting = $state(false);
 
 	// Define callback prop to notify parent of state changes
 	let { onIsSubmittingChange } = $props();
@@ -61,21 +62,37 @@
 			// Sign in using unified auth service
 			await signIn(formData.email, formData.password);
 			
+			// Show redirecting state
+			isRedirecting = true;
+			if (onIsSubmittingChange) {
+				onIsSubmittingChange(isRedirecting);
+			}
+			
+			// Wait for auth state to be fully updated
+			await new Promise(resolve => setTimeout(resolve, 300));
+			
+			// Invalidate all server data to refresh session validation
+			await invalidateAll();
+			
+			// Show success toast before navigation
 			toast.success('Signed in successfully');
 			
-			// Redirect to dashboard (layout will handle loading states)
+			// Navigate to dashboard (don't await as it will trigger page unload)
 			goto('/dashboard', { replaceState: true });
+			
+			// Don't reset loading states here since page will navigate away
 		} catch (error) {
 			if (error instanceof Error) {
 				toast.error(error.message);
 			} else {
 				toast.error('An error occurred');
 			}
-		} finally {
+			
 			isSubmitting = false;
+			isRedirecting = false;
 			// Notify parent of state change
 			if (onIsSubmittingChange) {
-				onIsSubmittingChange(isSubmitting);
+				onIsSubmittingChange(isSubmitting || isRedirecting);
 			}
 		}
 	}
@@ -88,7 +105,7 @@
 			id="email"
 			bind:value={formData.email}
 			placeholder="you@email.com"
-			disabled={isSubmitting}
+			disabled={isSubmitting || isRedirecting}
 			autocomplete="email"
 		/>
 		{#if errors.email}
@@ -98,7 +115,7 @@
 	<div class="space-y-2">
 		<div class="flex w-full items-center justify-between">
 			<label for="password" class="text-sm font-medium">Password</label>
-			<Button variant="link" class="text-sm" href="/forgot-password" disabled={isSubmitting}>
+			<Button variant="link" class="text-sm" href="/forgot-password" disabled={isSubmitting || isRedirecting}>
 				I forgot my password
 			</Button>
 		</div>
@@ -107,14 +124,14 @@
 			bind:value={formData.password}
 			placeholder="*********"
 			type="password"
-			disabled={isSubmitting}
+			disabled={isSubmitting || isRedirecting}
 			autocomplete="current-password"
 		/>
 		{#if errors.password}
 			<p class="text-sm text-destructive">{errors.password}</p>
 		{/if}
 	</div>
-	<Button type="submit" class="w-full" disabled={isSubmitting}>
-		{isSubmitting ? 'Signing in...' : 'Sign in'}
+	<Button type="submit" class="w-full" disabled={isSubmitting || isRedirecting}>
+		{isSubmitting ? 'Signing in...' : isRedirecting ? 'Redirecting...' : 'Sign in'}
 	</Button>
 </form>

@@ -4,7 +4,7 @@
 	import CompanyCodeInput from '$lib/components/auth/company-code-input.svelte';
 
 	const dispatch = createEventDispatcher<{
-		companyValidated: { code: string; invitation: any; company: any };
+		companyValidated: { code: string; company: any; invitation?: any };
 		back: void;
 	}>();
 
@@ -13,11 +13,13 @@
 	let isValidating = $state(false);
 
 	async function handleInvitationValidation(event: CustomEvent<{ code: string }>) {
+		console.log('🔍 handleInvitationValidation called with:', event.detail);
 		invitationCode = event.detail.code;
 		isValidating = true;
 		validationError = '';
 
 		try {
+			console.log('📡 Sending validation request for code:', invitationCode);
 			const response = await fetch('/api/invitations/validate', {
 				method: 'POST',
 				headers: {
@@ -26,24 +28,31 @@
 				body: JSON.stringify({ code: invitationCode }),
 			});
 
+			console.log('📡 Response status:', response.status);
+			const result = await response.json();
+			console.log('📡 Response result:', result);
+
 			if (response.ok) {
-				const result = await response.json();
 				if (result.valid) {
+					console.log('✅ Invitation valid, dispatching companyValidated');
 					dispatch('companyValidated', { 
 						code: invitationCode,
-						invitation: result.invitation,
-						company: result.company
+						company: result.company,
+						invitation: result.invitation
 					});
 				} else {
-					validationError = 'Invalid invitation code';
+					console.log('❌ Invitation invalid:', result.error);
+					validationError = result.error || 'Invalid invitation code';
 				}
 			} else {
-				const error = await response.json();
-				validationError = error.error || 'Failed to validate invitation code';
+				console.log('❌ API error:', result);
+				validationError = result.error || 'Failed to validate invitation code';
 			}
 		} catch (error) {
+			console.error('❌ Network error:', error);
 			validationError = 'Network error occurred';
 		} finally {
+			console.log('🏁 Validation finished, isValidating:', false);
 			isValidating = false;
 		}
 	}

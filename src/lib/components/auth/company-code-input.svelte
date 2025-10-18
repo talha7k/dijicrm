@@ -2,7 +2,8 @@
   import { createEventDispatcher } from 'svelte';
   import { tick } from 'svelte';
 
-  let { code = $bindable(''), error = null, loading = false, placeholder = 'Enter company code' } = $props();
+  let { code = $bindable(''), error = null, loading = false, placeholder = 'Enter invitation code' } = $props();
+  let isInternalUpdate = $state(false);
 
   const dispatch = createEventDispatcher<{
     validate: { code: string };
@@ -11,16 +12,10 @@
 
   let inputElement: HTMLInputElement;
 
-  async function handleInput(event: Event) {
+  function handleInput(event: Event) {
     const target = event.target as HTMLInputElement;
     code = target.value.toUpperCase(); // Normalize to uppercase
     dispatch('codeChange', { code });
-
-    // Auto-validate when code reaches expected length
-    if (code.length === 6) { // Assuming 6-character company codes
-      await tick();
-      dispatch('validate', { code });
-    }
   }
 
   function handleSubmit(event: Event) {

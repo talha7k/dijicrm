@@ -193,7 +193,22 @@ export async function signIn(email: string, password: string): Promise<void> {
   try {
     setAuthState(AuthStatus.AUTHENTICATING);
     const { signInWithEmailAndPassword } = await import("firebase/auth");
-    await signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      email,
+      password,
+    );
+
+    // Create session cookie for server-side authentication
+    const idToken = await userCredential.user.getIdToken();
+    await fetch("/api/session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idToken }),
+    });
+
     // Auth state listener will handle the rest
   } catch (error) {
     const errorMessage =

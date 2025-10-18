@@ -32,6 +32,11 @@
 	// Multi-step state
 	let currentStep = $state(1);
 	let selectedRole: 'client' | 'company-member' | 'create-company' | null = $state(null);
+
+	// Debug logging for currentStep changes
+	$effect(() => {
+		console.log('📍 currentStep changed to:', currentStep);
+	});
 	let onboardingData = $state({
 		invitationCode: '',
 		companyCode: '',
@@ -44,7 +49,8 @@
 	// Handle role selection
 	function handleRoleSelected(event: CustomEvent<{ role: 'client' | 'company-member' | 'create-company' }>) {
 		selectedRole = event.detail.role;
-		currentStep = 3;
+		// Stay on step 2 to show the appropriate setup component
+		// Don't move to step 3 until validation is complete
 	}
 
 	// Handle invitation validation
@@ -56,15 +62,16 @@
 	}
 
 	// Handle company code validation
-	function handleCompanyValidated(event: CustomEvent<{ code: string; invitation?: any; company?: any }>) {
-		onboardingData.companyCode = event.detail.code;
-		if (event.detail.invitation) {
-			onboardingData.invitation = event.detail.invitation;
-		}
-		if (event.detail.company) {
-			onboardingData.company = event.detail.company;
-		}
+	function handleCompanyValidated(event: CustomEvent<{ code: string; company: any; invitation?: any }>) {
+		console.log('🎯 handleCompanyValidated called with:', event.detail);
+		console.log('🎯 selectedRole is:', selectedRole);
+		console.log('🎯 currentStep is:', currentStep);
+		onboardingData.invitationCode = event.detail.code;
+		onboardingData.company = event.detail.company;
+		onboardingData.invitation = event.detail.invitation;
+		console.log('📊 Moving to step 3, currentStep was:', currentStep);
 		currentStep = 3;
+		console.log('📊 currentStep is now:', currentStep);
 	}
 
 	// Handle company creation
@@ -156,27 +163,29 @@
 				Get Started
 			</Button>
 		{:else if currentStep === 2}
-			<!-- Role Selection Step -->
-			<OnboardingRoleSelection on:roleSelected={handleRoleSelected} />
-		{:else if currentStep === 3}
-			<!-- Setup Step based on role -->
-			{#if selectedRole === 'client'}
+			{#if !selectedRole}
+				<!-- Role Selection Step -->
+				<OnboardingRoleSelection on:roleSelected={handleRoleSelected} />
+			{:else if selectedRole === 'client'}
+				<!-- Client Setup Step -->
 				<OnboardingClientSetup
 					on:invitationValidated={handleInvitationValidated}
 					on:back={goBack}
 				/>
 			{:else if selectedRole === 'company-member'}
+				<!-- Company Member Setup Step -->
 				<OnboardingMemberSetup
 					on:companyValidated={handleCompanyValidated}
 					on:back={goBack}
 				/>
 			{:else if selectedRole === 'create-company'}
+				<!-- Company Creation Step -->
 				<OnboardingCompanyCreation
 					on:companyCreated={handleCompanyCreated}
 					on:back={goBack}
 				/>
 			{/if}
-		{:else if currentStep === 4}
+		{:else if currentStep === 3}
 			<!-- Completion Step -->
 			<OnboardingComplete
 				{selectedRole}

@@ -15,6 +15,8 @@ export const POST: RequestHandler = async ({ request }) => {
       throw error(400, "Invitation code is required");
     }
 
+    console.log("🔍 Looking for invitation code:", code.toUpperCase());
+
     // Find invitation by code
     const invitationQuery = await db
       .collection("invitations")
@@ -23,7 +25,32 @@ export const POST: RequestHandler = async ({ request }) => {
       .limit(1)
       .get();
 
+    console.log("📊 Query results:", {
+      isEmpty: invitationQuery.empty,
+      docsFound: invitationQuery.docs.length,
+    });
+
+    if (!invitationQuery.empty) {
+      const doc = invitationQuery.docs[0];
+      console.log("📋 Found invitation:", {
+        id: doc.id,
+        code: doc.data().code,
+        status: doc.data().status,
+        expiresAt: doc.data().expiresAt?.toDate(),
+      });
+    }
+
     if (invitationQuery.empty) {
+      // Let's check all invitations to debug
+      const allInvitations = await db.collection("invitations").get();
+      console.log(
+        "🔍 All invitations in DB:",
+        allInvitations.docs.map((doc) => ({
+          id: doc.id,
+          code: doc.data().code,
+          status: doc.data().status,
+        })),
+      );
       throw error(404, "Invalid or expired invitation code");
     }
 

@@ -8,11 +8,26 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
   updateDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import type { UserProfile } from "$lib/types/user";
 import type { CompanyMember } from "$lib/types/companyMember";
+
+/**
+ * Onboarding Service
+ *
+ * This service handles the final step of user onboarding where users:
+ * 1. Join existing companies (via invitation codes)
+ * 2. Create new companies
+ * 3. Get their profiles updated with company associations
+ * 4. Get membership records created in company subcollections
+ *
+ * Note: Basic user profiles are created during sign-up in authService.ts
+ * This service only enhances those profiles with company information
+ */
 
 export interface OnboardingData {
   role: "client" | "company-member" | "create-company";
@@ -40,15 +55,93 @@ export interface CompanyData {
 }
 
 /**
- * Creates a complete user profile during onboarding
+ * Updates an existing user profile with company information during onboarding
  */
-export async function createUserProfile(
+async function updateExistingProfile(
   user: User,
   onboardingData: OnboardingData,
 ): Promise<UserProfile> {
-  console.log("Creating user profile:", { userId: user.uid, onboardingData });
+  console.log("Updating existing profile with company information");
 
-  // Use a transaction to ensure data consistency
+  // Resolve company ID from invitation or company code
+  const companyId = await resolveCompanyId(onboardingData);
+  console.log("Resolved company ID:", companyId);
+
+  const userRef = doc(db, "users", user.uid);
+  const existingProfile = (await getDoc(userRef)).data() as UserProfile;
+
+  // Update profile with company association
+  const updatedProfile: UserProfile = {
+    ...existingProfile,
+    companyAssociations: [
+      ...(existingProfile.companyAssociations || []),
+      {
+        companyId: companyId,
+        role: getCompanyRole(onboardingData.role),
+        joinedAt: Timestamp.now(),
+      },
+    ],
+    currentCompanyId: companyId,
+    onboardingCompleted: true,
+    updatedAt: serverTimestamp() as any,
+  };
+
+  // Update the profile
+  await setDoc(userRef, updatedProfile, { merge: true });
+
+  // Create or update membership document
+  const membershipRef = doc(
+    collection(db, `companies/${companyId}/members`),
+    user.uid,
+  );
+  const membershipData: any = {
+    id: `${user.uid}-${companyId}`,
+    userId: user.uid,
+    companyId: companyId,
+    role: getCompanyRole(onboardingData.role),
+    joinedAt: serverTimestamp(),
+    status: "active",
+    permissions: getDefaultPermissions(onboardingData.role),
+  };
+
+  const membershipDoc = await getDoc(membershipRef);
+  if (membershipDoc.exists()) {
+    await updateDoc(membershipRef, membershipData);
+  } else {
+    await setDoc(membershipRef, membershipData);
+  }
+
+  console.log("Profile updated successfully");
+  return updatedProfile;
+}
+
+/**
+ * Completes user onboarding by joining a company and updating profile
+ */
+export async function completeUserOnboarding(
+  user: User,
+  onboardingData: OnboardingData,
+): Promise<UserProfile> {
+  console.log("Completing user onboarding:", {
+    userId: user.uid,
+    onboardingData,
+  });
+
+  // Check if profile already exists
+  const userRef = doc(db, "users", user.uid);
+  const userDoc = await getDoc(userRef);
+  const profileExists = userDoc.exists();
+
+  console.log("Profile exists:", profileExists);
+
+  // If profile exists, just update it with company info
+  if (profileExists) {
+    console.log("Updating existing profile with company information");
+    return await updateExistingProfile(user, onboardingData);
+  }
+
+  // Otherwise, create new profile (for new signups)
+  console.log("Creating new profile with company information");
   return await runTransaction(db, async (transaction) => {
     let companyId: string;
 
@@ -93,9 +186,9 @@ export async function createUserProfile(
       }
       if (
         onboardingData.role === "company-member" &&
-        !onboardingData.companyCode
+        !onboardingData.invitationCode
       ) {
-        throw new Error("Company code is required for member onboarding");
+        throw new Error("Invitation code is required for member onboarding");
       }
 
       // For now, we'll need to implement company lookup based on codes
@@ -104,24 +197,28 @@ export async function createUserProfile(
       console.log("Resolved company ID:", companyId);
     }
 
-    // Create user profile
+    // Create or update user profile
+    const existingProfile = profileExists
+      ? (userDoc.data() as UserProfile)
+      : null;
+
     const UserProfile: any = {
       uid: user.uid,
       email: user.email!,
-      displayName: user.displayName || null,
-      photoURL: user.photoURL || null,
+      displayName: user.displayName || existingProfile?.displayName || null,
+      photoURL: user.photoURL || existingProfile?.photoURL || null,
 
-      // Authentication and status
+      // Preserve existing basic info if available
       isActive: true,
       lastLoginAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
+      createdAt: existingProfile?.createdAt || serverTimestamp(),
       updatedAt: serverTimestamp(),
 
-      // Profile information (can be expanded later)
-      emailNotifications: true,
-      pushNotifications: false,
-      theme: "system",
-      language: "en",
+      // Preserve existing preferences if available
+      emailNotifications: existingProfile?.emailNotifications ?? true,
+      pushNotifications: existingProfile?.pushNotifications ?? false,
+      theme: existingProfile?.theme || "system",
+      language: existingProfile?.language || "en",
 
       // Role-based access control
       role:
@@ -132,8 +229,9 @@ export async function createUserProfile(
             : onboardingData.role,
       permissions: getDefaultPermissions(onboardingData.role),
 
-      // Company associations
+      // Company associations - merge with existing if any
       companyAssociations: [
+        ...(existingProfile?.companyAssociations || []),
         {
           companyId: companyId,
           role: getCompanyRole(onboardingData.role),
@@ -147,8 +245,9 @@ export async function createUserProfile(
       // Onboarding completion tracking
       onboardingCompleted: true,
 
-      // Metadata
+      // Preserve existing metadata if available
       metadata: {
+        ...existingProfile?.metadata,
         accountStatus: "active",
       },
     };
@@ -157,13 +256,19 @@ export async function createUserProfile(
       uid: user.uid,
       companyId,
       role: UserProfile.role,
+      profileExists,
+      existingAssociations: existingProfile?.companyAssociations?.length || 0,
     });
 
-    // Save user profile
+    // Save or update user profile
     const userRef = doc(db, "users", user.uid);
-    transaction.set(userRef, UserProfile);
+    if (profileExists) {
+      transaction.update(userRef, UserProfile);
+    } else {
+      transaction.set(userRef, UserProfile);
+    }
 
-    // Create the corresponding membership document in the company's members subcollection
+    // Create or update the corresponding membership document in the company's members subcollection
     const membershipRef = doc(
       collection(db, `companies/${companyId}/members`),
       user.uid,
@@ -176,19 +281,32 @@ export async function createUserProfile(
       joinedAt: serverTimestamp(), // This is OK outside of arrays
       status: "active",
       permissions: getDefaultPermissions(onboardingData.role),
-      invitedBy:
-        onboardingData.role === "create-company" ? user.uid : undefined, // Owner invited themselves
     };
 
-    transaction.set(membershipRef, membershipData);
-    console.log(
-      "Company membership created for user:",
-      user.uid,
-      "in company:",
-      companyId,
-    );
+    // Only add invitedBy for company owners (who invite themselves)
+    if (onboardingData.role === "create-company") {
+      membershipData.invitedBy = user.uid;
+    }
 
-
+    // Check if membership already exists
+    const membershipDoc = await getDoc(membershipRef);
+    if (membershipDoc.exists()) {
+      transaction.update(membershipRef, membershipData);
+      console.log(
+        "Company membership updated for user:",
+        user.uid,
+        "in company:",
+        companyId,
+      );
+    } else {
+      transaction.set(membershipRef, membershipData);
+      console.log(
+        "Company membership created for user:",
+        user.uid,
+        "in company:",
+        companyId,
+      );
+    }
 
     console.log("User profile and membership saved successfully");
     return UserProfile;
@@ -199,11 +317,11 @@ export async function createUserProfile(
     try {
       const invitationsRef = collection(db, "invitations");
       const invitationQuery = query(
-        invitationsRef, 
-        where("code", "==", onboardingData.invitationCode)
+        invitationsRef,
+        where("code", "==", onboardingData.invitationCode),
       );
       const invitationSnapshot = await getDocs(invitationQuery);
-      
+
       if (!invitationSnapshot.empty) {
         const invitationDoc = invitationSnapshot.docs[0];
         await updateDoc(invitationDoc.ref, {
@@ -211,7 +329,10 @@ export async function createUserProfile(
           usedBy: user.uid,
           usedAt: serverTimestamp(),
         });
-        console.log("Invitation marked as used:", onboardingData.invitationCode);
+        console.log(
+          "Invitation marked as used:",
+          onboardingData.invitationCode,
+        );
       }
     } catch (error) {
       console.error("Error marking invitation as used:", error);
@@ -364,8 +485,8 @@ export function validateOnboardingData(onboardingData: OnboardingData): {
       errors.push("Invitation code is required for client onboarding");
     }
   } else if (onboardingData.role === "company-member") {
-    if (!onboardingData.companyCode?.trim()) {
-      errors.push("Company code is required for member onboarding");
+    if (!onboardingData.invitationCode?.trim()) {
+      errors.push("Invitation code is required for member onboarding");
     }
   }
 
