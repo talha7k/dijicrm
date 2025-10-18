@@ -20,6 +20,7 @@ import { companyContext } from "$lib/stores/companyContext";
 import { get } from "svelte/store";
   import { authenticatedFetch } from "$lib/utils/authUtils";
   import { formatDateTime } from "$lib/utils";
+  import { compressImage, COMPRESSION_PRESETS } from "$lib/utils/imageCompression";
   import AlertDialog from "$lib/components/shared/alert-dialog.svelte";
   import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
 
@@ -138,15 +139,17 @@ import { get } from "svelte/store";
       secondaryColor: "#6c757d",
     });
 
-   // Logo upload state
-   let selectedLogoFile = $state<File | null>(null);
-   let isUploadingLogo = $state(false);
-   let logoPreview = $state<string | null>(null);
+    // Logo upload state
+    let selectedLogoFile = $state<File | null>(null);
+    let isUploadingLogo = $state(false);
+    let isCompressingLogo = $state(false);
+    let logoPreview = $state<string | null>(null);
 
-    // Stamp image upload state
-    let selectedStampFile = $state<File | null>(null);
-    let isUploadingStamp = $state(false);
-    let stampPreview = $state<string | null>(null);
+     // Stamp image upload state
+     let selectedStampFile = $state<File | null>(null);
+     let isUploadingStamp = $state(false);
+     let isCompressingStamp = $state(false);
+     let stampPreview = $state<string | null>(null);
 
     // Company information state
     let tempCompanyName = $state<string>("");
@@ -433,54 +436,72 @@ import { get } from "svelte/store";
     }
   }
 
-  async function handleLogoFileSelect(event: Event) {
-    const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
+   async function handleLogoFileSelect(event: Event) {
+     const target = event.target as HTMLInputElement;
+     const file = target.files?.[0];
 
-    if (file) {
-      // Validation
-      const maxSize = 2 * 1024 * 1024; // 2MB
-      const allowedTypes = ["image/jpeg", "image/png", "image/svg+xml", "image/webp"];
-      const maxWidth = 2000;
-      const maxHeight = 2000;
+     if (file) {
+       // Validation
+       const maxSize = 2 * 1024 * 1024; // 2MB
+       const allowedTypes = ["image/jpeg", "image/png", "image/svg+xml", "image/webp"];
+       const maxWidth = 2000;
+       const maxHeight = 2000;
 
-      if (file.size > maxSize) {
-        showAlert("File Too Large", "File size must be less than 2MB.", "error");
-        target.value = ""; // Clear the input
-        return;
-      }
+       if (file.size > maxSize) {
+         showAlert("File Too Large", "File size must be less than 2MB.", "error");
+         target.value = ""; // Clear the input
+         return;
+       }
 
-      if (!allowedTypes.includes(file.type)) {
-        showAlert("Invalid File Type", "Please select a valid image file (JPEG, PNG, SVG, or WebP).", "error");
-        target.value = ""; // Clear the input
-        return;
-      }
+       if (!allowedTypes.includes(file.type)) {
+         showAlert("Invalid File Type", "Please select a valid image file (JPEG, PNG, SVG, or WebP).", "error");
+         target.value = ""; // Clear the input
+         return;
+       }
 
-      // Check dimensions for non-SVG files
-      if (file.type !== "image/svg+xml") {
-        try {
-          const dimensions = await getImageDimensions(file);
-          if (dimensions.width > maxWidth || dimensions.height > maxHeight) {
-            showAlert("Image Too Large", `Image dimensions must be ${maxWidth}x${maxHeight} pixels or smaller. Selected image is ${dimensions.width}x${dimensions.height} pixels.`, "error");
-            target.value = ""; // Clear the input
-            return;
-          }
-        } catch (error) {
-          console.warn("Could not validate image dimensions:", error);
-          // Continue anyway - the upload will handle it
-        }
-      }
+       // Check dimensions for non-SVG files
+       if (file.type !== "image/svg+xml") {
+         try {
+           const dimensions = await getImageDimensions(file);
+           if (dimensions.width > maxWidth || dimensions.height > maxHeight) {
+             showAlert("Image Too Large", `Image dimensions must be ${maxWidth}x${maxHeight} pixels or smaller. Selected image is ${dimensions.width}x${dimensions.height} pixels.`, "error");
+             target.value = ""; // Clear the input
+             return;
+           }
+         } catch (error) {
+           console.warn("Could not validate image dimensions:", error);
+           // Continue anyway - the upload will handle it
+         }
+       }
 
-      selectedLogoFile = file;
+       // Compress the image for non-SVG files
+       isCompressingLogo = true;
+       try {
+         let processedFile = file;
 
-      // Create preview for all file types including SVG
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        logoPreview = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    }
-  }
+         if (file.type !== "image/svg+xml") {
+           // Use branding compression preset for logos
+           processedFile = await compressImage(file, COMPRESSION_PRESETS.BRANDING);
+         }
+
+         selectedLogoFile = processedFile;
+
+         // Create preview for all file types including SVG
+         const reader = new FileReader();
+         reader.onload = (e) => {
+           logoPreview = e.target?.result as string;
+         };
+         reader.readAsDataURL(processedFile);
+       } catch (error) {
+         console.error("Image compression failed:", error);
+         showAlert("Compression Error", "Failed to compress image. Please try again.", "error");
+         target.value = ""; // Clear the input
+         return;
+       } finally {
+         isCompressingLogo = false;
+       }
+     }
+   }
 
   // Helper function to get image dimensions
   function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
@@ -1345,19 +1366,19 @@ import { get } from "svelte/store";
                                <Icon icon="lucide:copy" class="h-4 w-4 mr-1" />
                                Copy
                              </Button>
-                             <DropdownMenu.Root>
-                                <DropdownMenu.Trigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                  >
-                                   <Icon icon="lucide:more-horizontal" class="h-4 w-4" />
-                                 </Button>
-                               </DropdownMenu.Trigger>
-                               <DropdownMenu.Content>
-                                 <DropdownMenu.Item onclick={() => handleRevokeInvitation(invitation.id)}>
-                                   <Icon icon="lucide:x" class="h-4 w-4 mr-2" />
-                                   Revoke (Mark as Expired)
+                              <DropdownMenu.Root>
+                                 <DropdownMenu.Trigger>
+                                   <Button
+                                     size="sm"
+                                     variant="destructive"
+                                   >
+                                    <Icon icon="lucide:more-horizontal" class="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenu.Trigger>
+                                <DropdownMenu.Content>
+                                  <DropdownMenu.Item onclick={() => handleRevokeInvitation(invitation.id)}>
+                                    <Icon icon="lucide:x" class="h-4 w-4 mr-2" />
+                                    Revoke (Mark as Expired)
                                  </DropdownMenu.Item>
                                  <DropdownMenu.Separator />
                                  <DropdownMenu.Item onclick={() => handleDeleteInvitation(invitation.id)} class="text-destructive focus:text-destructive">
@@ -1423,19 +1444,19 @@ import { get } from "svelte/store";
                                <Icon icon="lucide:copy" class="h-4 w-4 mr-1" />
                                Copy
                              </Button>
-                             <DropdownMenu.Root>
-                                <DropdownMenu.Trigger asChild>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                  >
-                                   <Icon icon="lucide:more-horizontal" class="h-4 w-4" />
-                                 </Button>
-                               </DropdownMenu.Trigger>
-                               <DropdownMenu.Content>
-                                 <DropdownMenu.Item onclick={() => handleRevokeInvitation(invitation.id)}>
-                                   <Icon icon="lucide:x" class="h-4 w-4 mr-2" />
-                                   Revoke (Mark as Expired)
+                              <DropdownMenu.Root>
+                                 <DropdownMenu.Trigger>
+                                   <Button
+                                     size="sm"
+                                     variant="destructive"
+                                   >
+                                    <Icon icon="lucide:more-horizontal" class="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenu.Trigger>
+                                <DropdownMenu.Content>
+                                  <DropdownMenu.Item onclick={() => handleRevokeInvitation(invitation.id)}>
+                                    <Icon icon="lucide:x" class="h-4 w-4 mr-2" />
+                                    Revoke (Mark as Expired)
                                  </DropdownMenu.Item>
                                  <DropdownMenu.Separator />
                                  <DropdownMenu.Item onclick={() => handleDeleteInvitation(invitation.id)} class="text-destructive focus:text-destructive">

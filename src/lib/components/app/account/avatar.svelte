@@ -5,19 +5,20 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { firekitAuth, firekitUploadTask, firekitUser } from 'svelte-firekit';
 	import { toast } from 'svelte-sonner';
-	import { userProfile } from '$lib/services/authService';
-
-	const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes
-	const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+	import { userProfile, refreshUserData } from '$lib/services/authService';
+	import { compressImage, COMPRESSION_PRESETS } from '$lib/utils/imageCompression';
 
 	// State management
 	let user = $derived($userProfile);
 	let uploadState = $state({
 		imageUrl: '',
 		selectedImage: null as File | null,
+		compressedImage: null as File | null,
 		uploadTask: null as any,
 		progress: 0,
 		isUploading: false,
+		isCompressing: false,
+		isDeleting: false,
 		error: ''
 	});
 
@@ -37,7 +38,12 @@
 	// Handle upload completion
 	async function handleUploadComplete(downloadURL: string) {
 		try {
-			// Update the user's profile in Firebase
+			// Update the user's profile in Firebase Auth
+			await firekitAuth.updateUserProfile({
+				photoURL: downloadURL
+			});
+
+			// Also update the user's profile in Firestore
 			const { updateDoc, doc } = await import('firebase/firestore');
 			const { db } = await import('$lib/firebase');
 			
@@ -48,8 +54,16 @@
 				});
 			}
 
+			// Refresh the user profile store to get the updated photoURL
+			await refreshUserData();
+
+			// Clear the upload state
 			uploadState.isUploading = false;
 			uploadState.error = '';
+			uploadState.selectedImage = null;
+			uploadState.compressedImage = null;
+			if (fileInput) fileInput.value = '';
+
 			toast.success('Profile photo updated successfully');
 		} catch (error) {
 			handleError('Failed to update profile photo');
@@ -57,18 +71,18 @@
 	}
 
 	// Validate file
-	function validateFile(file: File): boolean {
-		if (!ALLOWED_TYPES.includes(file.type)) {
-			handleError('Please upload a valid image file (JPEG, PNG, or WebP)');
+	async function validateFile(file: File): Promise<boolean> {
+		try {
+			// Only validate file type, not size (compression will handle size)
+			const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+			if (!allowedTypes.includes(file.type)) {
+				throw new Error('Please upload a valid image file (JPEG, PNG, or WebP)');
+			}
+			return true;
+		} catch (error) {
+			handleError(error instanceof Error ? error.message : 'Validation failed');
 			return false;
 		}
-
-		if (file.size > MAX_FILE_SIZE) {
-			handleError('File size must be less than 1MB');
-			return false;
-		}
-
-		return true;
 	}
 
 	// Handle file selection
@@ -78,33 +92,61 @@
 
 		if (!file) return;
 
-		if (!validateFile(file)) {
+		if (!(await validateFile(file))) {
 			target.value = '';
 			return;
 		}
 
 		try {
+			uploadState.isCompressing = true;
 			uploadState.isUploading = true;
-			uploadState.imageUrl = URL.createObjectURL(file);
 			uploadState.selectedImage = file;
-			uploadState.uploadTask = firekitUploadTask(`users-profile/${firekitUser.uid}/profile`, file);
+			uploadState.imageUrl = URL.createObjectURL(file);
+
+			// Compress the image
+			const compressedFile = await compressImage(file, COMPRESSION_PRESETS.AVATAR);
+			uploadState.compressedImage = compressedFile;
+			uploadState.isCompressing = false;
+
+			// Start upload with compressed file
+			uploadState.uploadTask = firekitUploadTask(`users-profile/${firekitUser.uid}/profile`, compressedFile);
 		} catch (error) {
-			handleError('Failed to start upload');
+			uploadState.isCompressing = false;
+			handleError(error instanceof Error ? error.message : 'Failed to process image');
 		}
 	}
 
 	// Handle delete
 	async function handleDelete() {
 		try {
+			uploadState.isDeleting = true;
+			
 			await firekitAuth.updateUserProfile({
 				photoURL: ''
 			});
+			
+			// Also update the user's profile in Firestore
+			const { updateDoc, doc } = await import('firebase/firestore');
+			const { db } = await import('$lib/firebase');
+			
+			if (user?.uid) {
+				await updateDoc(doc(db, 'users', user.uid), {
+					photoURL: '',
+					updatedAt: new Date()
+				});
+			}
+			
+			// Refresh the user profile store to get the updated photoURL
+			await refreshUserData();
+			
 			uploadState.imageUrl = '';
 			uploadState.selectedImage = null;
 			if (fileInput) fileInput.value = '';
 			toast('Profile photo deleted successfully');
 		} catch (error) {
 			handleError('Failed to delete profile photo');
+		} finally {
+			uploadState.isDeleting = false;
 		}
 	}
 
@@ -113,6 +155,7 @@
 		console.error(message);
 		uploadState.error = message;
 		uploadState.isUploading = false;
+		uploadState.isDeleting = false;
 		toast.error(message);
 		throw new Error(message);
 	}
@@ -129,19 +172,29 @@
 			<div class="flex flex-col gap-2">
 				<div class="flex gap-2">
 					<Button size="sm" disabled={uploadState.isUploading} onclick={() => fileInput?.click()}>
-						{uploadState.isUploading ? `Uploading ${progress}%` : 'Upload photo'}
+						{#if uploadState.isCompressing}
+							Compressing...
+						{:else if uploadState.isUploading}
+							Uploading {progress}%
+						{:else}
+							Upload photo
+						{/if}
 					</Button>
 					<Button
 						variant="outline"
 						class="text-destructive"
 						size="sm"
-						disabled={uploadState.isUploading || !user.photoURL}
+						disabled={uploadState.isUploading || uploadState.isDeleting || !user.photoURL}
 						onclick={handleDelete}
 					>
-						Delete
+						{#if uploadState.isDeleting}
+							Deleting...
+						{:else}
+							Delete
+						{/if}
 					</Button>
 				</div>
-				<p class="text-xs text-muted-foreground">Pick a photo up to 1MB (JPEG, PNG, or WebP).</p>
+				<p class="text-xs text-muted-foreground">Pick a photo (JPEG, PNG, or WebP). Images will be compressed to 20KB max.</p>
 				{#if uploadState.error}
 					<p class="text-xs text-destructive">{uploadState.error}</p>
 				{/if}

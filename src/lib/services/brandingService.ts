@@ -9,6 +9,7 @@ import type {
   LogoUploadOptions,
 } from "$lib/types/branding";
 import { Timestamp } from "firebase/firestore";
+import { ImageProcessor } from "$lib/utils/imageCompression";
 
 // Collection name for company branding
 const BRANDING_COLLECTION = "companyBranding";
@@ -152,6 +153,7 @@ export class BrandingService {
     companyId: string,
     file: File,
     options: LogoUploadOptions = {},
+    onProgress?: (percentage: number) => void,
   ): Promise<LogoUploadResult> {
     try {
       // Set default options for logos
@@ -177,7 +179,7 @@ export class BrandingService {
         };
       }
 
-      // Validate file size
+      // Validate file size (before compression)
       if (file.size > uploadOptions.maxSize) {
         return {
           success: false,
@@ -185,43 +187,30 @@ export class BrandingService {
         };
       }
 
-      // Validate dimensions for non-SVG files
-      if (
-        file.type !== "image/svg+xml" &&
-        uploadOptions.maxWidth &&
-        uploadOptions.maxHeight
-      ) {
+      // Compress the image using branding preset
+      let processedFile = file;
+      if (file.type !== "image/svg+xml") {
         try {
-          const dimensions = await this.getImageDimensions(file);
-          if (
-            dimensions.width > uploadOptions.maxWidth ||
-            dimensions.height > uploadOptions.maxHeight
-          ) {
-            return {
-              success: false,
-              error: `Image dimensions must be ${uploadOptions.maxWidth}x${uploadOptions.maxHeight} pixels or smaller. Selected image is ${dimensions.width}x${dimensions.height} pixels.`,
-            };
-          }
+          const processor = ImageProcessor.createBrandingProcessor();
+          processedFile = await processor.processImage(file);
+          onProgress?.(50); // Compression complete
         } catch (error) {
-          console.warn("Could not validate image dimensions:", error);
-          // Continue with upload - let Firebase handle it
+          console.warn(
+            "Image compression failed, proceeding with original file:",
+            error,
+          );
+          // Continue with original file if compression fails
         }
-      }
-
-      // Validate file size
-      if (file.size > uploadOptions.maxSize) {
-        return {
-          success: false,
-          error: `File size exceeds maximum allowed size of ${uploadOptions.maxSize / (1024 * 1024)}MB`,
-        };
       }
 
       // Upload file
       const result = await uploadFile(
-        file,
+        processedFile,
         `logo-${Date.now()}`,
         uploadOptions,
       );
+
+      onProgress?.(100); // Upload complete
 
       if (!result.success) {
         return result;
@@ -317,6 +306,7 @@ export class BrandingService {
     companyId: string,
     file: File,
     options: LogoUploadOptions = {},
+    onProgress?: (percentage: number) => void,
   ): Promise<LogoUploadResult> {
     try {
       // Set default options for stamp images (smaller than logos)
@@ -342,7 +332,7 @@ export class BrandingService {
         };
       }
 
-      // Validate file size
+      // Validate file size (before compression)
       if (file.size > uploadOptions.maxSize) {
         return {
           success: false,
@@ -350,35 +340,30 @@ export class BrandingService {
         };
       }
 
-      // Validate dimensions for non-SVG files
-      if (
-        file.type !== "image/svg+xml" &&
-        uploadOptions.maxWidth &&
-        uploadOptions.maxHeight
-      ) {
+      // Compress the image using branding preset
+      let processedFile = file;
+      if (file.type !== "image/svg+xml") {
         try {
-          const dimensions = await this.getImageDimensions(file);
-          if (
-            dimensions.width > uploadOptions.maxWidth ||
-            dimensions.height > uploadOptions.maxHeight
-          ) {
-            return {
-              success: false,
-              error: `Image dimensions must be ${uploadOptions.maxWidth}x${uploadOptions.maxHeight} pixels or smaller. Selected image is ${dimensions.width}x${dimensions.height} pixels.`,
-            };
-          }
+          const processor = ImageProcessor.createBrandingProcessor();
+          processedFile = await processor.processImage(file);
+          onProgress?.(50); // Compression complete
         } catch (error) {
-          console.warn("Could not validate image dimensions:", error);
-          // Continue with upload - let Firebase handle it
+          console.warn(
+            "Image compression failed, proceeding with original file:",
+            error,
+          );
+          // Continue with original file if compression fails
         }
       }
 
       // Upload file
       const result = await uploadFile(
-        file,
+        processedFile,
         `stamp-${Date.now()}`,
         uploadOptions,
       );
+
+      onProgress?.(100); // Upload complete
 
       if (!result.success) {
         return result;
