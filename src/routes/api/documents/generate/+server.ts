@@ -5,13 +5,13 @@ import {
 } from "$lib/utils/template-rendering";
 import { renderTemplate } from "$lib/utils/template-validation";
 import type { DocumentTemplate } from "$lib/types/document";
-import { brandingService } from "$lib/services/brandingService";
 import type { CompanyBranding } from "$lib/types/branding";
 import { getDb } from "$lib/firebase-admin";
 import { requireCompanyAccess } from "$lib/utils/server-company-validation";
 import puppeteer from "puppeteer";
 import { generateZATCAQRCode } from "$lib/utils/zatca";
 import QRCode from "qrcode";
+import { populateSystemVariables } from "$lib/services/systemVariableService";
 
 /**
  * Generate a QR code image from text data
@@ -259,9 +259,22 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     }
 
     const body = await request.json();
-    const { templateId, data, format = "pdf", companyId } = body;
+    const {
+      templateId,
+      data,
+      format = "pdf",
+      companyId,
+      clientId,
+      orderId,
+    } = body;
 
-    console.log("Request body:", { templateId, format, companyId });
+    console.log("Request body:", {
+      templateId,
+      format,
+      companyId,
+      clientId,
+      orderId,
+    });
 
     if (!templateId || !data || !companyId) {
       throw error(
@@ -366,12 +379,24 @@ export const POST = async ({ request, locals }: RequestEvent) => {
       });
     }
 
+    // Populate system variables from database
+    console.log("Populating system variables...");
+    const systemVariables = await populateSystemVariables({
+      companyId,
+      clientId,
+      orderId,
+      additionalData: data, // Merge user-provided data
+    });
+
+    // Merge system variables with existing data
+    const mergedData = { ...systemVariables, ...data };
+
     // Add branding data to template data
     if (branding) {
       // Fetch and convert logo to data URL if available
       if (branding.logoUrl) {
         if (branding.logoUrl.startsWith("data:")) {
-          data.companyLogo = branding.logoUrl;
+          mergedData.companyLogo = branding.logoUrl;
           console.log("Using existing data URL for company logo");
         } else {
           console.log(
@@ -380,11 +405,11 @@ export const POST = async ({ request, locals }: RequestEvent) => {
           );
           const logoDataUrl = await fetchImageAsDataUrl(branding.logoUrl);
           if (logoDataUrl) {
-            data.companyLogo = logoDataUrl;
+            mergedData.companyLogo = logoDataUrl;
             console.log("Successfully converted logo to data URL");
           } else {
             console.log("Failed to fetch logo, using placeholder");
-            data.companyLogo =
+            mergedData.companyLogo =
               "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
           }
         }
@@ -393,7 +418,7 @@ export const POST = async ({ request, locals }: RequestEvent) => {
       // Fetch and convert stamp to data URL if available
       if (branding.stampImageUrl) {
         if (branding.stampImageUrl.startsWith("data:")) {
-          data.companyStamp = branding.stampImageUrl;
+          mergedData.companyStamp = branding.stampImageUrl;
           console.log("Using existing data URL for company stamp");
         } else {
           console.log(
@@ -404,11 +429,11 @@ export const POST = async ({ request, locals }: RequestEvent) => {
             branding.stampImageUrl,
           );
           if (stampDataUrl) {
-            data.companyStamp = stampDataUrl;
+            mergedData.companyStamp = stampDataUrl;
             console.log("Successfully converted stamp to data URL");
           } else {
             console.log("Failed to fetch stamp, using placeholder");
-            data.companyStamp =
+            mergedData.companyStamp =
               "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
           }
         }
@@ -417,23 +442,23 @@ export const POST = async ({ request, locals }: RequestEvent) => {
       console.log("Branding data added to template data");
     } else {
       // Provide fallback values when branding cannot be loaded
-      data.companyLogo =
+      mergedData.companyLogo =
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
-      data.companyStamp =
+      mergedData.companyStamp =
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
       console.log("Using fallback branding data (transparent placeholders)");
     }
 
-    console.log("Final template data keys:", Object.keys(data));
-    console.log("Items data:", data.items);
-    console.log("ZATCA QR code present:", !!data.zatcaQRCode);
+    console.log("Final template data keys:", Object.keys(mergedData));
+    console.log("Items data:", mergedData.items);
+    console.log("ZATCA QR code present:", !!mergedData.zatcaQRCode);
     console.log(
       "Company logo URL:",
-      data.companyLogo?.substring(0, 50) + "...",
+      mergedData.companyLogo?.substring(0, 50) + "...",
     );
     console.log(
       "Company stamp URL:",
-      data.companyStamp?.substring(0, 50) + "...",
+      mergedData.companyStamp?.substring(0, 50) + "...",
     );
 
     // Fetch template from Firestore - ensure it belongs to the company
@@ -481,12 +506,12 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     );
 
     // Validate template data
-    const validation = validateTemplateData(template, data);
+    const validation = validateTemplateData(template, mergedData);
     if (!validation.isValid) {
       console.error("Template validation failed:", {
         templateId,
         missingFields: validation.missingFields,
-        providedData: Object.keys(data),
+        providedData: Object.keys(mergedData),
         requiredPlaceholders: template.placeholders
           .filter((p) => p.required)
           .map((p) => p.key),
@@ -498,7 +523,7 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     }
 
     // Render template
-    let renderedHtml = renderTemplate(template, data);
+    let renderedHtml = renderTemplate(template, mergedData);
     console.log("Rendered HTML length:", renderedHtml.length);
     console.log("Rendered HTML preview:", renderedHtml.substring(0, 500));
 

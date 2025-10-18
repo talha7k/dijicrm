@@ -152,46 +152,21 @@ export interface ZATCAQRCodeData {
   vatAmount: number;
 }
 
-// Standard placeholder definitions
+// Standard placeholder definitions - Only system-generated variables
 export const STANDARD_PLACEHOLDERS: TemplatePlaceholder[] = [
   {
-    key: "clientName",
-    label: "Client Name",
-    type: "text",
-    required: true,
-    validation: { minLength: 1, maxLength: 100 },
-  },
-  {
-    key: "clientEmail",
-    label: "Client Email",
-    type: "text",
-    required: true,
-    validation: { pattern: "^[^@]+@[^@]+\\.[^@]+$" },
-  },
-  {
-    key: "companyName",
-    label: "Company Name",
-    type: "text",
-    required: true,
-  },
-  {
-    key: "amount",
-    label: "Amount",
-    type: "currency",
-    required: false,
-  },
-  {
-    key: "date",
-    label: "Date",
+    key: "currentDate",
+    label: "Current Date",
     type: "date",
     required: false,
-    defaultValue: "{{currentDate}}",
+    description: "The current date when the document is generated",
   },
   {
-    key: "dueDate",
-    label: "Due Date",
-    type: "date",
+    key: "orderNumber",
+    label: "Order Number",
+    type: "text",
     required: false,
+    description: "Unique identifier for the order or document",
   },
   {
     key: "zatcaQRCode",
@@ -201,21 +176,10 @@ export const STANDARD_PLACEHOLDERS: TemplatePlaceholder[] = [
     description: "ZATCA compliant QR code for electronic invoicing",
   },
   {
-    key: "vatAmount",
-    label: "VAT Amount",
-    type: "currency",
-    required: false,
-  },
-  {
-    key: "vatNumber",
-    label: "VAT Registration Number",
-    type: "text",
-    required: false,
-  },
-  {
     key: "invoiceTimestamp",
     label: "Invoice Timestamp",
     type: "text",
     required: false,
+    description: "Timestamp for invoice generation",
   },
 ];

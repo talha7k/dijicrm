@@ -25,9 +25,11 @@
    import PDFUploadModal from '$lib/components/app/client/PDFUploadModal.svelte';
    import EmailComposeModal from '$lib/components/app/client/EmailComposeModal.svelte';
    import PaymentModal from '$lib/components/app/client/PaymentModal.svelte';
-    import EmailHistory from '$lib/components/app/client/EmailHistory.svelte';
-     import DocumentHistory from '$lib/components/app/client/DocumentHistory.svelte';
-     import OrderCard from '$lib/components/app/client/OrderCard.svelte';
+     import EmailHistory from '$lib/components/app/client/EmailHistory.svelte';
+      import DocumentHistory from '$lib/components/app/client/DocumentHistory.svelte';
+      import OrderCard from '$lib/components/app/client/OrderCard.svelte';
+       import CustomVariableManager from '$lib/components/app/template/custom-variable-manager.svelte';
+       import DocumentDataForm from '$lib/components/app/template/document-data-form.svelte';
     
     import { emailHistoryStore } from '$lib/stores/emailHistory';
     import { companyContext } from '$lib/stores/companyContext';
@@ -110,6 +112,7 @@
     let showEmailComposeModal = $state(false);
     let showPaymentModal = $state(false);
     let showDocumentPreviewModal = $state(false);
+    let showDocumentGenerationModal = $state(false);
     let documentToPreview = $state<any>(null);
    let selectedOrder = $state<Order | null>(null);
 
@@ -250,10 +253,34 @@
     showPaymentModal = true;
   }
 
-  function handlePaymentComplete() {
-    // Update order status or refresh data
-    toast.success('Payment recorded successfully');
-  }
+   function handlePaymentComplete() {
+     // Update order status or refresh data
+     toast.success('Payment recorded successfully');
+   }
+
+   function handleGenerateDocument() {
+     showDocumentGenerationModal = true;
+   }
+
+   async function handleDocumentGenerationComplete(result: any) {
+     try {
+       console.log('Document generation result:', result);
+       
+       // Here you would typically:
+       // 1. Call the document generation API
+       // 2. Save the generated document
+       // 3. Update the document delivery store
+       
+       toast.success('Document generated successfully!');
+       showDocumentGenerationModal = false;
+       
+       // TODO: Integrate with actual document generation API
+       // For now, just show success message
+     } catch (error) {
+       console.error('Failed to generate document:', error);
+       toast.error('Failed to generate document');
+     }
+   }
 
    async function handleInviteClient() {
      if (!client) return;
@@ -322,6 +349,12 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
             </svg>
             Compose Email
+          </Button>
+          <Button variant="outline" onclick={handleGenerateDocument}>
+            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Generate Document
           </Button>
           <Button variant="outline" onclick={handleSendDocument}>
             <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -448,7 +481,7 @@
 
      <!-- Tabs -->
      <Tabs.Root bind:value={activeTab}>
-       <Tabs.List class="grid w-full grid-cols-4 gap-1">
+        <Tabs.List class="grid w-full grid-cols-5 gap-1">
          <Tabs.Trigger value="overview" class="text-xs sm:text-sm">
            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
@@ -467,12 +500,18 @@
            </svg>
            Emails
          </Tabs.Trigger>
-         <Tabs.Trigger value="documents" class="text-xs sm:text-sm">
-           <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-           </svg>
-           Documents
-         </Tabs.Trigger>
+          <Tabs.Trigger value="documents" class="text-xs sm:text-sm">
+            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Documents
+          </Tabs.Trigger>
+          <Tabs.Trigger value="templates" class="text-xs sm:text-sm">
+            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
+            </svg>
+            Templates
+          </Tabs.Trigger>
        </Tabs.List>
 
       <Tabs.Content value="overview" class="space-y-6">
@@ -650,6 +689,10 @@ onPreview={(document) => {
           }}
         />
       </Tabs.Content>
+
+      <Tabs.Content value="templates" class="space-y-6">
+        <CustomVariableManager />
+      </Tabs.Content>
     </Tabs.Root>
 
     <!-- Order Creation Modal -->
@@ -753,5 +796,27 @@ onPreview={(document) => {
          {/if}
         </Dialog.Content>
       </Dialog.Root>
+
+     <!-- Document Generation Modal -->
+     {#if showDocumentGenerationModal}
+       <Dialog.Root bind:open={showDocumentGenerationModal}>
+         <Dialog.Content class="max-w-6xl max-h-[90vh] overflow-auto">
+           <Dialog.Header>
+             <Dialog.Title>Generate Document</Dialog.Title>
+             <Dialog.Description>
+               Select a template and provide custom data to generate a document for {client.displayName || `${client.firstName} ${client.lastName}`}
+             </Dialog.Description>
+           </Dialog.Header>
+           <div class="mt-4">
+             <DocumentDataForm
+               clientId={clientId}
+               clientName={client.displayName || `${client.firstName} ${client.lastName}`}
+               onDataEntryComplete={handleDocumentGenerationComplete}
+               onCancel={() => showDocumentGenerationModal = false}
+             />
+           </div>
+         </Dialog.Content>
+       </Dialog.Root>
+     {/if}
    </div>
  {/if}

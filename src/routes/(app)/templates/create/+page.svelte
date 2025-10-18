@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import DashboardLayout from '$lib/components/shared/dashboard-layout.svelte';
-  import TemplateEditor from '$lib/components/shared/template-editor.svelte';
+  import TemplateEditDialog from '$lib/components/app/template/template-edit-dialog.svelte';
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { Badge } from '$lib/components/ui/badge';
@@ -10,6 +10,7 @@
   import Icon from '@iconify/svelte';
   import { requireCompany } from '$lib/utils/auth';
   import { documentTemplatesStore } from '$lib/stores/documentTemplates';
+  import { customTemplateVariablesStore } from '$lib/stores/customTemplateVariables';
   import { auth } from '$lib/firebase';
   import type { DocumentTemplate } from '$lib/types/document';
 
@@ -73,6 +74,38 @@
 
       console.log('Cleaned template data:', templateData);
 
+      // If this is a sample template, create custom variables from its placeholders
+      if (template.placeholders && template.placeholders.length > 0) {
+        try {
+          const { analyzeTemplateVariables } = await import('$lib/services/variableDetectionService');
+          const analysis = analyzeTemplateVariables(template.htmlContent, []);
+          
+          // Create custom variables for new variables detected
+          if (analysis.newVariables.length > 0) {
+            console.log('Creating custom variables from sample template:', analysis.newVariables);
+            for (const variable of analysis.newVariables) {
+              try {
+                await customTemplateVariablesStore.createCustomVariable({
+                  key: variable.key,
+                  label: variable.label,
+                  type: variable.type,
+                  description: variable.description,
+                  required: variable.required,
+                  category: 'custom'
+                });
+              } catch (varError) {
+                console.warn('Failed to create custom variable:', variable.key, varError);
+                // Continue even if one variable fails
+              }
+            }
+            toast.success(`Created ${analysis.newVariables.length} custom variables from template`);
+          }
+        } catch (analysisError) {
+          console.warn('Failed to analyze template variables:', analysisError);
+          // Continue with template save even if analysis fails
+        }
+      }
+
       if (template.id && template.id !== '') {
         // Update existing template
         console.log('Updating existing template:', template.id);
@@ -120,12 +153,15 @@ function handleTemplatePreview(template: DocumentTemplate) {
 
 {#if mounted}
   {#if showEditor}
-    <TemplateEditor
-      template={selectedTemplate}
-      on:save={(e) => handleTemplateSave(e.detail)}
-      on:preview={(e) => handleTemplatePreview(e.detail)}
-      on:cancel={handleCancel}
-    />
+    <DashboardLayout title="Create Template" description="Design your document template">
+      <div class="py-4">
+        <TemplateEditDialog
+          initialTemplate={selectedTemplate}
+          onSave={handleTemplateSave}
+          onCancel={handleCancel}
+        />
+      </div>
+    </DashboardLayout>
   {:else}
     <DashboardLayout title="Create Template" description="Choose a template to start with or create from scratch">
       <div class="space-y-6">

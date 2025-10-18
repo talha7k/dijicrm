@@ -229,43 +229,27 @@ export async function generatePreviewData(
     company = companyStore.data.company;
   }
 
-  // Generate sample data based on template type
-  if (template.type === "order") {
-    previewData.items = [
-      { description: "Web Development Services", quantity: 40, rate: 125.0 },
-      { description: "UI/UX Design Consultation", quantity: 20, rate: 150.0 },
-      { description: "Project Management", quantity: 10, rate: 100.0 },
-    ];
-    previewData.subtotal = 8750.0;
-    previewData.taxRate = 15;
-    previewData.taxAmount = 1312.5;
-    previewData.total = 10062.5;
+  // Generate basic system variables only
+  switch (template.type) {
+    case "order":
+      previewData.currentDate = new Date().toISOString().split("T")[0];
+      previewData.orderNumber = "INV-" + Date.now();
+      break;
 
-    // Generate ZATCA QR code if company has required data
-    if (company?.name && company?.vatNumber) {
-      try {
-        const zatcaData = {
-          sellerName: company.name,
-          vatNumber: company.vatNumber,
-          timestamp: new Date().toISOString(),
-          totalAmount: previewData.total,
-          vatAmount: previewData.taxAmount,
-        };
-        const qrCodeDataUrl = await generateZATCAQRCode(zatcaData);
-        previewData.zatcaQRCode = qrCodeDataUrl;
-      } catch (error) {
-        console.warn("Could not generate ZATCA QR code:", error);
-        previewData.zatcaQRCode = getSampleValue({
-          key: "zatcaQRCode",
-          type: "image",
-          label: "ZATCA QR Code",
-          required: false,
-        });
-      }
-    }
+    case "legal":
+      previewData.currentDate = new Date().toISOString().split("T")[0];
+      break;
+
+    case "business":
+      previewData.currentDate = new Date().toISOString().split("T")[0];
+      break;
+
+    case "custom":
+      previewData.currentDate = new Date().toISOString().split("T")[0];
+      break;
   }
 
-  // Generate individual placeholder values
+  // Generate individual placeholder values for any remaining placeholders
   for (const placeholder of template.placeholders) {
     if (!previewData[placeholder.key]) {
       previewData[placeholder.key] = await getSampleValue(

@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import DashboardLayout from '$lib/components/shared/dashboard-layout.svelte';
-  import TemplateEditor from '$lib/components/shared/template-editor.svelte';
+  import TemplateEditDialog from '$lib/components/app/template/template-edit-dialog.svelte';
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
@@ -266,7 +266,7 @@ function handleDeleteTemplate(template: any) {
 
     <!-- Edit Template Dialog -->
     <Dialog bind:open={showEditDialog}>
-      <DialogContent class="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent class="max-w-7xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Template</DialogTitle>
           <DialogDescription>
@@ -274,14 +274,20 @@ function handleDeleteTemplate(template: any) {
           </DialogDescription>
         </DialogHeader>
         {#if templateToEdit}
-          <TemplateEditor
-            template={templateToEdit}
-            on:save={(e) => handleTemplateEdit(e.detail)}
-            on:cancel={() => {
-              showEditDialog = false;
-              templateToEdit = null;
-            }}
-          />
+          <div class="py-4">
+            <TemplateEditDialog
+              initialTemplate={templateToEdit}
+              onSave={(updatedTemplate) => {
+                handleTemplateEdit(updatedTemplate);
+                showEditDialog = false;
+                templateToEdit = null;
+              }}
+              onCancel={() => {
+                showEditDialog = false;
+                templateToEdit = null;
+              }}
+            />
+          </div>
         {/if}
       </DialogContent>
     </Dialog>
