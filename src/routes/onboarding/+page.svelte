@@ -53,15 +53,7 @@
 		// Don't move to step 3 until validation is complete
 	}
 
-	// Handle invitation validation
-	function handleInvitationValidated(event: CustomEvent<{ code: string; invitation: any; company: any }>) {
-		onboardingData.invitationCode = event.detail.code;
-		onboardingData.invitation = event.detail.invitation;
-		onboardingData.company = event.detail.company;
-		currentStep = 3;
-	}
-
-	// Handle company code validation
+ 	// Handle company code validation
 	function handleCompanyValidated(event: CustomEvent<{ code: string; company: any; invitation?: any }>) {
 		console.log('🎯 handleCompanyValidated called with:', event.detail);
 		console.log('🎯 selectedRole is:', selectedRole);
@@ -194,12 +186,12 @@
 			{#if !selectedRole}
 				<!-- Role Selection Step -->
 				<OnboardingRoleSelection on:roleSelected={handleRoleSelected} />
-			{:else if selectedRole === 'client'}
-				<!-- Client Setup Step -->
-				<OnboardingClientSetup
-					on:invitationValidated={handleInvitationValidated}
-					on:back={goBack}
-				/>
+ 			{:else if selectedRole === 'client'}
+ 				<!-- Client Setup Step -->
+ 				<OnboardingClientSetup
+ 					on:companyValidated={handleCompanyValidated}
+ 					on:back={goBack}
+ 				/>
 			{:else if selectedRole === 'company-member'}
 				<!-- Company Member Setup Step -->
 				<OnboardingMemberSetup
