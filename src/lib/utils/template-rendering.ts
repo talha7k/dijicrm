@@ -6,6 +6,33 @@ import type { CompanyBranding } from "$lib/types/branding";
 import Handlebars from "handlebars";
 
 /**
+ * Adds placeholder SVG images for empty image data
+ */
+function addPlaceholderImages(data: Record<string, any>): Record<string, any> {
+  const enhancedData = { ...data };
+
+  // Company logo placeholder
+  if (!enhancedData.companyLogo || enhancedData.companyLogo.trim() === "") {
+    enhancedData.companyLogo =
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIiBzdHJva2U9IiNkMWQ1ZGIiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiPkNvbXBhbnkgTG9nbzwvdGV4dD4KPC9zdmc+";
+  }
+
+  // Company stamp placeholder
+  if (!enhancedData.companyStamp || enhancedData.companyStamp.trim() === "") {
+    enhancedData.companyStamp =
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIiBzdHJva2U9IiNkMWQ1ZGIiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTkiPkNvbXBhbnkgU3RhbXA8L3RleHQ+Cjwvc3ZnPg==";
+  }
+
+  // ZATCA QR code placeholder
+  if (!enhancedData.zatcaQRCode || enhancedData.zatcaQRCode.trim() === "") {
+    enhancedData.zatcaQRCode =
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y5ZmFmYiIgc3Ryb2tlPSIjZDVkN2RiIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8dGV4dCB4PSI1MCIgeT0iNTAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5YTNhZSI+UVI8L3RleHQ+Cjwvc3ZnPg==";
+  }
+
+  return enhancedData;
+}
+
+/**
  * Fetches an image from a URL and converts it to a base64 data URL
  */
 export async function fetchImageAsDataUrl(url: string): Promise<string | null> {
@@ -41,6 +68,9 @@ export function renderTemplate(
   data: Record<string, any>,
 ): string {
   try {
+    // Prepare data with placeholder images for empty values
+    const enhancedData = addPlaceholderImages(data);
+
     // Register helper functions for Handlebars
     Handlebars.registerHelper("formatCurrency", formatCurrency);
     Handlebars.registerHelper("formatDate", formatDate);
@@ -48,33 +78,16 @@ export function renderTemplate(
 
     // Compile and render the template with Handlebars
     const compiledTemplate = Handlebars.compile(template.htmlContent);
-    let renderedHtml = compiledTemplate(data);
+    const renderedHtml = compiledTemplate(enhancedData);
 
-    // Post-process to remove img tags with empty src for logo and stamp
-    renderedHtml = removeEmptyImageTags(renderedHtml);
-
+    // Return rendered HTML as-is without any post-processing
+    // Template should handle all conditional logic itself
     return renderedHtml;
   } catch (error) {
     console.error("Error rendering template with Handlebars:", error);
     // Fallback to simple replacement if Handlebars fails
     return fallbackRenderTemplate(template, data);
   }
-}
-
-/**
- * Removes img tags with empty src attributes for logo and stamp
- */
-function removeEmptyImageTags(html: string): string {
-  // Remove img tags where src is empty or just quotes
-  html = html.replace(/<img[^>]*src=[""]\s*[^>]*>/gi, "");
-  html = html.replace(/<img[^>]*src=['']\s*[^>]*>/gi, "");
-
-  // Also remove img tags that have src="{{companyLogo}}" or src="{{companyStamp}}" when those variables are empty
-  // This is a fallback in case the conditionals don't work
-  html = html.replace(/<img[^>]*src="\{\{companyLogo\}\}"[^>]*>/gi, "");
-  html = html.replace(/<img[^>]*src="\{\{companyStamp\}\}"[^>]*>/gi, "");
-
-  return html;
 }
 
 /**
@@ -100,114 +113,22 @@ function fallbackRenderTemplate(
     html = html.replace(placeholderRegex, value);
   }
 
-  // Remove empty image tags in fallback
-  html = removeEmptyImageTags(html);
+  // No post-processing - return HTML as-is
 
   return html;
 }
 
 /**
  * Injects company branding into rendered HTML
+ * Note: All branding (logo, stamp, colors) is handled by the template itself via placeholders
+ * This function returns the HTML unchanged to respect template design
  */
 export function injectBrandingIntoHtml(
   html: string,
-  branding: CompanyBranding & { zatcaQRCode?: string },
+  branding: CompanyBranding,
 ): string {
-  let brandedHtml = html;
-
-  // Only inject logo if it's not already in the rendered HTML
-  if (branding.logoUrl && !brandedHtml.includes(branding.logoUrl)) {
-    // Add logo to the top of the document
-    const logoHtml = `
-      <div style="text-align: center; margin-bottom: 20px;">
-        <img src="${branding.logoUrl}" alt="Company Logo" style="max-width: 200px; max-height: 100px;" />
-      </div>
-    `;
-
-    // Insert logo after the opening body tag or at the beginning
-    if (brandedHtml.includes("<body>")) {
-      brandedHtml = brandedHtml.replace(/(<body[^>]*>)/, `$1${logoHtml}`);
-    } else {
-      brandedHtml = logoHtml + brandedHtml;
-    }
-  }
-
-  // Inject stamp image if available and not already in rendered HTML
-  if (branding.stampImageUrl && !brandedHtml.includes(branding.stampImageUrl)) {
-    const stampPosition = branding.stampPosition || "bottom-right";
-
-    // Position styles based on stamp position
-    let positionStyles = "";
-    switch (stampPosition) {
-      case "top-left":
-        positionStyles = "position: absolute; top: 20px; left: 20px;";
-        break;
-      case "top-right":
-        positionStyles = "position: absolute; top: 20px; right: 20px;";
-        break;
-      case "bottom-left":
-        positionStyles = "position: absolute; bottom: 20px; left: 20px;";
-        break;
-      case "bottom-right":
-      default:
-        positionStyles = "position: absolute; bottom: 20px; right: 20px;";
-        break;
-    }
-
-    const stampHtml = `
-      <img src="${branding.stampImageUrl}" alt="Company Stamp" style="${positionStyles} max-width: 150px; max-height: 150px; opacity: 0.8; transform: rotate(-15deg); pointer-events: none;" />
-    `;
-
-    // Wrap content in relative positioned container and add stamp
-    brandedHtml = `
-      <div style="position: relative; min-height: 100vh;">
-        ${brandedHtml}
-        ${stampHtml}
-      </div>
-    `;
-  }
-
-  // Inject ZATCA QR code if available and not already in rendered HTML
-  if (branding.zatcaQRCode && !brandedHtml.includes(branding.zatcaQRCode)) {
-    const zatcaHtml = `
-      <img src="${branding.zatcaQRCode}" alt="ZATCA QR Code" class="zatca-qr-code" />
-    `;
-
-    // Wrap content in relative positioned container and add ZATCA
-    if (!brandedHtml.includes("position: relative")) {
-      brandedHtml = `
-        <div style="position: relative; min-height: 100vh;">
-          ${brandedHtml}
-          ${zatcaHtml}
-        </div>
-      `;
-    } else {
-      // If already wrapped, just add the ZATCA
-      brandedHtml = brandedHtml.replace(/(<\/div>\s*)$/, `${zatcaHtml}$1`);
-    }
-  }
-
-  // Apply brand colors if specified
-  if (branding.primaryColor || branding.secondaryColor) {
-    // Add CSS custom properties for brand colors
-    const colorVars = `
-      <style>
-        :root {
-          --brand-primary: ${branding.primaryColor || "#007bff"};
-          --brand-secondary: ${branding.secondaryColor || "#6c757d"};
-        }
-      </style>
-    `;
-
-    // Insert color variables in head or at the beginning
-    if (brandedHtml.includes("<head>")) {
-      brandedHtml = brandedHtml.replace(/(<head[^>]*>)/, `$1${colorVars}`);
-    } else {
-      brandedHtml = colorVars + brandedHtml;
-    }
-  }
-
-  return brandedHtml;
+  // Return HTML unchanged - template handles all styling and branding via placeholders
+  return html;
 }
 
 /**

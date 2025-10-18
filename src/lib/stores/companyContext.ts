@@ -8,9 +8,9 @@ import {
 import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import { auth } from "$lib/firebase";
-import { smtpConfigStore } from "./smtpConfig";
+
 import { setCurrencyConfig } from "$lib/utils/currency";
-import { setVatConfig } from "$lib/utils/vat";
+import { setVatConfig, initializeVatFromCompany } from "$lib/utils/vat";
 
 type CompanyContextData = {
   data: CompanyContext | null;
@@ -66,11 +66,11 @@ const switchCompany = async (companyId: string) => {
     companyUnsubscribe();
   }
 
-  // Set up real-time listener for company data
+  // Set up real-time listener for company data and subcollections
   const companyDocRef = doc(db, "companies", companyId);
   companyUnsubscribe = onSnapshot(
     companyDocRef,
-    (docSnapshot) => {
+    async (docSnapshot) => {
       if (docSnapshot.exists()) {
         const company = docSnapshot.data() as Company;
 
@@ -81,16 +81,69 @@ const switchCompany = async (companyId: string) => {
           symbol: currency,
         });
 
-        // Initialize VAT from company settings
-        const vatRate = company.settings?.vatAmount || 0.15;
-        setVatConfig({
-          rate: vatRate,
-          enabled: true,
-        });
+        // Load SMTP configuration from subcollection
+        let smtpConfig = null;
+        try {
+          const smtpDocRef = doc(db, `companies/${companyId}/smtp`, "config");
+          const smtpDoc = await getDoc(smtpDocRef);
+          if (smtpDoc.exists()) {
+            smtpConfig = smtpDoc.data();
+          }
+        } catch (error) {
+          console.warn("Failed to load SMTP config:", error);
+        }
+
+        // Load branding configuration from subcollection
+        let brandingConfig = null;
+        try {
+          const brandingDocRef = doc(
+            db,
+            `companies/${companyId}/branding`,
+            "config",
+          );
+          const brandingDoc = await getDoc(brandingDocRef);
+          if (brandingDoc.exists()) {
+            brandingConfig = brandingDoc.data();
+          }
+        } catch (error) {
+          console.warn("Failed to load branding config:", error);
+        }
+
+        // Load VAT configuration from subcollection
+        let vatConfig = null;
+        try {
+          const vatDocRef = doc(db, `companies/${companyId}/vat`, "config");
+          const vatDoc = await getDoc(vatDocRef);
+          if (vatDoc.exists()) {
+            vatConfig = vatDoc.data();
+          }
+        } catch (error) {
+          console.warn("Failed to load VAT config:", error);
+        }
+
+        // Initialize VAT from subcollection or fallback to company settings
+        if (vatConfig) {
+          setVatConfig(vatConfig);
+        } else if (company.settings?.vatAmount) {
+          // Fallback to company settings if subcollection doesn't exist
+          const vatRate = company.settings.vatAmount;
+          setVatConfig({
+            rate: vatRate,
+            enabled: true,
+          });
+        }
 
         companyContextData.update((s) => ({
           ...s,
-          data: { companyId, company, role, permissions: [] },
+          data: {
+            companyId,
+            company,
+            role,
+            permissions: [],
+            smtpConfig,
+            brandingConfig,
+            vatConfig,
+          },
           loading: false,
           error: null,
         }));
@@ -139,33 +192,25 @@ export const initializeFromUser = async () => {
   const $authStore = get(authStore);
   const currentContext = get(companyContextData);
 
-  // If we already have valid context from server validation, skip client-side validation
+  // If we already have valid context from server validation, use the centralized data
   if (
     currentContext.data &&
     currentContext.hasServerData &&
     $authStore.profile &&
     currentContext.data.companyId === $authStore.profile.currentCompanyId
   ) {
-    try {
-      await smtpConfigStore.initialize();
-    } catch (smtpError) {
-      console.warn("Failed to initialize SMTP configuration:", smtpError);
-    }
+    // SMTP and branding are now loaded in the real-time listener
     return;
   }
 
-  // If we already have valid context for the same company, just ensure SMTP is initialized
+  // If we already have valid context for the same company, use the centralized data
   if (
     currentContext.data &&
     $authStore.profile &&
     currentContext.data.companyId === $authStore.profile.currentCompanyId &&
     companyUnsubscribe
   ) {
-    try {
-      await smtpConfigStore.initialize();
-    } catch (smtpError) {
-      console.warn("Failed to initialize SMTP configuration:", smtpError);
-    }
+    // SMTP and branding are now loaded in the real-time listener
     return;
   }
 
@@ -208,11 +253,7 @@ export const initializeFromUser = async () => {
   try {
     await switchCompany(companyIdToLoad);
 
-    try {
-      await smtpConfigStore.initialize();
-    } catch (smtpError) {
-      console.warn("Failed to initialize SMTP configuration:", smtpError);
-    }
+    // SMTP and branding are now loaded in the real-time listener
   } catch (error) {
     companyContextData.update((s) => ({
       ...s,

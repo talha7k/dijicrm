@@ -1,5 +1,4 @@
 import type { GeneratedDocument, DocumentDelivery } from "$lib/types/document";
-import { db } from "$lib/firebase";
 import { authenticatedFetch } from "$lib/utils/authUtils";
 import { get } from "svelte/store";
 import { companyContext } from "$lib/stores/companyContext";
@@ -13,6 +12,7 @@ import {
   doc,
   updateDoc,
 } from "firebase/firestore";
+import { db } from "$lib/firebase";
 
 export interface EmailTemplate {
   subject: string;
@@ -58,25 +58,27 @@ export interface SMTPConfig {
 
 // Email service supporting both SMTP and mock implementations
 class EmailService {
-  private smtpConfig: SMTPConfig | null = null;
-  private mockFromEmail: string = "noreply@tk-crm.com";
-  private mockFromName: string = "TK-Crm";
-
-  // Configure SMTP settings
-  setSMTPConfig(config: SMTPConfig) {
-    this.smtpConfig = config.enabled ? config : null;
-  }
-
-  // Get current SMTP config (for UI display)
+  // Get SMTP config from company context
   getSMTPConfig(): SMTPConfig | null {
-    return this.smtpConfig;
+    try {
+      const context = get(companyContext);
+      return context?.data?.smtpConfig || null;
+    } catch (error) {
+      console.warn("Failed to get SMTP config from context:", error);
+      return null;
+    }
   }
 
   async sendEmail(options: EmailOptions): Promise<EmailResult> {
     console.log("📧 [EMAIL SERVICE] sendEmail called");
     console.log("📧 [EMAIL SERVICE] To:", options.to);
     console.log("📧 [EMAIL SERVICE] Subject:", options.subject);
-    console.log("📧 [EMAIL SERVICE] Has SMTP config:", !!this.smtpConfig);
+
+    // Get SMTP config from company context
+    const contextSMTP = this.getSMTPConfig();
+    const activeSMTP = contextSMTP;
+
+    console.log("📧 [EMAIL SERVICE] Has SMTP config:", !!activeSMTP);
     console.log(
       "📧 [EMAIL SERVICE] Attachments:",
       options.attachments?.length || 0,
@@ -85,20 +87,13 @@ class EmailService {
     try {
       let result: EmailResult;
 
-      if (this.smtpConfig) {
+      if (activeSMTP) {
         console.log("📧 [EMAIL SERVICE] Using SMTP configuration");
-        console.log("📧 [EMAIL SERVICE] SMTP Host:", this.smtpConfig.host);
-        console.log(
-          "📧 [EMAIL SERVICE] SMTP Enabled:",
-          this.smtpConfig.enabled,
-        );
+        console.log("📧 [EMAIL SERVICE] SMTP Host:", activeSMTP.host);
+        console.log("📧 [EMAIL SERVICE] SMTP Enabled:", activeSMTP.enabled);
 
         // Use SMTP via API endpoint
         // Get auth token - wait for user to be available
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-        };
-
         const companyData = get(companyContext);
         const companyId = companyData.data?.companyId;
 
@@ -107,7 +102,7 @@ class EmailService {
         }
 
         const requestBody = {
-          smtpConfig: this.smtpConfig,
+          smtpConfig: activeSMTP,
           emailOptions: options,
           companyId,
         };

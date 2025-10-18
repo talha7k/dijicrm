@@ -76,7 +76,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       permissions: ["read", "write", "admin", "delete"],
     };
 
-    await db!.collection("companyMembers").add(memberData);
+    await db!.collection(`companies/${companyRef.id}/members`).add(memberData);
     console.log(
       `Created company member entry for owner ${user.uid} in company ${companyRef.id}`,
     );

@@ -31,6 +31,7 @@ function createDocumentGenerationStore() {
       data: Record<string, any>,
       format: "html" | "pdf" = "pdf",
       companyId?: string,
+      orderId?: string,
     ) {
       update((state) => ({ ...state, loading: true, error: null }));
 
@@ -52,6 +53,7 @@ function createDocumentGenerationStore() {
             data,
             format,
             companyId,
+            orderId,
           }),
         });
 
@@ -101,8 +103,15 @@ function createDocumentGenerationStore() {
       templateId: string,
       data: Record<string, any>,
       companyId?: string,
+      orderId?: string,
     ) {
-      return this.generateDocument(templateId, data, "html", companyId);
+      return this.generateDocument(
+        templateId,
+        data,
+        "html",
+        companyId,
+        orderId,
+      );
     },
 
     clearResult() {

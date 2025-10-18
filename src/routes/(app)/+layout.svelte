@@ -9,13 +9,13 @@
   import Loading from "$lib/components/ui/loading/loading.svelte";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { companyContextData } from "$lib/stores/companyContext";
-  import type { CompanyMember } from "$lib/types/companyMember";
+   import { companyContextData } from "$lib/stores/companyContext";
+   import type { CompanyMember } from "$lib/types/companyMember";
   
   let { children, data }: { children: any; data: { profile: any; company: any; membership: CompanyMember } } = $props();
   
   // Initialize auth service when component mounts
-  onMount(() => {
+  onMount(async () => {
     console.log('🔍 Layout server data:', data);
     console.log('🔍 Profile keys:', data?.profile ? Object.keys(data.profile) : 'No profile');
     console.log('🔍 currentCompanyId:', data?.profile?.currentCompanyId);
@@ -30,17 +30,24 @@
         role: data.membership.role
       });
       
-      companyContextData.set({
-        data: {
-          companyId: data.profile.currentCompanyId,
-          company: data.company,
-          role: data.membership.role,
-          permissions: data.membership.permissions || []
-        },
-        loading: false,
-        error: null,
-        hasServerData: true
-      });
+       companyContextData.set({
+         data: {
+           companyId: data.profile.currentCompanyId,
+           company: data.company,
+           role: data.membership.role,
+           permissions: data.membership.permissions || []
+         },
+         loading: false,
+         error: null,
+         hasServerData: true
+       });
+
+        // All configurations are now loaded centrally in company context
+        // The company context real-time listener handles:
+        // - Currency config from company.settings.currency
+        // - VAT config from companies/{id}/vat subcollection
+        // - SMTP config from companies/{id}/smtp subcollection
+        // - Branding config from companies/{id}/branding subcollection
     } else {
       console.log('❌ Missing data for company context:', {
         hasProfile: !!data?.profile,

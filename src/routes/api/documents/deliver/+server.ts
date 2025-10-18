@@ -1,6 +1,8 @@
 import { json, error, type RequestEvent } from "@sveltejs/kit";
 import { emailService, EmailTemplates } from "$lib/services/emailService";
 import { Timestamp } from "firebase-admin/firestore";
+import { get } from "svelte/store";
+import { companyContext } from "$lib/stores/companyContext";
 import type { DocumentDelivery } from "$lib/types/document";
 import { getDb, getAuthAdmin } from "$lib/firebase-admin";
 import { requireCompanyAccess } from "$lib/utils/server-company-validation";
@@ -108,8 +110,9 @@ export const POST = async ({ request, locals }: RequestEvent) => {
       },
     };
 
-    // Check SMTP config before sending
-    const smtpConfig = emailService.getSMTPConfig();
+    // Check SMTP config from company context
+    const companyData = get(companyContext);
+    const smtpConfig = companyData?.data?.smtpConfig;
     if (!smtpConfig) {
       throw error(
         400,

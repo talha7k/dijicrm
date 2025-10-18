@@ -8,6 +8,7 @@
   import { ordersStore } from '$lib/stores/orders';
   import { productsStore } from '$lib/stores/products';
   import { formatCurrency } from '$lib/utils/currency';
+  import { getVatConfig } from '$lib/utils/vat';
   import type { Order } from '$lib/types/document';
   import * as Card from '$lib/components/ui/card';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -153,14 +154,34 @@
         throw new Error('No order ID found');
       }
 
+      // Create items array
+      const items = selectedProducts.map(productId => {
+        const product = products.find(p => p.id === productId);
+        return {
+          description: product?.name || 'Unknown Product',
+          quantity: 1,
+          rate: product?.price || 0,
+          amount: (product?.price || 0) * 1
+        };
+      });
+
+      // Calculate financials
+      const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
+      const vatConfig = getVatConfig();
+      const taxAmount = subtotal * vatConfig.rate;
+      const totalAmountWithTax = subtotal + taxAmount;
+
       const orderData: Partial<Order> = {
         clientId: selectedClientId,
         title,
         description,
         selectedProducts,
+        items,
+        subtotal,
+        taxAmount,
         status,
-        totalAmount,
-        outstandingAmount: totalAmount - (order?.paidAmount || 0),
+        totalAmount: totalAmountWithTax,
+        outstandingAmount: totalAmountWithTax - (order?.paidAmount || 0),
         updatedAt: Timestamp.now(),
       };
 

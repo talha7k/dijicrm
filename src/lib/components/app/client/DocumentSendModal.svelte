@@ -6,12 +6,14 @@
   import { Label } from "$lib/components/ui/label/index.js";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-  import { documentTemplatesStore } from "$lib/stores/documentTemplates";
-  import { clientDocumentsStore } from "$lib/stores/clientDocuments";
-  import { documentGenerationStore } from "$lib/stores/documentGeneration";
- import { clientManagementStore } from "$lib/stores/clientManagement";
- import { companyContext } from "$lib/stores/companyContext";
-  import { smtpConfigStore } from "$lib/stores/smtpConfig";
+  import * as Select from "$lib/components/ui/select";
+   import { documentTemplatesStore } from "$lib/stores/documentTemplates";
+   import { clientDocumentsStore } from "$lib/stores/clientDocuments";
+   import { documentGenerationStore } from "$lib/stores/documentGeneration";
+   import { clientManagementStore } from "$lib/stores/clientManagement";
+   import { companyContext } from "$lib/stores/companyContext";
+
+   import { ordersStore } from "$lib/stores/orders";
   import { get } from "svelte/store";
   import { mapClientDataToTemplate } from "$lib/utils/client-data-mapping";
   import { authenticatedFetch } from "$lib/utils/authUtils";
@@ -37,26 +39,28 @@
     onSendComplete,
   }: Props = $props();
 
-  let selectedTemplates = $state<string[]>([]);
-  let selectedCustomDocs = $state<string[]>([]);
-  let emailSubject = $state("");
-  let emailMessage = $state("");
-  let loading = $state(false);
-  let generationProgress = $state({
-    current: 0,
-    total: 0,
-    currentDocument: "",
-  });
+   let selectedTemplates = $state<string[]>([]);
+   let selectedCustomDocs = $state<string[]>([]);
+   let selectedOrderId = $state<string>("");
+   let emailSubject = $state("");
+   let emailMessage = $state("");
+   let loading = $state(false);
+   let generationProgress = $state({
+     current: 0,
+     total: 0,
+     currentDocument: "",
+   });
 
-  // Client data and generated documents
-  let client = $state<UserProfile | null>(null);
-  let generatedDocuments = $state<
-    Array<{ id: string; name: string; content: string; format: "pdf" | "html" }>
-  >([]);
-  let previewDocument = $state<{
-    id: string;
-    name: string;
-    content: string;
+   // Client data and generated documents
+   let client = $state<UserProfile | null>(null);
+   let orders = $state<any[]>([]);
+   let generatedDocuments = $state<
+     Array<{ id: string; name: string; content: string; format: "pdf" | "html" }>
+   >([]);
+   let previewDocument = $state<{
+     id: string;
+     name: string;
+     content: string;
   } | null>(null);
   let showPreview = $state(false);
   let previewLoading = $state(false);
@@ -77,27 +81,30 @@
     if (open) {
       console.log("📧 [DOCUMENT SEND MODAL] Modal opened, checking SMTP config...");
 
-       // Check SMTP config availability from store
-       const smtpState = get(smtpConfigStore);
-       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available on modal open:", !!smtpState.config);
-       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config initialized:", smtpState.initialized);
-       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config loading:", smtpState.loading);
-       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config error:", smtpState.error);
+        // Check SMTP config from company context
+        const companyData = get(companyContext);
+        const smtpConfig = companyData?.data?.smtpConfig;
+        console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available on modal open:", !!smtpConfig);
+        smtpConfigured = !!smtpConfig;
 
-       // Check SMTP config for UI
-       const smtpConfig = emailService.getSMTPConfig();
-       smtpConfigured = !!smtpConfig;
+        // Load client orders
+        ordersStore.loadClientOrders(clientId);
 
-      // Subscribe to templates store
-      const unsubscribeTemplates = documentTemplatesStore.subscribe((state) => {
-        availableTemplates = state.data.map((template) => ({
-          id: template.id,
-          name: template.name,
-          description: template.description || "",
-        }));
-      });
+       // Subscribe to templates store
+       const unsubscribeTemplates = documentTemplatesStore.subscribe((state) => {
+         availableTemplates = state.data.map((template) => ({
+           id: template.id,
+           name: template.name,
+           description: template.description || "",
+         }));
+       });
 
-      // Subscribe to client documents store
+       // Subscribe to orders store
+       const unsubscribeOrders = ordersStore.subscribe((state) => {
+         orders = state.data || [];
+       });
+
+       // Subscribe to client documents store
       const unsubscribeDocuments = clientDocumentsStore.subscribe((state) => {
         customDocuments = state.documents.map((doc) => ({
           id: doc.id,
@@ -120,11 +127,12 @@
       documentTemplatesStore.loadTemplates();
       clientDocumentsStore.loadClientDocuments(clientId);
 
-      return () => {
-        unsubscribeTemplates();
-        unsubscribeDocuments();
-        unsubscribeClient();
-      };
+       return () => {
+         unsubscribeTemplates();
+         unsubscribeOrders();
+         unsubscribeDocuments();
+         unsubscribeClient();
+       };
     }
   });
 
@@ -136,13 +144,26 @@
     }
   }
 
-  function handleCustomDocToggle(docId: string, checked: boolean) {
-    if (checked) {
-      selectedCustomDocs = [...selectedCustomDocs, docId];
-    } else {
-      selectedCustomDocs = selectedCustomDocs.filter((id) => id !== docId);
-    }
-  }
+   function handleCustomDocToggle(docId: string, checked: boolean) {
+     if (checked) {
+       selectedCustomDocs = [...selectedCustomDocs, docId];
+     } else {
+       selectedCustomDocs = selectedCustomDocs.filter((id) => id !== docId);
+     }
+   }
+
+   function isOrderTypeTemplate(template: { id: string; name: string; description: string }): boolean {
+     const name = template.name.toLowerCase();
+     const description = template.description.toLowerCase();
+     return name.includes('invoice') || name.includes('order') || description.includes('invoice') || description.includes('order');
+   }
+
+   function hasOrderTypeSelectedTemplates(): boolean {
+     return selectedTemplates.some(templateId => {
+       const template = availableTemplates.find(t => t.id === templateId);
+       return template && isOrderTypeTemplate(template);
+     });
+   }
 
   async function handlePreview(templateId: string) {
     if (!client) {
@@ -160,18 +181,31 @@
       const companyName =
         get(companyContext).data?.company?.name || "Your Company";
 
-      // Map client data to template variables
-      const templateData = mapClientDataToTemplate(client);
+       // Get selected order if available
+       const selectedOrder = orders.find(o => o.id === selectedOrderId);
 
-      // Override with actual company name
-      templateData.companyName = companyName;
+        // Map client data to template variables
+        const templateData = mapClientDataToTemplate(client, selectedOrder);
 
-      // Generate HTML preview
-      const result = await documentGenerationStore.previewDocument(
-        templateId,
-        templateData,
-        companyId,
-      );
+           // Override with actual company name
+           templateData.companyName = companyName;
+
+           // Add VAT number for ZATCA QR code
+           const companyVatNumber = get(companyContext).data?.company?.vatNumber;
+           if (companyVatNumber) {
+             templateData.vatRegistrationNumber = companyVatNumber;
+             console.log("Added VAT number to template data:", companyVatNumber);
+           } else {
+             console.log("No VAT number found in company context");
+           }
+
+       // Generate HTML preview
+        const result = await documentGenerationStore.previewDocument(
+         templateId,
+         templateData,
+         companyId,
+         selectedOrderId || undefined,
+       );
 
       previewDocument = {
         id: templateId,
@@ -227,9 +261,21 @@
       const companyName =
         get(companyContext).data?.company?.name || "Your Company";
 
-      // Map client data to template variables
-      const templateData = mapClientDataToTemplate(client);
-      templateData.companyName = companyName;
+       // Get selected order if available
+       const selectedOrder = orders.find(o => o.id === selectedOrderId);
+
+       // Map client data to template variables
+       const templateData = mapClientDataToTemplate(client, selectedOrder);
+       templateData.companyName = companyName;
+
+        // Add VAT number for ZATCA QR code
+        const companyVatNumber = get(companyContext).data?.company?.vatNumber;
+        if (companyVatNumber) {
+          templateData.vatRegistrationNumber = companyVatNumber;
+          console.log("Added VAT number to template data:", companyVatNumber);
+        } else {
+          console.log("No VAT number found in company context");
+        }
 
       // Generate document
       const result = await documentGenerationStore.generateDocument(
@@ -340,19 +386,23 @@
         await new Promise(resolve => setTimeout(resolve, 100));
 
         try {
-          // Map client data to template variables
-          const templateData = mapClientDataToTemplate(client);
+       // Get selected order if available
+       const selectedOrder = orders.find(o => o.id === selectedOrderId);
+
+       // Map client data to template variables
+       const templateData = mapClientDataToTemplate(client, selectedOrder);
 
           // Override with actual company name
           templateData.companyName = companyName;
 
           // Generate PDF document
-          const result = await documentGenerationStore.generateDocument(
-            templateId,
-            templateData,
-            "pdf",
-            companyId,
-          );
+           const result = await documentGenerationStore.generateDocument(
+             templateId,
+             templateData,
+             "pdf",
+             companyId,
+             selectedOrderId || undefined,
+           );
 
           generatedDocuments.push({
             id: templateId,
@@ -418,10 +468,11 @@
       
       const { emailService } = await import("$lib/services/emailService");
       
-       // Check SMTP config before sending
-       const smtpConfig = emailService.getSMTPConfig();
-       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available:", !!smtpConfig);
-       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config:", smtpConfig);
+        // Check SMTP config from company context
+        const companyData = get(companyContext);
+        const smtpConfig = companyData?.data?.smtpConfig;
+        console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available:", !!smtpConfig);
+        console.log("📧 [DOCUMENT SEND MODAL] SMTP Config:", smtpConfig);
 
        if (!smtpConfig) {
          toast.error("SMTP configuration is required to send emails. Please <a href='/settings' class='underline hover:no-underline'>configure your email settings</a> before sending documents.");
@@ -475,7 +526,7 @@
 </script>
 
 <Dialog.Root bind:open>
-  <Dialog.Content class="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+  <Dialog.Content style="width: 90vw; height: 95vh; max-width: none; max-height: none;" class="overflow-y-auto">
     <Dialog.Header>
       <Dialog.Title>Send Documents to {clientName}</Dialog.Title>
       <Dialog.Description>
@@ -539,23 +590,23 @@
                   </p>
                 </div>
                 <div class="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onclick={() => handlePreview(template.id)}
-                    disabled={!client || previewLoading}
-                  >
-                    {previewLoading ? "Loading..." : "Preview"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onclick={() =>
-                      downloadDocument(template.id, template.name, "pdf")}
-                    disabled={!client}
-                  >
-                    Download PDF
-                  </Button>
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onclick={() => handlePreview(template.id)}
+                     disabled={!client || previewLoading || (isOrderTypeTemplate(template) && !selectedOrderId)}
+                   >
+                     {previewLoading ? "Loading..." : "Preview"}
+                   </Button>
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onclick={() =>
+                       downloadDocument(template.id, template.name, "pdf")}
+                     disabled={!client || (isOrderTypeTemplate(template) && !selectedOrderId)}
+                   >
+                     Download PDF
+                   </Button>
                 </div>
               </div>
             {/each}
@@ -596,9 +647,30 @@
             </div>
           {/each}
         </div>
-      </div>
+       </div>
 
-      <!-- Email Customization -->
+       <!-- Order Selection for Invoice Templates -->
+       {#if orders.length > 0 && selectedTemplates.length > 0}
+         <div class="space-y-3">
+           <Label class="text-base font-medium">Select Order for Invoice</Label>
+           <p class="text-sm text-muted-foreground">
+             Choose an order to generate invoice documents with accurate data.
+           </p>
+           <Select.Root type="single" value={selectedOrderId} onValueChange={(v) => selectedOrderId = v}>
+             <Select.Trigger>
+               {selectedOrderId ? orders.find(o => o.id === selectedOrderId)?.title || "Select Order" : "Select Order"}
+             </Select.Trigger>
+             <Select.Content>
+               <Select.Item value="">No Order (Use Default Data)</Select.Item>
+               {#each orders as order}
+                 <Select.Item value={order.id}>{order.title} - {order.totalAmount ? `$${order.totalAmount}` : order.status}</Select.Item>
+               {/each}
+             </Select.Content>
+           </Select.Root>
+         </div>
+       {/if}
+
+       <!-- Email Customization -->
       <Card.Root>
         <Card.Header>
           <Card.Title class="text-base">Email Message</Card.Title>
@@ -747,12 +819,13 @@
       <Button variant="outline" onclick={handleCancel} disabled={loading}>
         Cancel
       </Button>
-       <Button
-         onclick={handleSend}
-         disabled={loading ||
-           (selectedTemplates.length === 0 && selectedCustomDocs.length === 0) ||
-           !smtpConfigured}
-       >
+        <Button
+          onclick={handleSend}
+          disabled={loading ||
+            (selectedTemplates.length === 0 && selectedCustomDocs.length === 0) ||
+            !smtpConfigured ||
+            (hasOrderTypeSelectedTemplates() && !selectedOrderId)}
+        >
         {#if loading}
           {#if generationProgress.total > 0}
             Generating ({generationProgress.current}/{generationProgress.total})

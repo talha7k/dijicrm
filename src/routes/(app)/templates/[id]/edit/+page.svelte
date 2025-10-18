@@ -19,10 +19,23 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
 
-  onMount(() => {
-    mounted = true;
-    loadTemplate();
-  });
+   onMount(async () => {
+     mounted = true;
+     
+     // Wait for company context to be ready before loading template
+     if (!$companyContext.data || $companyContext.loading) {
+       await new Promise<void>((resolve) => {
+         const unsubscribe = companyContext.subscribe((value) => {
+           if (value.data && !value.loading) {
+             unsubscribe();
+             resolve();
+           }
+         });
+       });
+     }
+     
+     loadTemplate();
+   });
 
   async function loadTemplate() {
     try {
@@ -34,12 +47,7 @@
         return;
       }
 
-      // Wait for company context to be ready
-      if (!$companyContext.data || $companyContext.loading) {
-        // Wait a bit and retry
-        setTimeout(loadTemplate, 100);
-        return;
-      }
+       // Company context should be ready now due to the onMount wait
 
       // Load the specific template
       const templates = await getDocumentTemplate(templateId);

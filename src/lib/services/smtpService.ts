@@ -7,8 +7,8 @@ import type {
 } from "$lib/types/smtp";
 import { Timestamp } from "firebase/firestore";
 
-// Collection name for SMTP configurations
-const SMTP_COLLECTION = "smtpConfigurations";
+// Collection name for SMTP configurations (now a subcollection of companies)
+const SMTP_SUBCOLLECTION = "smtp";
 
 /**
  * Service for managing SMTP configuration persistence in Firebase.
@@ -16,17 +16,15 @@ const SMTP_COLLECTION = "smtpConfigurations";
  * This service handles the storage and retrieval of SMTP email server configurations
  * for companies. Passwords are encrypted before storage for security.
  *
- * Firebase Collection: smtpConfigurations
+ * Firebase Collection: companies/{companyId}/smtp
  * Document Structure:
- * - companyId: string (document ID)
- * - enabled: boolean
  * - host: string
  * - port: number
- * - secure: boolean
- * - auth: { user: string } (password stored separately as encryptedPassword)
+ * - username: string
+ * - password: string (encrypted)
  * - fromEmail: string
  * - fromName: string
- * - encryptedPassword: string (base64 encoded)
+ * - enabled: boolean
  * - createdAt: Timestamp
  * - updatedAt: Timestamp
  */
@@ -39,7 +37,11 @@ export class SMTPService {
     config: SMTPConfig,
   ): Promise<SMTPServiceResult> {
     try {
-      const docRef = doc(db, SMTP_COLLECTION, companyId);
+      const docRef = doc(
+        db,
+        `companies/${companyId}/${SMTP_SUBCOLLECTION}`,
+        "config",
+      );
       const now = Timestamp.now();
 
       // Encrypt sensitive data (basic encryption for demo - in production use proper encryption)
@@ -76,7 +78,11 @@ export class SMTPService {
    */
   async loadSMTPConfig(companyId: string): Promise<SMTPServiceResult> {
     try {
-      const docRef = doc(db, SMTP_COLLECTION, companyId);
+      const docRef = doc(
+        db,
+        `companies/${companyId}/${SMTP_SUBCOLLECTION}`,
+        "config",
+      );
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
@@ -131,7 +137,11 @@ export class SMTPService {
     config: Partial<SMTPConfig>,
   ): Promise<SMTPServiceResult> {
     try {
-      const docRef = doc(db, SMTP_COLLECTION, companyId);
+      const docRef = doc(
+        db,
+        `companies/${companyId}/${SMTP_SUBCOLLECTION}`,
+        "config",
+      );
       const now = Timestamp.now();
 
       const updateData: Partial<StoredSMTPConfig> = {
@@ -165,7 +175,11 @@ export class SMTPService {
    */
   async deleteSMTPConfig(companyId: string): Promise<SMTPServiceResult> {
     try {
-      const docRef = doc(db, SMTP_COLLECTION, companyId);
+      const docRef = doc(
+        db,
+        `companies/${companyId}/${SMTP_SUBCOLLECTION}`,
+        "config",
+      );
       await updateDoc(docRef, {
         enabled: false,
         updatedAt: Timestamp.now(),

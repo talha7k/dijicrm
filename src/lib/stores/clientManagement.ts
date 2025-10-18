@@ -253,8 +253,9 @@ function createClientManagementStore() {
             invitationUrl,
           );
 
-          // Check SMTP config before sending
-          const smtpConfig = emailService.getSMTPConfig();
+          // Check SMTP config from company context
+          const companyData = get(companyContext);
+          const smtpConfig = companyData?.data?.smtpConfig;
           if (!smtpConfig) {
             throw new Error(
               "SMTP configuration is required to send emails. Please configure your email settings in the Settings page.",
@@ -422,8 +423,9 @@ function createClientManagementStore() {
             invitationUrl,
           );
 
-          // Check SMTP config before sending
-          const smtpConfig = emailService.getSMTPConfig();
+          // Check SMTP config from company context
+          const companyData = get(companyContext);
+          const smtpConfig = companyData?.data?.smtpConfig;
           if (!smtpConfig) {
             throw new Error(
               "SMTP configuration is required to send emails. Please configure your email settings in the Settings page.",

@@ -20,8 +20,8 @@ export const GET = async ({ url }: { url: URL }) => {
     if (db) {
       try {
         const brandingDoc = await db
-          .collection("companyBranding")
-          .doc(companyId)
+          .collection(`companies/${companyId}/branding`)
+          .doc("config")
           .get();
         if (brandingDoc.exists) {
           adminBrandingData = brandingDoc.data();

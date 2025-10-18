@@ -1,3 +1,5 @@
+import { vatService } from "$lib/services/vatService";
+
 /**
  * Centralized VAT configuration utility
  * Supports configurable VAT rates for internationalization
@@ -20,6 +22,7 @@ const DEFAULT_VAT: VatConfig = {
  * Current VAT configuration
  */
 let currentVat: VatConfig = { ...DEFAULT_VAT };
+let currentCompanyId: string | null = null;
 
 /**
  * Set the VAT configuration
@@ -51,16 +54,46 @@ export function getVatRate(): number {
 }
 
 /**
- * Initialize VAT from company settings
+ * Initialize VAT from company settings or load from service
  * This should be called when company context changes
  */
-export function initializeVatFromCompany(vatAmount?: number): void {
+export async function initializeVatFromCompany(
+  companyId?: string,
+  vatAmount?: number,
+): Promise<void> {
+  if (companyId && companyId !== currentCompanyId) {
+    // Load VAT config from service for this company
+    try {
+      const result = await vatService.loadVatConfig(companyId);
+      if (result.success && result.config) {
+        setVatConfig(result.config);
+        currentCompanyId = companyId;
+        return;
+      }
+    } catch (error) {
+      console.warn("Failed to load VAT config from service:", error);
+    }
+  }
+
   if (vatAmount !== undefined) {
     // If vatAmount is provided, calculate rate (assuming it's for a base amount)
     // But since we don't have the base amount, we'll use the provided rate or default
     setVatConfig({ rate: vatAmount / 100 || DEFAULT_VAT.rate, enabled: true });
   } else {
     setVatConfig(DEFAULT_VAT);
+  }
+}
+
+/**
+ * Save current VAT configuration for a company
+ */
+export async function saveVatConfig(companyId: string): Promise<boolean> {
+  try {
+    const result = await vatService.saveVatConfig(companyId, currentVat);
+    return result.success;
+  } catch (error) {
+    console.error("Failed to save VAT config:", error);
+    return false;
   }
 }
 

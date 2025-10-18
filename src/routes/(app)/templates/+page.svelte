@@ -37,21 +37,33 @@
 
 
 
-   onMount(() => {
+   onMount(async () => {
      mounted = true;
+     
      // Wait for company context to be ready before loading templates
-     if ($companyContext.data && !$companyContext.loading) {
-       documentTemplatesStore.loadTemplates();
+     if (!$companyContext.data || $companyContext.loading) {
+       await new Promise<void>((resolve) => {
+         const unsubscribe = companyContext.subscribe((value) => {
+           if (value.data && !value.loading) {
+             unsubscribe();
+             resolve();
+           }
+         });
+       });
      }
-     // Company access is checked at layout level
+     
+     documentTemplatesStore.loadTemplates();
    });
 
-   // Watch for company context changes
-   $effect(() => {
-     if (mounted && $companyContext.data && !$companyContext.loading) {
-       documentTemplatesStore.loadTemplates();
-     }
-   });
+    // Watch for company context changes (for navigation between companies)
+    $effect(() => {
+      if (mounted && $companyContext.data && !$companyContext.loading) {
+        // Only reload if templates aren't already loaded or company changed
+        if (!$documentTemplatesStore.data || $documentTemplatesStore.data.length === 0) {
+          documentTemplatesStore.loadTemplates();
+        }
+      }
+    });
 
    let filteredTemplates = $state<DocumentTemplate[]>([]);
 
@@ -173,8 +185,9 @@ function handleDeleteTemplate(template: any) {
              </div>
           </div>
 
-        <!-- Templates Grid -->
-        {#if $companyContext.loading}
+         <!-- Templates Grid -->
+         <div class="mt-6">
+         {#if $companyContext.loading}
           <div class="text-center py-8">Loading company context...</div>
         {:else if $companyContext.error}
           <Card>
@@ -257,9 +270,9 @@ function handleDeleteTemplate(template: any) {
                </CardContent>
              </Card>
            {/each}
-         </div>
-       {/if}
-       </TabsContent>
+          </div>
+         {/if}
+         </TabsContent>
 
        <TabsContent value="variables" class="mt-6">
          <CustomVariableManagement />

@@ -108,6 +108,8 @@ export async function populateSystemVariables(
           if (!variables.taxAmount && variables.taxRate && variables.subtotal) {
             variables.taxAmount =
               (variables.subtotal * variables.taxRate) / 100;
+            // Update totalAmount to include tax
+            variables.totalAmount = variables.subtotal + variables.taxAmount;
           }
           variables.discountAmount = orderData.discountAmount || 0;
           variables.currency = orderData.currency || "SAR";

@@ -43,9 +43,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     // Check if user is already a member
     const existingMemberQuery = await db
-      .collection("companyMembers")
+      .collection(`companies/${companyId}/members`)
       .where("userId", "==", user.uid)
-      .where("companyId", "==", companyId)
+      .where("status", "==", "active")
       .limit(1)
       .get();
 
@@ -54,16 +54,28 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     // Create company member record
+    const getPermissionsForRole = (role: string): string[] => {
+      switch (role) {
+        case "owner":
+          return ["read", "write", "admin", "delete"];
+        case "admin":
+          return ["read", "write", "admin"];
+        case "member":
+        default:
+          return ["read", "write"];
+      }
+    };
+
     const memberData: CompanyMember = {
       userId: user.uid,
       companyId,
       role: role as "member" | "admin" | "owner",
       joinedAt: Timestamp.now() as any,
       status: "active",
-      permissions: [], // Default permissions
+      permissions: getPermissionsForRole(role),
     };
 
-    await db.collection("companyMembers").add(memberData);
+    await db.collection(`companies/${companyId}/members`).add(memberData);
 
     // Update company member count
     await companyDoc.ref.update({

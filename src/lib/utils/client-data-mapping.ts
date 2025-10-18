@@ -5,6 +5,7 @@ import type { UserProfile } from "$lib/types/user";
  */
 export function mapClientDataToTemplate(
   client: UserProfile,
+  order?: any,
 ): Record<string, any> {
   const clientData: Record<string, any> = {
     // Basic client information
@@ -51,18 +52,29 @@ export function mapClientDataToTemplate(
     serviceDescription: "Professional services provided",
     amount: 1000, // Default amount
 
-    // Order/invoice specific fields (with defaults for client documents)
-    orderNumber: `INV-${new Date().getTime()}`, // Generate a default invoice number
-    items: [
-      {
-        description: "Professional services provided",
-        quantity: 1,
-        rate: 1000,
-        amount: 1000,
-      },
-    ],
-    subtotal: 1000,
-    total: 1000, // Same as amount for simple cases
+    // Order/invoice specific fields (use order data if available)
+    orderNumber: order?.id ? `INV-${order.id}` : `INV-${new Date().getTime()}`, // Generate a default invoice number
+    items: order
+      ? [
+          {
+            description: order.title || "Order services",
+            quantity: 1,
+            rate: order.totalAmount || 1000,
+            amount: order.totalAmount || 1000,
+          },
+        ]
+      : [
+          {
+            description: "Professional services provided",
+            quantity: 1,
+            rate: 1000,
+            amount: 1000,
+          },
+        ],
+    subtotal: order?.totalAmount || 1000,
+    taxRate: 15, // Default VAT rate
+    taxAmount: (order?.totalAmount || 1000) * 0.15, // 15% of subtotal
+    totalAmount: (order?.totalAmount || 1000) * 1.15, // Subtotal + tax
   };
 
   return clientData;
@@ -137,6 +149,8 @@ export function getClientPlaceholderKeys(): string[] {
     "orderNumber",
     "items",
     "subtotal",
-    "total",
+    "taxRate",
+    "taxAmount",
+    "totalAmount",
   ];
 }

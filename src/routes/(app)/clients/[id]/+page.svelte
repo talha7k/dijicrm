@@ -6,8 +6,9 @@
    import { clientManagementStore } from '$lib/stores/clientManagement';
    import { productsStore } from '$lib/stores/products';
 
-    import { ordersStore } from '$lib/stores/orders';
-    import { documentDeliveryStore } from '$lib/stores/documentDelivery';
+     import { ordersStore } from '$lib/stores/orders';
+     import { documentDeliveryStore } from '$lib/stores/documentDelivery';
+     import { getVatConfig } from '$lib/utils/vat';
     import { collection, query, where, getDocs } from 'firebase/firestore';
     import { db } from '$lib/firebase';
    import Button from '$lib/components/ui/button/button.svelte';
@@ -188,36 +189,56 @@
     }).format(date);
   }
 
-   async function handleCreateOrder(order: any) {
-     try {
+    async function handleCreateOrder(order: any) {
+      try {
         const companyContextValue = get(companyContext);
         const userId = auth.currentUser?.uid;
-        
+
         if (!companyContextValue.data || !userId) {
           toast.error('Authentication or company context required');
           return;
         }
+
+        // Create items array
+        const items = order.selectedProducts.map((productId: string) => {
+          const product = products.find(p => p.id === productId);
+          return {
+            description: product?.name || 'Unknown Product',
+            quantity: 1,
+            rate: product?.price || 0,
+            amount: (product?.price || 0) * 1
+          };
+        });
+
+        // Calculate financials
+        const subtotal = items.reduce((sum: number, item: any) => sum + item.amount, 0);
+        const vatConfig = getVatConfig();
+        const taxAmount = subtotal * vatConfig.rate;
+        const totalAmountWithTax = subtotal + taxAmount;
 
         await orderStore.createOrder({
           clientId,
           title: order.title,
           description: order.description,
           selectedProducts: order.selectedProducts,
+          items,
+          subtotal,
+          taxAmount,
           status: "draft",
           documents: [],
-          totalAmount: order.totalAmount,
+          totalAmount: totalAmountWithTax,
           paidAmount: 0,
-          outstandingAmount: order.totalAmount,
+          outstandingAmount: totalAmountWithTax,
           payments: [],
           createdBy: userId,
         });
-       showOrderModal = false;
-       toast.success('Order created successfully');
-     } catch (error) {
-       console.error('Error creating order:', error);
-       toast.error('Failed to create order');
-     }
-   }
+        showOrderModal = false;
+        toast.success('Order created successfully');
+      } catch (error) {
+        console.error('Error creating order:', error);
+        toast.error('Failed to create order');
+      }
+    }
 
    function handleNewOrder() {
      showOrderModal = true;

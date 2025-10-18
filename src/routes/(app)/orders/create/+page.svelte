@@ -7,6 +7,7 @@
   import { ordersStore } from '$lib/stores/orders';
   import { productsStore } from '$lib/stores/products';
   import { formatCurrency } from '$lib/utils/currency';
+  import { getVatConfig } from '$lib/utils/vat';
   import type { Order } from '$lib/types/document';
   import * as Card from '$lib/components/ui/card';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -92,16 +93,36 @@
 
       const userId = ''; // This should be set from auth context
 
+      // Create items array
+      const items = selectedProducts.map(productId => {
+        const product = products.find(p => p.id === productId);
+        return {
+          description: product?.name || 'Unknown Product',
+          quantity: 1,
+          rate: product?.price || 0,
+          amount: (product?.price || 0) * 1
+        };
+      });
+
+      // Calculate financials
+      const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
+      const vatConfig = getVatConfig();
+      const taxAmount = subtotal * vatConfig.rate;
+      const totalAmountWithTax = subtotal + taxAmount;
+
       const orderData: Omit<Order, "id" | "createdAt" | "updatedAt" | "companyId"> = {
         clientId: selectedClientId,
         title,
         description,
         selectedProducts,
+        items,
+        subtotal,
+        taxAmount,
         status,
         documents: [],
-        totalAmount,
+        totalAmount: totalAmountWithTax,
         paidAmount: 0,
-        outstandingAmount: totalAmount,
+        outstandingAmount: totalAmountWithTax,
         payments: [],
         createdBy: userId,
       };

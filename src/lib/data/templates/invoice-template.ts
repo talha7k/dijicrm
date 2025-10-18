@@ -373,11 +373,9 @@ export const invoiceTemplate: DocumentTemplate = {
               {{/if}}
             </div>
 
-           {{#if zatcaQRCode}}
-           <div class="zatca-qr-code">
-             <img src="{{zatcaQRCode}}" alt="ZATCA QR Code" />
-           </div>
-           {{/if}}
+             <div class="zatca-qr-code">
+               <img src="{{zatcaQRCode}}" alt="ZATCA QR Code" />
+             </div>
          </div>
 
          <div class="invoice-title">

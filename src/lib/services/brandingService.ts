@@ -11,8 +11,8 @@ import type {
 import { Timestamp } from "firebase/firestore";
 import { ImageProcessor } from "$lib/utils/imageCompression";
 
-// Collection name for company branding
-const BRANDING_COLLECTION = "companyBranding";
+// Collection name for company branding (now a subcollection of companies)
+const BRANDING_SUBCOLLECTION = "branding";
 
 /**
  * Service for managing company branding configuration and assets.
@@ -22,11 +22,10 @@ const BRANDING_COLLECTION = "companyBranding";
  * path in Firebase Storage.
  *
  * Firebase Collections:
- * - companyBranding: Stores branding configuration
+ * - companies/{companyId}/branding: Stores branding configuration
  * - Firebase Storage: Stores logo files
  *
- * Document Structure (companyBranding):
- * - companyId: string (document ID)
+ * Document Structure (companies/{companyId}/branding):
  * - logoUrl?: string (Firebase Storage download URL)
  * - stampText?: string
  * - stampPosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right"
@@ -46,7 +45,11 @@ export class BrandingService {
     branding: CompanyBranding,
   ): Promise<BrandingServiceResult> {
     try {
-      const docRef = doc(db, BRANDING_COLLECTION, companyId);
+      const docRef = doc(
+        db,
+        `companies/${companyId}/${BRANDING_SUBCOLLECTION}`,
+        "config",
+      );
       const now = Timestamp.now();
 
       const storedBranding: StoredCompanyBranding = {
@@ -76,7 +79,11 @@ export class BrandingService {
    */
   async loadBranding(companyId: string): Promise<BrandingServiceResult> {
     try {
-      const docRef = doc(db, BRANDING_COLLECTION, companyId);
+      const docRef = doc(
+        db,
+        `companies/${companyId}/${BRANDING_SUBCOLLECTION}`,
+        "config",
+      );
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
@@ -109,7 +116,11 @@ export class BrandingService {
     updates: Partial<CompanyBranding>,
   ): Promise<BrandingServiceResult> {
     try {
-      const docRef = doc(db, BRANDING_COLLECTION, companyId);
+      const docRef = doc(
+        db,
+        `companies/${companyId}/${BRANDING_SUBCOLLECTION}`,
+        "config",
+      );
       const now = Timestamp.now();
 
       const updateData: Partial<StoredCompanyBranding> = {

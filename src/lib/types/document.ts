@@ -125,6 +125,14 @@ export interface Order {
   title: string;
   description?: string;
   selectedProducts: string[]; // Product IDs
+  items?: Array<{
+    description: string;
+    quantity: number;
+    rate: number;
+    amount?: number;
+  }>;
+  subtotal?: number;
+  taxAmount?: number;
   status:
     | "draft"
     | "quote"

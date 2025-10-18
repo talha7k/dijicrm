@@ -9,6 +9,8 @@
   import { toast } from 'svelte-sonner';
   import type { DocumentType } from '$lib/stores/documentTypes';
   import { emailService } from '$lib/services/emailService';
+  import { get } from 'svelte/store';
+  import { companyContext } from '$lib/stores/companyContext';
   import Icon from '@iconify/svelte';
 
   interface Props {
@@ -43,8 +45,9 @@
         documentTypes = state.data || [];
       });
 
-      // Check SMTP config
-      const smtpConfig = emailService.getSMTPConfig();
+      // Check SMTP config from company context
+      const companyData = get(companyContext);
+      const smtpConfig = companyData?.data?.smtpConfig;
       smtpConfigured = !!smtpConfig;
 
       return unsubscribe;

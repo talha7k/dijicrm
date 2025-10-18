@@ -1,5 +1,7 @@
 import { writable } from "svelte/store";
 import { Timestamp } from "firebase/firestore";
+import { get } from "svelte/store";
+import { companyContext } from "./companyContext";
 import type { GeneratedDocument, DocumentDelivery } from "$lib/types/document";
 import {
   emailService,
@@ -65,8 +67,9 @@ function createDocumentDeliveryStore() {
           },
         };
 
-        // Check SMTP config before sending
-        const smtpConfig1 = emailService.getSMTPConfig();
+        // Check SMTP config from company context
+        const companyData = get(companyContext);
+        const smtpConfig1 = companyData?.data?.smtpConfig;
         if (!smtpConfig1) {
           throw new Error(
             "SMTP configuration is required to send emails. Please configure your email settings in the Settings page.",
@@ -159,8 +162,9 @@ function createDocumentDeliveryStore() {
           },
         };
 
-        // Check SMTP config before sending
-        const smtpConfig2 = emailService.getSMTPConfig();
+        // Check SMTP config from company context
+        const companyData = get(companyContext);
+        const smtpConfig2 = companyData?.data?.smtpConfig;
         if (!smtpConfig2) {
           throw new Error(
             "SMTP configuration is required to send emails. Please configure your email settings in the Settings page.",
@@ -439,8 +443,9 @@ function createDocumentDeliveryStore() {
           },
         };
 
-        // Check SMTP config before sending
-        const smtpConfig4 = emailService.getSMTPConfig();
+        // Check SMTP config from company context
+        const companyData = get(companyContext);
+        const smtpConfig4 = companyData?.data?.smtpConfig;
         if (!smtpConfig4) {
           throw new Error(
             "SMTP configuration is required to send emails. Please configure your email settings in the Settings page.",

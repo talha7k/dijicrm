@@ -29,4 +29,7 @@ export interface CompanyContext {
   company: Company;
   role: "member" | "admin" | "owner";
   permissions: string[];
+  smtpConfig?: any;
+  brandingConfig?: any;
+  vatConfig?: any;
 }

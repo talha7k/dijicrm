@@ -95,10 +95,25 @@ let deleteDataCounts = $state<{
        return matchesSearch && matchesStatus && matchesActivity;
      }));
 
-  onMount(() => {
-    // Load clients for current company
-    clientStore.loadClients();
-  });
+   onMount(async () => {
+     // Wait for company context to be loaded before loading clients
+     let companyContextValue = get(companyContext);
+     if (!companyContextValue.data) {
+       // If not loaded yet, wait for it to load
+       await new Promise<void>((resolve) => {
+         const unsubscribe = companyContext.subscribe((value) => {
+           if (value.data) {
+             unsubscribe();
+             companyContextValue = value;
+             resolve();
+           }
+         });
+       });
+     }
+
+     // Load clients for current company
+     clientStore.loadClients();
+   });
 
   function getStatusBadge(client: UserProfile) {
     const status = client.metadata?.accountStatus || 'unknown';
