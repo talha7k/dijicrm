@@ -16,9 +16,9 @@ import type { DocumentTemplate } from '$lib/types/document';
     showCssEditor?: boolean;
   }
 
-  let { 
-    initialContent = '', 
-    initialScreenCss = '', 
+  let {
+    initialContent = '',
+    initialScreenCss = '',
     initialPrintCss = '',
     showVariableReference = true,
     showCssEditor = true
@@ -109,10 +109,18 @@ Example:
     zoomLevel = 1;
   }
 
-  function getPreviewHtml() {
+  // Reactive preview HTML with variable replacement
+  let previewHtml = $state('');
+
+  function updatePreview() {
+    if (!htmlContent) {
+      previewHtml = '';
+      return;
+    }
+
     // Basic variable replacement for preview
     let preview = htmlContent;
-    
+
     // Replace common system variables with example values
     const replacements: Record<string, string> = {
       '{{currentDate}}': new Date().toLocaleDateString(),
@@ -135,15 +143,29 @@ Example:
       '{{companyCity}}': 'Riyadh',
       '{{companyCountry}}': 'Saudi Arabia',
       '{{vatNumber}}': '123456789012345',
-      '{{crNumber}}': '1012345678'
+      '{{crNumber}}': '1012345678',
+      '{{companyName}}': 'Your Company Name',
+      '{{companyEmail}}': 'info@yourcompany.com',
+      '{{companyPhone}}': '+966 11 123 4567',
+      '{{companyAddress}}': '123 Business St, Riyadh, Saudi Arabia',
+      '{{companyLogo}}': 'https://via.placeholder.com/200x100?text=Company+Logo',
+      '{{companyStamp}}': 'https://via.placeholder.com/150x150?text=Company+Stamp'
     };
 
     Object.entries(replacements).forEach(([variable, value]) => {
       preview = preview.replace(new RegExp(variable.replace(/[{}]/g, '\\$&'), 'g'), value);
     });
 
-    return preview;
+    previewHtml = preview;
   }
+
+  // Update preview when content changes
+  $effect(() => {
+    updatePreview();
+  });
+
+  // Initial preview update
+  updatePreview();
 
 
 </script>
@@ -248,7 +270,7 @@ Example:
                 class="p-4 bg-white overflow-auto" 
                 style="height: 500px; transform: scale({zoomLevel}); transform-origin: top left;"
               >
-                {@html getPreviewHtml()}
+                 {@html previewHtml}
               </div>
             </div>
           {:else}

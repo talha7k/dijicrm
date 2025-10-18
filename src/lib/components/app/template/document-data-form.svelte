@@ -263,11 +263,19 @@
           </div>
         {:else}
           <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {#each filteredTemplates() as template}
-              <div 
-                class="border border-border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-                onclick={() => selectTemplate(template)}
-              >
+             {#each filteredTemplates() as template}
+               <div
+                 class="border border-border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                 role="button"
+                 tabindex="0"
+                 onclick={() => selectTemplate(template)}
+                 onkeydown={(e) => {
+                   if (e.key === 'Enter' || e.key === ' ') {
+                     e.preventDefault();
+                     selectTemplate(template);
+                   }
+                 }}
+               >
                 <div class="flex items-start justify-between mb-2">
                   <h3 class="font-medium">{template.name}</h3>
                   <Badge variant="outline" class="text-xs">{template.type}</Badge>

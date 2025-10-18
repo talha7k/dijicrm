@@ -55,7 +55,12 @@ export function analyzeTemplateVariables(
       // Create new variable definition
       const newVar = createVariableDefinition(variableName);
       detectedVariables.push(newVar);
-      newVariables.push(newVar);
+
+      // Only add to newVariables if it's actually a new custom variable
+      // System variables are automatically available and don't need to be "defined"
+      if (newVar.category === "custom") {
+        newVariables.push(newVar);
+      }
     }
   }
 
@@ -67,9 +72,7 @@ export function analyzeTemplateVariables(
 
   return {
     detectedVariables,
-    existingVariables: detectedVariables.filter((v) =>
-      existingVariablesMap.has(v.key),
-    ),
+    existingVariables: Array.from(existingVariablesMap.values()),
     newVariables,
     recommendations,
   };
@@ -79,7 +82,7 @@ export function analyzeTemplateVariables(
  * Creates a variable definition based on the variable name and system catalog
  */
 function createVariableDefinition(variableName: string): TemplateVariable {
-  // Check if it's a system variable
+  // Check if it's a system variable first
   const systemVar = SYSTEM_VARIABLE_CATALOG.find(
     (sv) => sv.key === variableName,
   );
@@ -96,7 +99,7 @@ function createVariableDefinition(variableName: string): TemplateVariable {
     };
   }
 
-  // Determine variable type based on naming conventions
+  // If not a system variable, determine type based on naming conventions for custom variables
   const detectedType = detectVariableType(variableName);
 
   return {

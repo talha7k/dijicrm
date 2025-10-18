@@ -66,30 +66,33 @@
     analyzeVariables();
   });
 
-  function analyzeVariables() {
-    if (!template.htmlContent.trim()) {
-      detectedVariables = [];
-      variableAnalysis = null;
-      return;
-    }
+   function analyzeVariables() {
+     if (!template.htmlContent.trim()) {
+       detectedVariables = [];
+       variableAnalysis = null;
+       return;
+     }
 
-    try {
-      const analysis = analyzeTemplateVariables(
-        template.htmlContent,
-        detectedVariables
-      );
-      variableAnalysis = analysis;
-      detectedVariables = analysis.detectedVariables;
-      
-      // Show recommendations if there are new variables
-      if (analysis.newVariables.length > 0) {
-        console.log('New variables detected:', analysis.newVariables);
-        console.log('Recommendations:', analysis.recommendations);
-      }
-    } catch (error) {
-      console.error('Error analyzing variables:', error);
-    }
-  }
+     try {
+       // Pass existing variables from the store, not the detected ones
+       // This prevents circular dependency issues
+       const existingVars = $customTemplateVariablesStore.customVariables || [];
+       const analysis = analyzeTemplateVariables(
+         template.htmlContent,
+         existingVars
+       );
+       variableAnalysis = analysis;
+       detectedVariables = analysis.detectedVariables;
+
+       // Show recommendations if there are new variables
+       if (analysis.newVariables.length > 0) {
+         console.log('New variables detected:', analysis.newVariables);
+         console.log('Recommendations:', analysis.recommendations);
+       }
+     } catch (error) {
+       console.error('Error analyzing variables:', error);
+     }
+   }
 
   function handleSave() {
     // Validate template
@@ -284,11 +287,11 @@
       </CardDescription>
     </CardHeader>
     <CardContent>
-      <BasicEditor
-        initialContent={editorContent}
-        showVariableReference={false}
-        showCssEditor={true}
-      />
+       <BasicEditor
+         initialContent={editorContent}
+         showVariableReference={false}
+         showCssEditor={true}
+       />
     </CardContent>
   </Card>
 

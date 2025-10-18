@@ -315,6 +315,62 @@ export const SYSTEM_VARIABLE_CATALOG: VariableCatalogEntry[] = [
     isCommon: false,
   },
 
+  // Company variables (system-provided from company DB)
+  {
+    key: "companyName",
+    label: "Company Name",
+    type: "text",
+    category: "system",
+    description: "Name of the company generating the document",
+    exampleValue: "Your Company Name",
+    isCommon: true,
+  },
+  {
+    key: "companyEmail",
+    label: "Company Email",
+    type: "text",
+    category: "system",
+    description: "Email address of the company",
+    exampleValue: "info@yourcompany.com",
+    isCommon: true,
+  },
+  {
+    key: "companyPhone",
+    label: "Company Phone",
+    type: "text",
+    category: "system",
+    description: "Phone number of the company",
+    exampleValue: "+966 11 123 4567",
+    isCommon: true,
+  },
+  {
+    key: "companyAddress",
+    label: "Company Address",
+    type: "text",
+    category: "system",
+    description: "Full address of the company",
+    exampleValue: "123 Business St, Riyadh, Saudi Arabia",
+    isCommon: true,
+  },
+  {
+    key: "companyLogo",
+    label: "Company Logo",
+    type: "image",
+    category: "system",
+    description: "Logo image of the company",
+    exampleValue: "https://yourcompany.com/logo.png",
+    isCommon: true,
+  },
+  {
+    key: "companyStamp",
+    label: "Company Stamp",
+    type: "text",
+    category: "system",
+    description: "Official company stamp or seal",
+    exampleValue: "Official Company Stamp",
+    isCommon: false,
+  },
+
   // Client variables (system-provided from client DB)
   {
     key: "clientName",

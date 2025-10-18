@@ -45,6 +45,14 @@ export async function populateSystemVariables(
         // Company system variables
         variables.companyName = companyData.name;
         variables.companyVatNumber = companyData.vatNumber;
+
+        // For other company variables, provide fallback values
+        // These can be configured through the branding system
+        variables.companyEmail = "";
+        variables.companyPhone = "";
+        variables.companyAddress = "";
+        variables.companyLogo = "";
+        variables.companyStamp = "";
       }
     }
 
@@ -123,7 +131,16 @@ export async function populateSystemVariables(
     // Ensure all system variables from catalog have values (even if empty)
     for (const systemVar of SYSTEM_VARIABLE_CATALOG) {
       if (!(systemVar.key in variables)) {
-        variables[systemVar.key] = getDefaultValueForType(systemVar.type);
+        // Special handling for company variables that might not be in company data
+        if (
+          systemVar.key.startsWith("company") &&
+          systemVar.key !== "companyName" &&
+          systemVar.key !== "companyVatNumber"
+        ) {
+          variables[systemVar.key] = "";
+        } else {
+          variables[systemVar.key] = getDefaultValueForType(systemVar.type);
+        }
       }
     }
 
@@ -138,14 +155,31 @@ export async function populateSystemVariables(
       currentTime: now.toTimeString().split(" ")[0],
       currentDateTime: now.toISOString(),
       invoiceTimestamp: now.toISOString(),
+      // Company variables with fallback values
+      companyName: "Your Company",
+      companyEmail: "",
+      companyPhone: "",
+      companyAddress: "",
+      companyLogo: "",
+      companyStamp: "",
+      companyVatNumber: "",
     };
 
     // Add fallback values for all system variables
     for (const systemVar of SYSTEM_VARIABLE_CATALOG) {
       if (!(systemVar.key in fallbackVariables)) {
-        fallbackVariables[systemVar.key] = getDefaultValueForType(
-          systemVar.type,
-        );
+        // Special handling for company variables
+        if (
+          systemVar.key.startsWith("company") &&
+          systemVar.key !== "companyName" &&
+          systemVar.key !== "companyVatNumber"
+        ) {
+          fallbackVariables[systemVar.key] = "";
+        } else {
+          fallbackVariables[systemVar.key] = getDefaultValueForType(
+            systemVar.type,
+          );
+        }
       }
     }
 
