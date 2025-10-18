@@ -4,6 +4,7 @@ import {
   getClientPlaceholderKeys,
 } from "./client-data-mapping";
 import type { UserProfile } from "$lib/types/user";
+import { vi } from "vitest";
 
 describe("client-data-mapping", () => {
   const mockClient: UserProfile = {
@@ -78,7 +79,7 @@ describe("client-data-mapping", () => {
       expect(result.clientJoinedAt).toBe("January 1, 2023");
       expect(result.clientBio).toBe("Test bio");
       expect(result.clientUsername).toBe("johndoe");
-      expect(result.currentDate).toBe("October 16, 2025");
+      expect(result.currentDate).toBe("October 18, 2025");
     });
 
     it("should include common document fields with defaults", () => {

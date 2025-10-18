@@ -246,52 +246,9 @@ export const businessEstablishmentContractTemplate: DocumentTemplate = {
   `,
   placeholders: [
     {
-      key: "companyLogo",
-      label: "Company Logo URL",
-      type: "image",
-      required: true,
-    },
-    {
-      key: "companyStamp",
-      label: "Company Stamp URL",
-      type: "image",
-      required: false,
-    },
-    {
-      key: "companyName",
-      label: "Company Name",
-      type: "text",
-      required: true,
-    },
-    {
-      key: "companyAddress",
-      label: "Company Address",
-      type: "text",
-      required: true,
-    },
-    {
-      key: "companyPhone",
-      label: "Company Phone",
-      type: "text",
-      required: false,
-    },
-    {
-      key: "companyEmail",
-      label: "Company Email",
-      type: "text",
-      required: false,
-    },
-    { key: "clientName", label: "Client Name", type: "text", required: true },
-    {
       key: "serviceFee",
       label: "Service Fee Amount (SAR)",
       type: "number",
-      required: true,
-    },
-    {
-      key: "currentDate",
-      label: "Current Date",
-      type: "date",
       required: true,
     },
     {

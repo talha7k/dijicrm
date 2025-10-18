@@ -3,15 +3,17 @@ import {
   type TemplateVariable,
   type VariableDetectionResult,
 } from "$lib/types/templateVariable";
+import type { TemplatePlaceholder } from "$lib/types/document";
 
 /**
  * Regular expression pattern to detect template variables
- * Matches {{variableName}} format
+ * Matches {{variableName}} format but excludes template logic like {{#if}}, {{/each}}, etc.
  */
-const VARIABLE_PATTERN = /\{\{([^}]+)\}\}/g;
+const VARIABLE_PATTERN = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
 
 /**
  * Detects variables used in a template string
+ * Only matches simple variable names, not template logic syntax
  */
 export function detectVariablesInTemplate(templateContent: string): string[] {
   const matches = templateContent.match(VARIABLE_PATTERN);
@@ -20,10 +22,13 @@ export function detectVariablesInTemplate(templateContent: string): string[] {
   }
 
   // Extract variable names from {{variableName}} format
-  const variableNames = matches.map((match) => {
-    const variableName = match.slice(2, -2).trim();
-    return variableName;
-  });
+  // Filter out template logic patterns like #if, /if, #each, /each
+  const variableNames = matches
+    .map((match) => match.slice(2, -2).trim())
+    .filter((variableName) => {
+      // Exclude template logic patterns that start with # or /
+      return !variableName.startsWith("#") && !variableName.startsWith("/");
+    });
 
   // Remove duplicates and return
   return [...new Set(variableNames)];
@@ -35,12 +40,28 @@ export function detectVariablesInTemplate(templateContent: string): string[] {
 export function analyzeTemplateVariables(
   templateContent: string,
   existingVariables: TemplateVariable[] = [],
+  templatePlaceholders: TemplatePlaceholder[] = [],
 ): VariableDetectionResult {
   const detectedVariableNames = detectVariablesInTemplate(templateContent);
 
-  // Find existing variables that match detected ones
+  // Convert template placeholders to TemplateVariable format
+  const convertedPlaceholders: TemplateVariable[] = templatePlaceholders.map(
+    (placeholder) => ({
+      key: placeholder.key,
+      label: placeholder.label,
+      type: placeholder.type,
+      required: placeholder.required,
+      defaultValue: placeholder.defaultValue,
+      description: placeholder.description,
+      category: "custom", // Template placeholders are custom variables
+      usageCount: 0, // New placeholders start with 0 usage
+    }),
+  );
+
+  // Find existing variables that match detected ones (from both store and template)
+  const allExistingVariables = [...existingVariables, ...convertedPlaceholders];
   const existingVariablesMap = new Map(
-    existingVariables.map((v) => [v.key, v]),
+    allExistingVariables.map((v) => [v.key, v]),
   );
 
   const detectedVariables: TemplateVariable[] = [];
@@ -256,12 +277,7 @@ function generateRecommendations(
   }
 
   // Check for potentially missing common variables
-  const commonVariables = [
-    "clientName",
-    "clientEmail",
-    "currentDate",
-    "totalAmount",
-  ];
+  const commonVariables = ["currentDate", "totalAmount"];
   const detectedKeys = detectedVariables.map((v) => v.key);
   const missingCommon = commonVariables.filter(
     (cv) => !detectedKeys.includes(cv),
@@ -348,7 +364,7 @@ function validateVariableType(value: any, expectedType: string): boolean {
     case "date":
       return (
         value instanceof Date ||
-        (typeof value === "string" && !isNaN(Date.parse(value)))
+        (typeof value === "string" && !isNaN(new Date(value).getTime()))
       );
     case "boolean":
       return (

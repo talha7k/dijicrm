@@ -195,7 +195,7 @@
       return;
     }
 
-    const results = variableDetectionService.analyzeTemplateVariables(templateContent, []);
+    const results = variableDetectionService.analyzeTemplateVariables(templateContent, [], []);
     detectionResults = results;
     showDetectionDialog = true;
   }

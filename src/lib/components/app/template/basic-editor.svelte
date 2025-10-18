@@ -4,7 +4,9 @@
   import { Textarea } from '$lib/components/ui/textarea';
   import Icon from '@iconify/svelte';
   import { validateBasicTemplate } from '$lib/utils/basicTemplateValidation';
-import type { DocumentTemplate } from '$lib/types/document';
+  import { renderTemplate, generatePreviewData } from '$lib/utils/template-rendering';
+  import type { DocumentTemplate } from '$lib/types/document';
+  import { Timestamp } from '@firebase/firestore';
   import VariableReference from './variable-reference.svelte';
   import CssTextareas from './css-textareas.svelte';
 
@@ -14,6 +16,7 @@ import type { DocumentTemplate } from '$lib/types/document';
     initialPrintCss?: string;
     showVariableReference?: boolean;
     showCssEditor?: boolean;
+    content?: string;
   }
 
   let {
@@ -21,17 +24,16 @@ import type { DocumentTemplate } from '$lib/types/document';
     initialScreenCss = '',
     initialPrintCss = '',
     showVariableReference = true,
-    showCssEditor = true
+    showCssEditor = false, // Disabled by default since styles are now internal to templates
+    content = $bindable(initialContent)
   }: Props = $props();
 
-  let htmlContent = $state(initialContent);
-  let screenCss = $state(initialScreenCss);
-  let printCss = $state(initialPrintCss);
-  let previewMode = $state(false);
-  let printPreviewMode = $state(false);
-  let zoomLevel = $state(1);
-  let validationErrors = $state<string[]>([]);
-  let validationWarnings = $state<string[]>([]);
+   let htmlContent = $state(content || initialContent);
+   let previewMode = $state(false);
+   let printPreviewMode = $state(false);
+   let zoomLevel = $state(1);
+   let validationErrors = $state<string[]>([]);
+   let validationWarnings = $state<string[]>([]);
 
   // Example template for placeholder
   const exampleTemplate = `Enter your HTML template here...
@@ -109,7 +111,7 @@ Example:
     zoomLevel = 1;
   }
 
-  // Reactive preview HTML with variable replacement
+  // Reactive preview HTML with proper template rendering
   let previewHtml = $state('');
 
   function updatePreview() {
@@ -118,45 +120,34 @@ Example:
       return;
     }
 
-    // Basic variable replacement for preview
-    let preview = htmlContent;
+    try {
+      // Create a temporary template object for rendering
+      const tempTemplate: DocumentTemplate = {
+        id: 'preview',
+        companyId: 'preview',
+        name: 'Preview Template',
+        description: 'Preview template',
+        type: 'order',
+        isActive: true,
+        version: 1,
+        createdBy: 'system',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        htmlContent: htmlContent,
+        placeholders: [], // Template-specific placeholders will be handled by generatePreviewData
+        tags: []
+      };
 
-    // Replace common system variables with example values
-    const replacements: Record<string, string> = {
-      '{{currentDate}}': new Date().toLocaleDateString(),
-      '{{currentTime}}': new Date().toLocaleTimeString(),
-      '{{currentDateTime}}': new Date().toLocaleString(),
-      '{{orderNumber}}': 'INV-2024-001',
-      '{{documentId}}': 'DOC-123456',
-      '{{documentType}}': 'Invoice',
-      '{{subtotal}}': '1,000.00',
-      '{{taxAmount}}': '150.00',
-      '{{totalAmount}}': '1,150.00',
-      '{{discountAmount}}': '50.00',
-      '{{currency}}': 'SAR',
-      '{{items}}': '<tr><td>Item 1</td><td>2</td><td>500.00</td></tr><tr><td>Item 2</td><td>1</td><td>150.00</td></tr>',
-      '{{itemCount}}': '3',
-      '{{orderDate}}': new Date().toLocaleDateString(),
-      '{{dueDate}}': new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-      '{{paymentStatus}}': 'Pending',
-      '{{orderStatus}}': 'Processing',
-      '{{companyCity}}': 'Riyadh',
-      '{{companyCountry}}': 'Saudi Arabia',
-      '{{vatNumber}}': '123456789012345',
-      '{{crNumber}}': '1012345678',
-      '{{companyName}}': 'Your Company Name',
-      '{{companyEmail}}': 'info@yourcompany.com',
-      '{{companyPhone}}': '+966 11 123 4567',
-      '{{companyAddress}}': '123 Business St, Riyadh, Saudi Arabia',
-      '{{companyLogo}}': 'https://via.placeholder.com/200x100?text=Company+Logo',
-      '{{companyStamp}}': 'https://via.placeholder.com/150x150?text=Company+Stamp'
-    };
+      // Generate comprehensive preview data including system variables and template placeholders
+      const previewData = generatePreviewData(tempTemplate);
 
-    Object.entries(replacements).forEach(([variable, value]) => {
-      preview = preview.replace(new RegExp(variable.replace(/[{}]/g, '\\$&'), 'g'), value);
-    });
-
-    previewHtml = preview;
+      // Use proper Handlebars rendering
+      previewHtml = renderTemplate(tempTemplate, previewData);
+    } catch (error) {
+      console.error('Error rendering preview:', error);
+      // Fallback to simple content display if rendering fails
+      previewHtml = htmlContent;
+    }
   }
 
   // Update preview when content changes
@@ -180,9 +171,9 @@ Example:
             <Icon icon="lucide:edit" class="h-5 w-5" />
             Basic Template Editor
           </CardTitle>
-          <CardDescription>
-            Simple HTML template editor with preview and styling options
-          </CardDescription>
+           <CardDescription>
+             Simple HTML template editor with preview (styles are defined internally in templates)
+           </CardDescription>
         </div>
         <div class="flex gap-2">
           <Button variant="outline" size="sm" onclick={togglePreview}>
@@ -275,24 +266,24 @@ Example:
             </div>
           {:else}
             <!-- Edit Mode -->
-            <Textarea
-              bind:value={htmlContent}
-              placeholder={exampleTemplate}
-              rows={20}
-              class="font-mono text-sm min-h-[500px]"
-            />
+             <Textarea
+               bind:value={content}
+               placeholder={exampleTemplate}
+               rows={20}
+               class="font-mono text-sm min-h-[500px]"
+             />
           {/if}
         </CardContent>
       </Card>
 
-      <!-- CSS Editor -->
-      {#if showCssEditor}
-        <CssTextareas 
-          screenCss={screenCss} 
-          printCss={printCss}
-          showTemplates={true}
-        />
-      {/if}
+       <!-- CSS Editor (disabled since styles are now internal to templates) -->
+       {#if showCssEditor}
+         <CssTextareas
+           screenCss=""
+           printCss=""
+           showTemplates={true}
+         />
+       {/if}
     </div>
 
     <!-- Side Panel -->
@@ -355,10 +346,10 @@ Example:
               <span class="text-muted-foreground">HTML Length:</span>
               <span>{htmlContent.length} chars</span>
             </div>
-            <div class="flex justify-between">
-              <span class="text-muted-foreground">CSS Length:</span>
-              <span>{screenCss.length + printCss.length} chars</span>
-            </div>
+             <div class="flex justify-between">
+               <span class="text-muted-foreground">CSS Length:</span>
+               <span>Internal to template</span>
+             </div>
             <div class="flex justify-between">
               <span class="text-muted-foreground">Variables:</span>
               <span>{(htmlContent.match(/\{\{[^}]+\}\}/g) || []).length}</span>

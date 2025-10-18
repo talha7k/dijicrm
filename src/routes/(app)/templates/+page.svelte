@@ -2,12 +2,12 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import DashboardLayout from '$lib/components/shared/dashboard-layout.svelte';
-  import TemplateEditDialog from '$lib/components/app/template/template-edit-dialog.svelte';
+
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { Badge } from '$lib/components/ui/badge';
-  import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '$lib/components/ui/dialog';
+
   import * as Select from '$lib/components/ui/select/index.js';
   import { toast } from 'svelte-sonner';
 
@@ -23,10 +23,8 @@
    let searchQuery = $state('');
    let selectedType = $state('all');
 
-   let showEditDialog = $state(false);
     let showPreviewDialog = $state(false);
-    let templateToEdit = $state<DocumentTemplate | null>(null);
-    let templateToPreview = $state<DocumentTemplate | null>(null);
+     let templateToPreview = $state<DocumentTemplate | null>(null);
 
    // Dialog state
    let showConfirmDialog = $state(false);
@@ -82,9 +80,8 @@
 
 
 function handleEditTemplate(template: DocumentTemplate) {
-     templateToEdit = template;
-     showEditDialog = true;
-   }
+      goto(`/templates/${template.id}/edit`);
+    }
 
 function handleDeleteTemplate(template: any) {
       // Check if template has a valid ID before showing delete dialog
@@ -119,18 +116,7 @@ function handleDeleteTemplate(template: any) {
       }
     }
 
-   async function handleTemplateEdit(templateData: DocumentTemplate) {
-     if (!templateToEdit) return;
-     
-     try {
-       await documentTemplatesStore.updateTemplate(templateToEdit.id, templateData);
-       showEditDialog = false;
-       templateToEdit = null;
-     } catch (error) {
-       console.error("Failed to update template:", error);
-       toast.error("Failed to update template");
-     }
-   }
+
 
 
 
@@ -264,33 +250,7 @@ function handleDeleteTemplate(template: any) {
       </div>
     {/if}
 
-    <!-- Edit Template Dialog -->
-    <Dialog bind:open={showEditDialog}>
-      <DialogContent class="max-w-7xl max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit Template</DialogTitle>
-          <DialogDescription>
-            Update the document template content and settings.
-          </DialogDescription>
-        </DialogHeader>
-        {#if templateToEdit}
-          <div class="py-4">
-            <TemplateEditDialog
-              initialTemplate={templateToEdit}
-              onSave={(updatedTemplate) => {
-                handleTemplateEdit(updatedTemplate);
-                showEditDialog = false;
-                templateToEdit = null;
-              }}
-              onCancel={() => {
-                showEditDialog = false;
-                templateToEdit = null;
-              }}
-            />
-          </div>
-        {/if}
-      </DialogContent>
-    </Dialog>
+
 
      <!-- Preview Template Dialog -->
      <TemplatePreviewDialog bind:open={showPreviewDialog} template={templateToPreview} />

@@ -168,20 +168,35 @@ function createDocumentTemplatesStore() {
 
 export const documentTemplatesStore = createDocumentTemplatesStore();
 
-export async function getDocumentTemplate(templateId: string) {
+export async function getDocumentTemplate(
+  templateId: string,
+): Promise<DocumentTemplate | null> {
   try {
-    // This would need to be implemented with Firebase query
-    // For now, return a placeholder
+    const companyId = get(activeCompanyId);
+    if (!companyId) {
+      throw new Error("No active company");
+    }
+
+    const docSnap = await getDocs(
+      query(
+        collection(db, "documentTemplates"),
+        where("__name__", "==", templateId),
+      ),
+    );
+
+    if (docSnap.empty) {
+      return null;
+    }
+
+    const data = docSnap.docs[0].data();
     return {
-      data: null,
-      loading: false,
-      error: "Not implemented yet",
-    };
+      id: docSnap.docs[0].id,
+      ...data,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    } as DocumentTemplate;
   } catch (error) {
-    return {
-      data: null,
-      loading: false,
-      error: "Failed to load template",
-    };
+    console.error("Error loading template:", error);
+    return null;
   }
 }

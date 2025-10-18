@@ -59,34 +59,9 @@ export const serviceAgreementTemplate: DocumentTemplate = {
   `,
   placeholders: [
     {
-      key: "companyName",
-      label: "Company Name",
-      type: "text",
-      required: true,
-    },
-    {
-      key: "companyAddress",
-      label: "Company Address",
-      type: "text",
-      required: true,
-    },
-    { key: "clientName", label: "Client Name", type: "text", required: true },
-    {
-      key: "clientAddress",
-      label: "Client Address",
-      type: "text",
-      required: true,
-    },
-    {
       key: "servicesDescription",
       label: "Services Description",
       type: "text",
-      required: true,
-    },
-    {
-      key: "totalAmount",
-      label: "Total Amount",
-      type: "number",
       required: true,
     },
     {

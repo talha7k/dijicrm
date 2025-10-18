@@ -275,63 +275,8 @@ export const companyIncorporationIntentFormTemplate: DocumentTemplate = {
   `,
   placeholders: [
     {
-      key: "companyLogo",
-      label: "Company Logo URL",
-      type: "image",
-      required: true,
-    },
-    {
-      key: "companyStamp",
-      label: "Company Stamp URL",
-      type: "image",
-      required: false,
-    },
-    {
-      key: "companyName",
-      label: "Company Name",
-      type: "text",
-      required: true,
-    },
-    {
-      key: "companyAddress",
-      label: "Company Address",
-      type: "text",
-      required: true,
-    },
-    {
-      key: "companyPhone",
-      label: "Company Phone",
-      type: "text",
-      required: false,
-    },
-    {
-      key: "companyEmail",
-      label: "Company Email",
-      type: "text",
-      required: false,
-    },
-    { key: "clientName", label: "Client Name", type: "text", required: true },
-    {
       key: "contactPerson",
       label: "Contact Person",
-      type: "text",
-      required: true,
-    },
-    {
-      key: "clientEmail",
-      label: "Client Email",
-      type: "text",
-      required: true,
-    },
-    {
-      key: "clientPhone",
-      label: "Client Phone",
-      type: "text",
-      required: true,
-    },
-    {
-      key: "clientAddress",
-      label: "Client Address",
       type: "text",
       required: true,
     },
@@ -401,12 +346,6 @@ export const companyIncorporationIntentFormTemplate: DocumentTemplate = {
       label: "Timeline Expectations",
       type: "text",
       required: false,
-    },
-    {
-      key: "currentDate",
-      label: "Current Date",
-      type: "date",
-      required: true,
     },
     {
       key: "primaryColor",

@@ -6,6 +6,7 @@ import {
   mergeVariableDetection,
 } from "./variableDetectionService";
 import type { TemplateVariable } from "$lib/types/templateVariable";
+import { SYSTEM_VARIABLE_CATALOG } from "$lib/types/templateVariable";
 
 describe("Variable Detection Service", () => {
   describe("detectVariablesInTemplate", () => {
@@ -24,11 +25,11 @@ describe("Variable Detection Service", () => {
       expect(variables).toEqual(["orderNumber"]);
     });
 
-    it("should handle variables with spaces", () => {
-      const template = "Date: {{ currentDate }}";
+    it("should handle variables with underscores", () => {
+      const template = "Date: {{current_date}}";
       const variables = detectVariablesInTemplate(template);
 
-      expect(variables).toEqual(["currentDate"]);
+      expect(variables).toEqual(["current_date"]);
     });
 
     it("should return empty array for no variables", () => {
@@ -37,12 +38,20 @@ describe("Variable Detection Service", () => {
 
       expect(variables).toEqual([]);
     });
+
+    it("should exclude template logic syntax", () => {
+      const template =
+        "{{#if zatcaQRCode}}<img src='qr.png'>{{/if}}{{#each items}}<li>{{name}}</li>{{/each}}";
+      const variables = detectVariablesInTemplate(template);
+
+      expect(variables).toEqual(["name"]);
+    });
   });
 
   describe("analyzeTemplateVariables", () => {
     it("should detect system variables", () => {
       const template = "Date: {{currentDate}}, Total: {{totalAmount}}";
-      const result = analyzeTemplateVariables(template);
+      const result = analyzeTemplateVariables(template, [], []);
 
       expect(result.detectedVariables).toHaveLength(2);
       expect(result.detectedVariables[0].key).toBe("currentDate");
@@ -51,15 +60,15 @@ describe("Variable Detection Service", () => {
       expect(result.detectedVariables[1].category).toBe("system");
     });
 
-    it("should detect custom variables", () => {
+    it("should detect system variables", () => {
       const template = "Client: {{clientName}}, Email: {{clientEmail}}";
       const result = analyzeTemplateVariables(template);
 
       expect(result.detectedVariables).toHaveLength(2);
       expect(result.detectedVariables[0].key).toBe("clientName");
-      expect(result.detectedVariables[0].category).toBe("custom");
+      expect(result.detectedVariables[0].category).toBe("system");
       expect(result.detectedVariables[1].key).toBe("clientEmail");
-      expect(result.detectedVariables[1].category).toBe("custom");
+      expect(result.detectedVariables[1].category).toBe("system");
     });
 
     it("should detect variable types correctly", () => {
@@ -96,20 +105,25 @@ describe("Variable Detection Service", () => {
 
       expect(result.existingVariables).toHaveLength(1);
       expect(result.existingVariables[0].key).toBe("clientName");
-      expect(result.newVariables).toHaveLength(1);
-      expect(result.newVariables[0].key).toBe("clientEmail");
+      expect(result.newVariables).toHaveLength(0); // clientEmail is now a system variable
     });
 
     it("should generate recommendations", () => {
       const template = "{{clientName}} - {{totalAmount}}";
       const result = analyzeTemplateVariables(template);
 
-      expect(result.recommendations).toContain(
-        "Found 1 system variables that will be auto-populated",
-      );
-      expect(result.recommendations).toContain(
-        "Found 1 custom variables that need user input",
-      );
+      expect(result.recommendations.length).toBeGreaterThan(0);
+      expect(
+        result.recommendations.some((r) =>
+          r.includes("system variables that will be auto-populated"),
+        ),
+      ).toBe(true);
+      // Both variables are system variables now, so no custom variables
+      expect(
+        result.recommendations.some((r) =>
+          r.includes("custom variables that need user input"),
+        ),
+      ).toBe(false);
     });
   });
 
@@ -182,7 +196,7 @@ describe("Variable Detection Service", () => {
         "clientName",
         "orderNumber",
       ]);
-      expect(merged.newVariables).toHaveLength(2);
+      expect(merged.newVariables).toHaveLength(0); // Both are system variables now
     });
 
     it("should remove duplicate recommendations", () => {

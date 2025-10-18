@@ -64,90 +64,29 @@ async function generatePdfFromHtml(
     // Set viewport for better PDF rendering
     await page.setViewport({ width: 794, height: 1123 }); // A4 size
 
-    // Add CSS for better table and image rendering
+    // Add minimal CSS for PDF generation - avoid conflicts with template styles
     const styles = `
-      <style>
-        body {
-          font-family: 'Arial', sans-serif;
-          margin: 0;
-          padding: 20px;
-          color: #333;
-        }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 20px 0;
-        }
-        th, td {
-          border: 1px solid #ddd;
-          padding: 8px 12px;
-          text-align: left;
-          vertical-align: top;
-        }
-        th {
-          background-color: #f5f5f5;
-          font-weight: bold;
-        }
-        tr:nth-child(even) {
-          background-color: #f9f9f9;
-        }
-        img {
-          max-width: 100%;
-          height: auto;
-          display: block;
-        }
-        .invoice-container {
-          max-width: 800px;
-          margin: 0 auto;
-        }
-        .header {
-          margin-bottom: 30px;
-        }
-        .company-info {
-          margin-bottom: 20px;
-        }
-        .billing-info {
-          margin-bottom: 30px;
-        }
-        .order-table {
-          margin: 20px 0;
-        }
-        .totals {
-          text-align: right;
-          margin-top: 20px;
-        }
-        .total-row {
-          margin-bottom: 5px;
-        }
-        .total-row.total {
-          font-weight: bold;
-          font-size: 18px;
-          border-top: 2px solid #333;
-          padding-top: 10px;
-        }
-        .footer {
-          margin-top: 40px;
-          text-align: center;
-          font-size: 12px;
-          color: #666;
-        }
-        .zatca-qr-code {
-          position: absolute !important;
-          top: 20px !important;
-          right: 20px !important;
-          width: 100px !important;
-          height: 100px !important;
-        }
-        .company-logo {
-          text-align: center;
-          margin-bottom: 20px;
-        }
-        .company-logo img {
-          max-width: 200px;
-          max-height: 100px;
-        }
-      </style>
-    `;
+       <style>
+         /* Only add essential styles that templates might not have */
+         body {
+           margin: 0;
+           padding: 0;
+           font-family: 'Arial', sans-serif;
+           color: #333;
+         }
+         /* Ensure images don't break layout */
+         img {
+           max-width: 100%;
+           height: auto;
+           display: block;
+         }
+         /* Print-specific styles for better PDF output */
+         @media print {
+           body { padding: 20px; }
+           .invoice-container { max-width: none; }
+         }
+       </style>
+     `;
 
     // Wrap HTML in proper document structure with styles
     const fullHtml = `

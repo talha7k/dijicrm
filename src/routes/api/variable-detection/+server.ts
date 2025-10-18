@@ -27,6 +27,7 @@ export const POST: RequestHandler = async ({ request }) => {
     const analysis = analyzeTemplateVariables(
       data.templateContent,
       existingVariables,
+      [],
     );
 
     // Validate provided data if available
@@ -86,6 +87,7 @@ export const PUT: RequestHandler = async ({ request }) => {
       const analysis = analyzeTemplateVariables(
         templateData.content,
         existingVariables,
+        [],
       );
       analyses.push(analysis);
     }

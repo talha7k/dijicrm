@@ -106,9 +106,7 @@ function validateBasicHtmlSyntax(htmlContent: string): BasicValidationResult {
     warnings.push("Body tag found but no closing </body> tag");
   }
 
-  if (trimmedContent.includes("<head") && !trimmedContent.includes("</head>")) {
-    warnings.push("Head tag found but no closing </head> tag");
-  }
+  // Note: <head> tag validation removed as templates don't require full HTML structure
 
   // Check for potentially dangerous content
   const dangerousPatterns = [
@@ -142,18 +140,11 @@ function validateBasicHtmlSyntax(htmlContent: string): BasicValidationResult {
   });
 
   // Check for template variable syntax
-  const variablePattern = /\{\{[^}]+\}\}/g;
+  const variablePattern = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
   const variables = trimmedContent.match(variablePattern) || [];
 
   if (variables.length > 0) {
-    // Check for malformed variables
-    variables.forEach((variable) => {
-      if (!variable.match(/^\{\{[a-zA-Z_][a-zA-Z0-9_]*\}\}$/)) {
-        warnings.push(
-          `Potentially malformed variable: ${variable}. Variables should use format {{variableName}}`,
-        );
-      }
-    });
+    // Note: Template logic syntax like {{#if}} is allowed and not treated as variables
   }
 
   return {
@@ -239,7 +230,7 @@ export function validateTemplateForGeneration(
 
   // Additional checks for generation readiness
   if (template.htmlContent) {
-    const variablePattern = /\{\{[^}]+\}\}/g;
+    const variablePattern = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
     const variables = template.htmlContent.match(variablePattern) || [];
 
     if (variables.length === 0) {
@@ -250,7 +241,7 @@ export function validateTemplateForGeneration(
 
     // Check for variables that might be system variables
     const systemVariablePattern =
-      /\{\{(currentDate|currentTime|currentDateTime|orderNumber|totalAmount|subtotal|taxAmount|currency|items|itemCount|orderDate|dueDate|paymentStatus|orderStatus|companyCity|companyCountry|zatcaQRCode|vatNumber|crNumber|documentId|documentType|invoiceTimestamp|discountAmount)\}\}/g;
+      /\{\{(currentDate|currentTime|currentDateTime|orderNumber|totalAmount|subtotal|taxAmount|currency|items|itemCount|orderDate|dueDate|paymentStatus|orderStatus|companyCity|companyCountry|zatcaQRCode|vatNumber|crNumber|documentId|documentType|invoiceTimestamp|discountAmount|companyName|companyEmail|companyPhone|companyAddress|companyLogo|companyStamp)\}\}/g;
     const systemVariables =
       template.htmlContent.match(systemVariablePattern) || [];
 

@@ -53,6 +53,10 @@ export async function populateSystemVariables(
         variables.companyAddress = "";
         variables.companyLogo = "";
         variables.companyStamp = "";
+
+        // Order-specific variables
+        variables.taxRate = 15; // Default tax rate
+        variables.paymentTerms = "Net 30 days"; // Default payment terms
       }
     }
 
@@ -97,6 +101,15 @@ export async function populateSystemVariables(
           variables.subtotal = orderData.subtotal || 0;
           variables.taxAmount = orderData.taxAmount || orderData.vatAmount || 0;
           variables.totalAmount = orderData.total || orderData.totalAmount || 0;
+
+          // For backward compatibility, also set 'total' as an alias for 'totalAmount'
+          variables.total = variables.totalAmount;
+
+          // Calculate taxAmount if not provided but we have taxRate and subtotal
+          if (!variables.taxAmount && variables.taxRate && variables.subtotal) {
+            variables.taxAmount =
+              (variables.subtotal * variables.taxRate) / 100;
+          }
           variables.discountAmount = orderData.discountAmount || 0;
           variables.currency = orderData.currency || "SAR";
 
@@ -138,6 +151,12 @@ export async function populateSystemVariables(
           systemVar.key !== "companyVatNumber"
         ) {
           variables[systemVar.key] = "";
+        } else if (systemVar.key === "taxRate") {
+          variables[systemVar.key] = 15;
+        } else if (systemVar.key === "paymentTerms") {
+          variables[systemVar.key] = "Net 30 days";
+        } else if (systemVar.key === "taxAmount") {
+          variables[systemVar.key] = 0;
         } else {
           variables[systemVar.key] = getDefaultValueForType(systemVar.type);
         }
@@ -163,18 +182,29 @@ export async function populateSystemVariables(
       companyLogo: "",
       companyStamp: "",
       companyVatNumber: "",
+      // Order variables with fallback values
+      taxRate: 15,
+      paymentTerms: "Net 30 days",
+      taxAmount: 0,
+      total: 0,
     };
 
     // Add fallback values for all system variables
     for (const systemVar of SYSTEM_VARIABLE_CATALOG) {
       if (!(systemVar.key in fallbackVariables)) {
-        // Special handling for company variables
+        // Special handling for company and order variables
         if (
           systemVar.key.startsWith("company") &&
           systemVar.key !== "companyName" &&
           systemVar.key !== "companyVatNumber"
         ) {
           fallbackVariables[systemVar.key] = "";
+        } else if (systemVar.key === "taxRate") {
+          fallbackVariables[systemVar.key] = 15;
+        } else if (systemVar.key === "paymentTerms") {
+          fallbackVariables[systemVar.key] = "Net 30 days";
+        } else if (systemVar.key === "taxAmount") {
+          fallbackVariables[systemVar.key] = 0;
         } else {
           fallbackVariables[systemVar.key] = getDefaultValueForType(
             systemVar.type,

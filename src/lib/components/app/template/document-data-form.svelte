@@ -72,11 +72,11 @@
     showDataForm = true;
   }
 
-  function extractTemplateVariables(template: DocumentTemplate) {
-    // Extract variables from template content using regex
-    const variableRegex = /\{\{([^}]+)\}\}/g;
-    const matches = template.htmlContent.match(variableRegex) || [];
-    const variableKeys = [...new Set(matches.map(match => match.replace(/[{}]/g, '').trim()))];
+   function extractTemplateVariables(template: DocumentTemplate) {
+     // Extract variables from template content using regex (exclude template logic)
+     const variableRegex = /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g;
+     const matches = template.htmlContent.match(variableRegex) || [];
+     const variableKeys = [...new Set(matches)];
 
     // Get custom variables that match these keys
     const customVars = $customTemplateVariablesStore.customVariables?.filter(v => 

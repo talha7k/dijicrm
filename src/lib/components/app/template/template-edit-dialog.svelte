@@ -44,11 +44,20 @@
     tags: initialTemplate?.tags || []
   });
 
-  let validationErrors = $state<string[]>([]);
-  let validationWarnings = $state<string[]>([]);
-  let showVariableAccordion = $state(false);
-  let detectedVariables = $state<any[]>([]);
-  let variableAnalysis = $state<any>(null);
+   let validationErrors = $state<string[]>([]);
+   let validationWarnings = $state<string[]>([]);
+   let showVariableAccordion = $state(false);
+   let detectedVariables = $state<any[]>([]);
+   let variableAnalysis = $state<any>(null);
+
+   // Reactive validation - validate whenever template content changes
+   $effect(() => {
+     if (template.htmlContent || template.name) {
+       const validation = validateBasicTemplate(template);
+       validationErrors = validation.errors;
+       validationWarnings = validation.warnings;
+     }
+   });
 
   // Load client variables for the company
   $effect(() => {
@@ -57,14 +66,19 @@
     }
   });
 
-  // Create a reactive binding for the editor content
-  let editorContent = $state(template.htmlContent);
-  
-  $effect(() => {
-    template.htmlContent = editorContent;
-    // Analyze variables whenever template content changes
-    analyzeVariables();
-  });
+   // Create a reactive binding for the editor content
+   let editorContent = $state(template.htmlContent);
+
+   $effect(() => {
+     template.htmlContent = editorContent;
+     // Analyze variables whenever template content changes
+     analyzeVariables();
+   });
+
+   // Also update editorContent when template.htmlContent changes (for external updates)
+   $effect(() => {
+     editorContent = template.htmlContent;
+   });
 
    function analyzeVariables() {
      if (!template.htmlContent.trim()) {
@@ -77,10 +91,11 @@
        // Pass existing variables from the store, not the detected ones
        // This prevents circular dependency issues
        const existingVars = $customTemplateVariablesStore.customVariables || [];
-       const analysis = analyzeTemplateVariables(
-         template.htmlContent,
-         existingVars
-       );
+        const analysis = analyzeTemplateVariables(
+          template.htmlContent,
+          existingVars,
+          template.placeholders || []
+        );
        variableAnalysis = analysis;
        detectedVariables = analysis.detectedVariables;
 
@@ -105,15 +120,15 @@
       return;
     }
 
-    // Update template with current data
-    const updatedTemplate: DocumentTemplate = {
+    // Prepare template for saving
+    const templateToSave: DocumentTemplate = {
       ...template,
       htmlContent: template.htmlContent,
       updatedAt: Timestamp.now(),
-      version: template.version + 1
+      version: initialTemplate && initialTemplate.id && initialTemplate.id.trim() !== '' ? template.version + 1 : 1
     };
 
-    onSave(updatedTemplate);
+    onSave(templateToSave);
   }
 
   function handleVariableInsert(variableKey: string) {
@@ -287,11 +302,12 @@
       </CardDescription>
     </CardHeader>
     <CardContent>
-       <BasicEditor
-         initialContent={editorContent}
-         showVariableReference={false}
-         showCssEditor={true}
-       />
+        <BasicEditor
+          initialContent={editorContent}
+          showVariableReference={false}
+          showCssEditor={false}
+          bind:content={editorContent}
+        />
     </CardContent>
   </Card>
 
@@ -333,9 +349,9 @@
     <Button variant="outline" onclick={onCancel}>
       Cancel
     </Button>
-    <Button onclick={handleSave} disabled={validationErrors.length > 0}>
-      <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
-      {initialTemplate ? 'Update Template' : 'Create Template'}
-    </Button>
+      <Button onclick={handleSave} disabled={validationErrors.length > 0 || validationWarnings.length > 0}>
+       <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
+       {initialTemplate && initialTemplate.id && initialTemplate.id.trim() !== '' ? 'Update Template' : 'Create Template'}
+     </Button>
   </div>
 </div>

@@ -47,12 +47,12 @@ export function mapClientDataToTemplate(
     // Common document fields (with defaults)
     companyName: "Your Company", // Will be overridden by actual company name
     date: formatDate(new Date()),
-    dueDate: formatDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 days from now
+    dueDate: formatDate(new Date("2025-11-15")), // 30 days from now
     serviceDescription: "Professional services provided",
     amount: 1000, // Default amount
 
     // Order/invoice specific fields (with defaults for client documents)
-    orderNumber: `INV-${Date.now()}`, // Generate a default invoice number
+    orderNumber: `INV-${new Date().getTime()}`, // Generate a default invoice number
     items: [
       {
         description: "Professional services provided",

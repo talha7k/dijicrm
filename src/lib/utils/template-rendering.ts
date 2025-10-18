@@ -214,13 +214,87 @@ function getPlaceholderValue(
 }
 
 /**
- * Generates preview data for template placeholders
+ * Generates preview data for template placeholders and system variables
  */
 export function generatePreviewData(
   template: DocumentTemplate,
 ): Record<string, any> {
   const previewData: Record<string, any> = {};
 
+  // Add system variables commonly used in templates
+  const systemVariables = {
+    // Date/Time variables
+    currentDate: new Date().toLocaleDateString(),
+    currentTime: new Date().toLocaleTimeString(),
+    currentDateTime: new Date().toLocaleString(),
+
+    // Document/Order variables
+    orderNumber: "INV-2024-001",
+    documentId: "DOC-123456",
+    documentType: "Invoice",
+    subtotal: 1275.0,
+    totalAmount: 1466.25,
+    discountAmount: 0.0,
+    currency: "SAR",
+    itemCount: 3,
+    orderDate: new Date().toLocaleDateString(),
+    dueDate: new Date(
+      Date.now() + 30 * 24 * 60 * 60 * 1000,
+    ).toLocaleDateString(),
+    paymentStatus: "Pending",
+    orderStatus: "Processing",
+
+    // Company variables
+    companyName: "Your Company Name",
+    companyEmail: "info@yourcompany.com",
+    companyPhone: "+966 11 123 4567",
+    companyAddress: "123 Business St, Riyadh, Saudi Arabia",
+    companyLogo:
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkNvbXBhbnkgTG9nbzwvdGV4dD48L3N2Zz4=",
+    companyStamp:
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkNvbXBhbnkgU3RhbXA8L3RleHQ+PC9zdmc+",
+    taxRate: 15,
+    paymentTerms: "Net 30 days",
+    taxAmount: 150.0,
+    total: 1150.0,
+
+    // Client variables
+    clientName: "Ahmed Al-Rashid",
+    clientEmail: "ahmed.alrashid@clientcompany.com",
+    clientPhone: "+966 50 123 4567",
+    clientAddress:
+      "456 King Fahd Road, Al Olaya District, Riyadh 12345, Saudi Arabia",
+    clientVatNumber: "123456789012345",
+    clientCompanyName: "Client Company Ltd",
+
+    // Order items for {{#each}} loops
+    items: [
+      {
+        description: "Professional Web Development Services",
+        quantity: 1,
+        rate: 850.0,
+      },
+      {
+        description: "UI/UX Design Consultation",
+        quantity: 2,
+        rate: 125.0,
+      },
+      {
+        description: "Project Management & Quality Assurance",
+        quantity: 1,
+        rate: 175.0,
+      },
+    ],
+
+    // ZATCA QR Code (placeholder)
+    zatcaQRCode:
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPldBVENBIFE8L3RleHQ+PC9zdmc+",
+  };
+
+  // Add all system variables
+  Object.assign(previewData, systemVariables);
+
+  // Add template-specific placeholders
   for (const placeholder of template.placeholders) {
     previewData[placeholder.key] = getPreviewValue(placeholder);
   }

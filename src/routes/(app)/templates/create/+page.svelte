@@ -6,13 +6,14 @@
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { Badge } from '$lib/components/ui/badge';
-  import { toast } from 'svelte-sonner';
-  import Icon from '@iconify/svelte';
-  import { requireCompany } from '$lib/utils/auth';
-  import { documentTemplatesStore } from '$lib/stores/documentTemplates';
-  import { customTemplateVariablesStore } from '$lib/stores/customTemplateVariables';
-  import { auth } from '$lib/firebase';
-  import type { DocumentTemplate } from '$lib/types/document';
+   import { toast } from 'svelte-sonner';
+   import Icon from '@iconify/svelte';
+   import { requireCompany } from '$lib/utils/auth';
+   import { documentTemplatesStore } from '$lib/stores/documentTemplates';
+   import { customTemplateVariablesStore } from '$lib/stores/customTemplateVariables';
+   import { auth } from '$lib/firebase';
+   import { Timestamp } from '@firebase/firestore';
+   import type { DocumentTemplate } from '$lib/types/document';
 
   let mounted = $state(false);
   let showEditor = $state(false);
@@ -20,29 +21,32 @@
 
   import { sampleTemplates } from '$lib/data/sampleTemplates';
 
-   onMount(() => {
-     mounted = true;
-     // Company access is checked at layout level
-   });
+    onMount(() => {
+      console.log('Create page mounted');
+      mounted = true;
+      // Company access is checked at layout level
+    });
 
-  function handleUseSampleTemplate(template: any) {
-    selectedTemplate = {
-      id: '',
-      companyId: '',
-      name: template.name,
-      description: template.description,
-      type: template.type,
-      htmlContent: template.htmlContent.trim(),
-      placeholders: template.placeholders,
-      isActive: true,
-      version: 1,
-      createdBy: '',
-      createdAt: new Date() as any,
-      updatedAt: new Date() as any,
-      tags: template.tags
-    };
-    showEditor = true;
-  }
+   function handleUseSampleTemplate(template: any) {
+     console.log('Use template clicked for:', template.name);
+     selectedTemplate = {
+       id: '',
+       companyId: '',
+       name: template.name,
+       description: template.description,
+       type: template.type,
+       htmlContent: template.htmlContent.trim(),
+       placeholders: template.placeholders,
+       isActive: true,
+       version: 1,
+       createdBy: '',
+       createdAt: Timestamp.now(),
+       updatedAt: Timestamp.now(),
+       tags: template.tags
+     };
+     console.log('Setting selectedTemplate and showEditor');
+     showEditor = true;
+   }
 
   function handleCreateBlank() {
     selectedTemplate = null;
@@ -78,7 +82,7 @@
       if (template.placeholders && template.placeholders.length > 0) {
         try {
           const { analyzeTemplateVariables } = await import('$lib/services/variableDetectionService');
-          const analysis = analyzeTemplateVariables(template.htmlContent, []);
+           const analysis = analyzeTemplateVariables(template.htmlContent, [], template.placeholders || []);
           
           // Create custom variables for new variables detected
           if (analysis.newVariables.length > 0) {
@@ -152,82 +156,120 @@ function handleTemplatePreview(template: DocumentTemplate) {
 </script>
 
 {#if mounted}
-  {#if showEditor}
-    <DashboardLayout title="Create Template" description="Design your document template">
-      <div class="py-4">
-        <TemplateEditDialog
-          initialTemplate={selectedTemplate}
-          onSave={handleTemplateSave}
-          onCancel={handleCancel}
-        />
-      </div>
-    </DashboardLayout>
-  {:else}
-    <DashboardLayout title="Create Template" description="Choose a template to start with or create from scratch">
-      <div class="space-y-6">
-        <!-- Create Blank Template -->
+  <DashboardLayout title="Create Template" description="Design your document template">
+    <div class="space-y-6">
+      <!-- Template Info Header (only for existing templates) -->
+      {#if selectedTemplate && selectedTemplate.id}
         <Card>
           <CardHeader>
-            <CardTitle>Start from Scratch</CardTitle>
-            <CardDescription>Create a completely custom template</CardDescription>
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <CardTitle class="text-2xl">{selectedTemplate.name}</CardTitle>
+                <CardDescription class="mt-2">
+                  {selectedTemplate.description || 'No description'}
+                </CardDescription>
+              </div>
+              <Badge class={getTypeColor(selectedTemplate.type)}>
+                {selectedTemplate.type}
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent>
-            <Button onclick={handleCreateBlank}>
-              <Icon icon="lucide:plus" class="h-4 w-4 mr-2" />
-              Create Blank Template
-            </Button>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span class="text-muted-foreground">Version:</span>
+                <span class="ml-2 font-medium">v{selectedTemplate.version}</span>
+              </div>
+              <div>
+                <span class="text-muted-foreground">Placeholders:</span>
+                <span class="ml-2 font-medium">{selectedTemplate.placeholders.length}</span>
+              </div>
+              <div>
+                <span class="text-muted-foreground">Status:</span>
+                <span class="ml-2 font-medium">{selectedTemplate.isActive ? 'Active' : 'Inactive'}</span>
+              </div>
+              <div>
+                <span class="text-muted-foreground">Tags:</span>
+                <span class="ml-2 font-medium">{selectedTemplate.tags?.length || 0}</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
+      {/if}
 
-        <!-- Sample Templates -->
-        <div>
-          <h2 class="text-xl font-semibold mb-4">Sample Templates</h2>
-          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {#each sampleTemplates as template}
-              <Card class="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div class="flex items-start justify-between">
-                    <div class="flex-1">
-                      <CardTitle class="text-base">{template.name}</CardTitle>
-                      <CardDescription class="mt-1 text-sm">
-                        {template.description}
-                      </CardDescription>
-                    </div>
-                    <Badge class={getTypeColor(template.type)}>
-                      {template.type}
-                    </Badge>
+       <!-- Template Editor -->
+       {#if showEditor}
+         <TemplateEditDialog
+           initialTemplate={selectedTemplate}
+           onSave={handleTemplateSave}
+           onCancel={handleCancel}
+         />
+       {/if}
+    </div>
+      <!-- Create Blank Template -->
+      <Card>
+        <CardHeader>
+          <CardTitle>Start from Scratch</CardTitle>
+          <CardDescription>Create a completely custom template</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onclick={handleCreateBlank}>
+            <Icon icon="lucide:plus" class="h-4 w-4 mr-2" />
+            Create Blank Template
+          </Button>
+        </CardContent>
+      </Card>
+
+      <!-- Sample Templates -->
+      <div>
+        <h2 class="text-xl font-semibold mb-4">Sample Templates</h2>
+           {#if sampleTemplates.length > 0}
+             {console.log('Rendering', sampleTemplates.length, 'sample templates')}
+           {/if}
+           <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+             {#each sampleTemplates as template}
+            <Card class="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    <CardTitle class="text-base">{template.name}</CardTitle>
+                    <CardDescription class="mt-1 text-sm">
+                      {template.description}
+                    </CardDescription>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div class="space-y-2">
-                    <div class="flex items-center text-xs text-muted-foreground">
-                      <Icon icon="lucide:code" class="h-3 w-3 mr-1" />
-                      {template.placeholders.length} placeholders
-                    </div>
-                    {#if template.tags && template.tags.length > 0}
-                      <div class="flex flex-wrap gap-1">
-                        {#each template.tags as tag}
-                          <Badge variant="outline" class="text-xs">
-                            {tag}
-                          </Badge>
-                        {/each}
-                      </div>
-                    {/if}
+                  <Badge class={getTypeColor(template.type)}>
+                    {template.type}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div class="space-y-2">
+                  <div class="flex items-center text-xs text-muted-foreground">
+                    <Icon icon="lucide:code" class="h-3 w-3 mr-1" />
+                    {template.placeholders.length} placeholders
                   </div>
-                  <Button
-                    size="sm"
-                    class="w-full mt-3"
-                    onclick={() => handleUseSampleTemplate(template)}
-                  >
-                    <Icon icon="lucide:edit" class="h-3 w-3 mr-1" />
-                    Use This Template
-                  </Button>
-                </CardContent>
-              </Card>
-            {/each}
-          </div>
+                  {#if template.tags && template.tags.length > 0}
+                    <div class="flex flex-wrap gap-1">
+                      {#each template.tags as tag}
+                        <Badge variant="outline" class="text-xs">
+                          {tag}
+                        </Badge>
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+                <Button
+                  size="sm"
+                  class="w-full mt-3"
+                  onclick={() => handleUseSampleTemplate(template)}
+                >
+                  <Icon icon="lucide:edit" class="h-3 w-3 mr-1" />
+                  Use This Template
+                </Button>
+              </CardContent>
+            </Card>
+          {/each}
         </div>
       </div>
-    </DashboardLayout>
-  {/if}
-{/if}
+  </DashboardLayout>
+   {/if}

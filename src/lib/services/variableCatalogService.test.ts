@@ -12,6 +12,7 @@ import {
   VARIABLE_CATEGORIES,
   VARIABLE_TYPES,
 } from "./variableCatalogService";
+import { SYSTEM_VARIABLE_CATALOG } from "$lib/types/templateVariable";
 
 describe("Variable Catalog Service", () => {
   describe("getSystemVariables", () => {
@@ -99,7 +100,7 @@ describe("Variable Catalog Service", () => {
 
   describe("validateVariableKey", () => {
     it("should validate correct variable keys", () => {
-      const result = validateVariableKey("clientName");
+      const result = validateVariableKey("customVariable");
 
       expect(result.valid).toBe(true);
       expect(result.errors).toEqual([]);

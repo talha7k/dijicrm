@@ -245,6 +245,15 @@ export const SYSTEM_VARIABLE_CATALOG: VariableCatalogEntry[] = [
     isCommon: true,
   },
   {
+    key: "total",
+    label: "Total Amount (alias)",
+    type: "currency",
+    category: "system",
+    description: "Alias for totalAmount for backward compatibility",
+    exampleValue: 1150.0,
+    isCommon: false,
+  },
+  {
     key: "discountAmount",
     label: "Discount Amount",
     type: "currency",
@@ -298,9 +307,7 @@ export const SYSTEM_VARIABLE_CATALOG: VariableCatalogEntry[] = [
     type: "date",
     category: "system",
     description: "Payment due date for the invoice",
-    exampleValue: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0],
+    exampleValue: new Date("2025-11-15").toISOString().split("T")[0],
     isCommon: true,
   },
 
@@ -369,6 +376,46 @@ export const SYSTEM_VARIABLE_CATALOG: VariableCatalogEntry[] = [
     description: "Official company stamp or seal",
     exampleValue: "Official Company Stamp",
     isCommon: false,
+  },
+
+  // Order-specific variables
+  {
+    key: "taxRate",
+    label: "Tax Rate",
+    type: "number",
+    category: "system",
+    description: "Tax rate percentage applied to the order",
+    exampleValue: 15,
+    isCommon: true,
+  },
+  {
+    key: "paymentTerms",
+    label: "Payment Terms",
+    type: "text",
+    category: "system",
+    description: "Payment terms for the order",
+    exampleValue: "Net 30 days",
+    isCommon: true,
+  },
+
+  // Order item variables (populated from order items array)
+  {
+    key: "description",
+    label: "Item Description",
+    type: "text",
+    category: "system",
+    description: "Description of the order item",
+    exampleValue: "Web Development Services",
+    isCommon: true,
+  },
+  {
+    key: "quantity",
+    label: "Item Quantity",
+    type: "number",
+    category: "system",
+    description: "Quantity of the order item",
+    exampleValue: 1,
+    isCommon: true,
   },
 
   // Client variables (system-provided from client DB)

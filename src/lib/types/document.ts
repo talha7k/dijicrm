@@ -6,7 +6,7 @@ export interface DocumentTemplate {
   name: string;
   description?: string;
   type: "order" | "legal" | "business" | "custom";
-  htmlContent: string; // The HTML template with placeholders
+  htmlContent: string; // The HTML template with placeholders and internal styles
   placeholders: TemplatePlaceholder[]; // Defined placeholders in the template
   isActive: boolean;
   version: number;
