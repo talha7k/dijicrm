@@ -668,15 +668,30 @@ import { get } from "svelte/store";
     );
   }
 
+  // Track if invitations have been loaded to prevent infinite loops
+  let invitationsLoaded = $state(false);
+  
   // Load invitations when mounted or when invitations tab is activated
   $effect(() => {
     if (!mounted) return;
     
     const companyContextValue = get(companyContext);
-    if (!companyContextValue.data) return;
+    if (!companyContextValue.data) {
+      console.log('🔄 Waiting for company context...');
+      return;
+    }
     
-    // Load invitations if on invitations tab or if not loaded yet
-    if (activeSection === 'invitations' || invitations.length === 0) {
+    console.log('📊 Company context loaded, checking if should load invitations...');
+    console.log('📊 Active section:', activeSection, 'Invitations length:', invitations.length, 'Loaded:', invitationsLoaded);
+    
+    // Reset flag when switching away from invitations tab
+    if (activeSection !== 'invitations') {
+      invitationsLoaded = false;
+      return;
+    }
+    
+    // Load invitations if on invitations tab and not loaded yet
+    if (activeSection === 'invitations' && !invitationsLoaded) {
       loadInvitations();
     }
   });
@@ -686,18 +701,27 @@ import { get } from "svelte/store";
     if (!companyContextValue.data) return;
     
     const companyId = companyContextValue.data.companyId;
+    console.log('🔍 Loading invitations for companyId:', companyId);
     isLoadingInvitations = true;
     
     try {
+      console.log('🌐 Making API call to:', `/api/invitations?companyId=${companyId}`);
       const response = await authenticatedFetch(`/api/invitations?companyId=${companyId}`);
+      console.log('📡 API response status:', response.status);
+      console.log('📡 API response ok:', response.ok);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log('❌ API error response:', errorText);
+      }
       if (response.ok) {
         const data = await response.json();
-        console.log('Raw invitations data:', data);
+        console.log('📥 Raw invitations data:', data);
         const rawInvitations = data.invitations || [];
-        console.log('Raw invitations array:', rawInvitations);
+        console.log('📋 Raw invitations array:', rawInvitations);
         
         // Update the array with a new reference to trigger reactivity
         invitations = [...rawInvitations];
+        invitationsLoaded = true; // Mark as loaded to prevent infinite loops
         console.log('Updated invitations array:', invitations);
         console.log('Invitations length after update:', invitations.length);
       } else {
@@ -1322,12 +1346,11 @@ import { get } from "svelte/store";
                                Copy
                              </Button>
                              <DropdownMenu.Root>
-                               <DropdownMenu.Trigger asChild let:builder>
-                                 <Button
-                                   size="sm"
-                                   variant="destructive"
-                                   builders={[builder]}
-                                 >
+                                <DropdownMenu.Trigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                  >
                                    <Icon icon="lucide:more-horizontal" class="h-4 w-4" />
                                  </Button>
                                </DropdownMenu.Trigger>
@@ -1401,12 +1424,11 @@ import { get } from "svelte/store";
                                Copy
                              </Button>
                              <DropdownMenu.Root>
-                               <DropdownMenu.Trigger asChild let:builder>
-                                 <Button
-                                   size="sm"
-                                   variant="destructive"
-                                   builders={[builder]}
-                                 >
+                                <DropdownMenu.Trigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                  >
                                    <Icon icon="lucide:more-horizontal" class="h-4 w-4" />
                                  </Button>
                                </DropdownMenu.Trigger>

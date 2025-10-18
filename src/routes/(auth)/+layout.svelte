@@ -1,5 +1,5 @@
 <script>
-  import { isAuthenticated, isLoading } from "$lib/services/authService";
+  import { isAuthenticated, isLoading, requiresOnboarding } from "$lib/services/authService";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
 
@@ -9,17 +9,16 @@
   onMount(async () => {
     const { initializeAuth } = await import("$lib/services/authService");
     await initializeAuth();
-    
-    // If user is already authenticated, redirect to dashboard
-    if ($isAuthenticated) {
-      goto("/dashboard");
-    }
   });
 
-  // Watch for auth state changes
+  // Watch for auth state changes and redirect authenticated users
   $effect(() => {
     if ($isAuthenticated && !$isLoading) {
-      goto("/dashboard");
+      if ($requiresOnboarding) {
+        goto("/onboarding");
+      } else {
+        goto("/dashboard");
+      }
     }
   });
 </script>

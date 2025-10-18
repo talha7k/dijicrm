@@ -48,6 +48,15 @@
 		goto('/onboarding');
 	}
 
+	// Auto-initialize company context when user data is available
+	$effect(() => {
+		if (userData && $companyContext.loading && !$companyContext.error) {
+			get(companyContext).initializeFromUser().catch(error => {
+				console.error('Failed to initialize company context:', error);
+			});
+		}
+	});
+
 	async function refreshProfile() {
 		try {
 			// Import and use the direct read function

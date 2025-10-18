@@ -1,47 +1,21 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
-
 	import SignInWithGoogle from '$lib/components/auth/google-sign-in.svelte';
 	import SignInForm from '$lib/components/auth/sign-in-form.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 
-	let checkingStatus = $state(false);
 	let formSubmitting = $state(false);
 	let googleSigningIn = $state(false);
-
-	onMount(async () => {
-		if (!browser) return;
-
-		checkingStatus = true;
-
-		// Check if user is already authenticated by checking for session
-		try {
-			const response = await fetch('/api/session');
-			if (response.ok) {
-				// User is authenticated, redirect to dashboard
-				goto('/dashboard', { replaceState: true });
-			}
-		} catch (error) {
-			// User is not authenticated, continue showing sign-in form
-		}
-
-		checkingStatus = false;
-	});
 </script>
 
-{#if checkingStatus || formSubmitting || googleSigningIn}
+{#if formSubmitting || googleSigningIn}
   <div class="flex h-full w-full items-center justify-center">
     <div class="text-center">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
       <p class="text-muted-foreground">
-        {checkingStatus 
-          ? 'Checking authentication status...' 
-          : googleSigningIn
-            ? 'Signing in with Google...'
-            : 'Signing in...'}
+        {googleSigningIn
+          ? 'Signing in with Google...'
+          : 'Signing in...'}
       </p>
     </div>
   </div>

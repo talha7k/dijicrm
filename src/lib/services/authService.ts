@@ -33,6 +33,10 @@ export const authStore = persisted<AuthState>("authState", {
   lastActivity: Date.now(),
 });
 
+// Initialization guard to prevent multiple simultaneous calls
+let authServiceInitializing = false;
+let initializationPromise: Promise<void> | null = null;
+
 // Derived stores for convenient access
 export const isAuthenticated = derived(
   authStore,
@@ -71,33 +75,54 @@ function setAuthState(
 
 // Initialize auth service - sets up Firebase auth listener
 export async function initializeAuth(): Promise<void> {
-  try {
-    setAuthState(AuthStatus.INITIALIZING);
-
-    // Set up Firebase auth state listener
-    auth.onAuthStateChanged(
-      async (firebaseUser) => {
-        if (firebaseUser) {
-          setAuthState(AuthStatus.AUTHENTICATING, firebaseUser);
-          await handleAuthenticatedUser(firebaseUser);
-        } else {
-          setAuthState(AuthStatus.UNAUTHENTICATED);
-        }
-      },
-      (error) => {
-        console.error("Auth state listener error:", error);
-        setAuthState(AuthStatus.ERROR, null, null, error.message);
-      },
-    );
-  } catch (error) {
-    console.error("Auth initialization error:", error);
-    setAuthState(
-      AuthStatus.ERROR,
-      null,
-      null,
-      error instanceof Error ? error.message : "Unknown error",
-    );
+  // Prevent multiple simultaneous initializations
+  if (authServiceInitializing && initializationPromise) {
+    return initializationPromise;
   }
+
+  if (authServiceInitializing) {
+    return Promise.resolve();
+  }
+
+  authServiceInitializing = true;
+
+  initializationPromise = new Promise<void>(async (resolve, reject) => {
+    try {
+      setAuthState(AuthStatus.INITIALIZING);
+
+      // Set up Firebase auth state listener
+      auth.onAuthStateChanged(
+        async (firebaseUser) => {
+          if (firebaseUser) {
+            setAuthState(AuthStatus.AUTHENTICATING, firebaseUser);
+            await handleAuthenticatedUser(firebaseUser);
+          } else {
+            setAuthState(AuthStatus.UNAUTHENTICATED);
+          }
+          authServiceInitializing = false;
+          resolve();
+        },
+        (error) => {
+          console.error("Auth state listener error:", error);
+          setAuthState(AuthStatus.ERROR, null, null, error.message);
+          authServiceInitializing = false;
+          reject(error);
+        },
+      );
+    } catch (error) {
+      console.error("Auth initialization error:", error);
+      setAuthState(
+        AuthStatus.ERROR,
+        null,
+        null,
+        error instanceof Error ? error.message : "Unknown error",
+      );
+      authServiceInitializing = false;
+      reject(error);
+    }
+  });
+
+  return initializationPromise;
 }
 
 // Handle authenticated user - fetch or create profile
@@ -305,15 +330,54 @@ export function isProfileComplete(profile: UserProfile | null): boolean {
   );
 }
 
+// Utility function to check if user has company associations
+export function hasCompanyAssociations(profile: UserProfile | null): boolean {
+  if (!profile) return false;
+
+  const validAssociations = profile.companyAssociations?.filter(
+    (assoc) =>
+      assoc.companyId &&
+      typeof assoc.companyId === "string" &&
+      assoc.companyId.trim().length > 0,
+  );
+
+  return !!(validAssociations && validAssociations.length > 0);
+}
+
+// Utility function to check if user needs onboarding
+export function needsOnboarding(profile: UserProfile | null): boolean {
+  if (!profile) return true;
+
+  // If onboarding is not completed, user needs onboarding
+  if (!profile.onboardingCompleted) return true;
+
+  // If user has no company associations, they need onboarding
+  if (!hasCompanyAssociations(profile)) return true;
+
+  return false;
+}
+
 // Derived store for profile completeness
 export const profileComplete = derived(authStore, ($auth) =>
   isProfileComplete($auth.profile),
 );
 
-// Derived store for ready state (authenticated + profile complete)
+// Derived store for company associations
+export const hasCompanyAccess = derived(authStore, ($auth) =>
+  hasCompanyAssociations($auth.profile),
+);
+
+// Derived store for onboarding requirement
+export const requiresOnboarding = derived(authStore, ($auth) =>
+  needsOnboarding($auth.profile),
+);
+
+// Derived store for ready state (authenticated + profile complete + has company associations)
 export const readyForApp = derived(
   authStore,
   ($auth) =>
     $auth.status === AuthStatus.AUTHENTICATED &&
-    isProfileComplete($auth.profile),
+    isProfileComplete($auth.profile) &&
+    hasCompanyAssociations($auth.profile) &&
+    $auth.profile?.onboardingCompleted,
 );
