@@ -5,7 +5,7 @@ import {
   hasCompanyAccess,
   getCompanyRole,
 } from "$lib/utils/company-validation";
-import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import { auth } from "$lib/firebase";
 
@@ -145,11 +145,25 @@ const switchCompany = async (companyId: string, providedUser?: any) => {
     },
   );
 
-  // Update user's current company
+  // Update user's current company only if it's different
   if (auth.currentUser) {
-    await updateDoc(doc(db, "users", auth.currentUser.uid), {
-      currentCompanyId: companyId,
-    });
+    const userRef = doc(db, "users", auth.currentUser.uid);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      // Only update if the company ID is actually different to prevent loops
+      if (userData.currentCompanyId !== companyId) {
+        await updateDoc(userRef, {
+          currentCompanyId: companyId,
+        });
+      }
+    } else {
+      // If user doesn't exist in DB, create the profile first
+      await setDoc(userRef, {
+        currentCompanyId: companyId,
+      }, { merge: true });
+    }
   }
 };
 

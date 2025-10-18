@@ -1,10 +1,17 @@
 import type { User } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  onSnapshot,
+  serverTimestamp,
+  Timestamp,
+} from "firebase/firestore";
 import { auth, db } from "$lib/firebase";
 import type { UserProfile } from "$lib/types/user";
-import { derived } from "svelte/store";
+import { derived, get } from "svelte/store";
 import { persisted } from "svelte-persisted-store";
-import { get } from "svelte/store";
 
 // Auth status enum for clear state management
 export enum AuthStatus {
@@ -21,7 +28,6 @@ interface AuthState {
   user: User | null;
   profile: UserProfile | null;
   error: string | null;
-  lastActivity: number;
 }
 
 // Create the unified auth store
@@ -30,12 +36,16 @@ export const authStore = persisted<AuthState>("authState", {
   user: null,
   profile: null,
   error: null,
-  lastActivity: Date.now(),
 });
 
-// Initialization guard to prevent multiple simultaneous calls
-let authServiceInitializing = false;
-let initializationPromise: Promise<void> | null = null;
+// Global state to manage listeners
+let unsubscribeFromAuth: (() => void) | null = null;
+let unsubscribeFromProfile: (() => void) | null = null;
+
+// Track if we're currently performing a login write to prevent loops
+let isPerformingLoginWrite = false;
+let currentLoginWriteUid: string | null = null;
+let lastLoginWriteTimestamp: number | null = null;
 
 // Derived stores for convenient access
 export const isAuthenticated = derived(
@@ -56,136 +66,185 @@ export const authError = derived(authStore, ($auth) => $auth.error);
 export const currentUser = derived(authStore, ($auth) => $auth.user);
 export const userProfile = derived(authStore, ($auth) => $auth.profile);
 
-// Auth state transition helpers
-function setAuthState(
-  status: AuthStatus,
-  user: User | null = null,
-  profile: UserProfile | null = null,
-  error: string | null = null,
-) {
-  authStore.update((state) => ({
-    ...state,
-    status,
-    user,
-    profile,
-    error,
-    lastActivity: Date.now(),
-  }));
+/**
+ * [FIX] Performs a one-time write to create a profile or update `lastLoginAt`.
+ * This is now separate from the real-time listener to prevent loops.
+ */
+async function handleLoginWrite(user: User): Promise<void> {
+  // Prevent multiple concurrent writes that could cause issues
+  // Also prevent writes that happen too close together to avoid loops
+  const now = Date.now();
+  if (isPerformingLoginWrite && currentLoginWriteUid === user.uid) {
+    // Check if the last write was very recent (less than 1 second ago)
+    if (lastLoginWriteTimestamp && (now - lastLoginWriteTimestamp) < 1000) {
+      console.log("Login write happened very recently, skipping to prevent loop");
+      return;
+    }
+  }
+  
+  isPerformingLoginWrite = true;
+  currentLoginWriteUid = user.uid;
+  lastLoginWriteTimestamp = now;
+  
+  const userRef = doc(db, "users", user.uid);
+  try {
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      // User exists, just update their last login time.
+      // Use a more specific field update to minimize potential triggers
+      await setDoc(userRef, { 
+        lastLoginAt: serverTimestamp() 
+      }, { merge: true });
+    } else {
+      // User is new, create their profile.
+      const { Timestamp } = await import("firebase/firestore");
+      const newProfile: UserProfile = {
+        uid: user.uid,
+        email: user.email || "",
+        displayName: user.displayName || user.email || "",
+        photoURL: user.photoURL || null,
+        isActive: true,
+        lastLoginAt: Timestamp.now(), // Use client-side timestamp initially
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+        emailNotifications: true,
+        pushNotifications: true,
+        theme: "system",
+        language: "en",
+        role: "company",
+        permissions: [],
+        metadata: {
+          deviceInfo: {
+            lastDevice: typeof navigator !== 'undefined' ? navigator.userAgent || "unknown" : "unknown",
+            platform: typeof navigator !== 'undefined' ? navigator.platform || "unknown" : "unknown",
+          },
+          accountStatus: "active",
+        },
+        onboardingCompleted: false,
+      };
+      await setDoc(userRef, newProfile);
+    }
+  } catch (error) {
+    console.error("Error during login write operation:", error);
+    // Optionally handle this error in the auth store
+  } finally {
+    // Only reset the flags if this is the same operation that set them
+    if (currentLoginWriteUid === user.uid) {
+      isPerformingLoginWrite = false;
+      currentLoginWriteUid = null;
+    }
+  }
 }
 
-// Initialize auth service - sets up Firebase auth listener
-export async function initializeAuth(): Promise<void> {
-  // Prevent multiple simultaneous initializations
-  if (authServiceInitializing && initializationPromise) {
-    return initializationPromise;
+/**
+ * [FIX] Sets up a real-time listener that ONLY reads data and updates the store.
+ */
+function setupProfileListener(uid: string) {
+  const userRef = doc(db, "users", uid);
+  unsubscribeFromProfile = onSnapshot(userRef, (docSnap) => {
+    if (docSnap.exists()) {
+      authStore.update((state) => ({
+        ...state,
+        profile: docSnap.data() as UserProfile,
+        status: AuthStatus.AUTHENTICATED, // Now we are fully authenticated with profile data
+        error: null,
+      }));
+    } else {
+      authStore.update((state) => ({
+        ...state,
+        profile: null,
+        status: AuthStatus.ERROR,
+        error: "User profile was not found or deleted.",
+      }));
+    }
+  }, (error) => {
+    console.error("Profile listener error:", error);
+    authStore.update((state) => ({
+      ...state,
+      status: AuthStatus.ERROR,
+      error: "Failed to listen for profile updates.",
+    }));
+  });
+}
+
+/**
+ * Initializes the entire authentication service. Call this ONCE.
+ */
+export function initializeAuth(): void {
+  // Prevent re-initialization if already initialized
+  if (unsubscribeFromAuth) {
+    console.log("Auth service already initialized, skipping duplicate initialization.");
+    return;
   }
+  
+  authStore.update(s => ({ ...s, status: AuthStatus.INITIALIZING }));
 
-  if (authServiceInitializing) {
-    return Promise.resolve();
-  }
+  // Store the auth state subscription to prevent multiple subscriptions
+  unsubscribeFromAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+    // Clean up any existing profile listener when the user changes
+    if (unsubscribeFromProfile) {
+      unsubscribeFromProfile();
+      unsubscribeFromProfile = null;
+    }
 
-  authServiceInitializing = true;
-
-  initializationPromise = new Promise<void>(async (resolve, reject) => {
-    try {
-      setAuthState(AuthStatus.INITIALIZING);
-
-      // Set up Firebase auth state listener
-      auth.onAuthStateChanged(
-        async (firebaseUser) => {
-          if (firebaseUser) {
-            setAuthState(AuthStatus.AUTHENTICATING, firebaseUser);
-            await handleAuthenticatedUser(firebaseUser);
-          } else {
-            setAuthState(AuthStatus.UNAUTHENTICATED);
-          }
-          authServiceInitializing = false;
-          resolve();
-        },
-        (error) => {
-          console.error("Auth state listener error:", error);
-          setAuthState(AuthStatus.ERROR, null, null, error.message);
-          authServiceInitializing = false;
-          reject(error);
-        },
-      );
-    } catch (error) {
-      console.error("Auth initialization error:", error);
-      setAuthState(
-        AuthStatus.ERROR,
-        null,
-        null,
-        error instanceof Error ? error.message : "Unknown error",
-      );
-      authServiceInitializing = false;
-      reject(error);
+    if (firebaseUser) {
+      // Set intermediate state
+      authStore.update(s => ({ ...s, user: firebaseUser, status: AuthStatus.AUTHENTICATING }));
+      
+      // 1. Perform the one-time database write.
+      await handleLoginWrite(firebaseUser);
+      
+      // 2. Set up the separate, continuous read listener.
+      setupProfileListener(firebaseUser.uid);
+    } else {
+      // User is logged out, clear all state.
+      authStore.set({
+        user: null,
+        profile: null,
+        status: AuthStatus.UNAUTHENTICATED,
+        error: null,
+      });
     }
   });
-
-  return initializationPromise;
 }
 
-// Handle authenticated user - fetch or create profile
-async function handleAuthenticatedUser(user: User): Promise<void> {
-  try {
-    const profile = await fetchOrCreateUserProfile(user);
-    setAuthState(AuthStatus.AUTHENTICATED, user, profile);
-  } catch (error) {
-    console.error("Error handling authenticated user:", error);
-    setAuthState(
-      AuthStatus.ERROR,
+// Function to re-initialize auth with server-side data to prevent duplicate operations
+export function initializeAuthWithServerData(user: User, profile: UserProfile): void {
+  // If auth service is already initialized, just update the state directly
+  if (unsubscribeFromAuth) {
+    authStore.update(state => ({
+      ...state,
       user,
-      null,
-      error instanceof Error ? error.message : "Profile fetch failed",
-    );
+      profile,
+      status: AuthStatus.AUTHENTICATED,
+      error: null
+    }));
+    return;
   }
+  
+  // Otherwise, initialize normally but with the provided data
+  authStore.set({
+    user,
+    profile,
+    status: AuthStatus.AUTHENTICATED,
+    error: null
+  });
+  
+  // Set up the profile listener for future updates
+  setupProfileListener(user.uid);
 }
 
-// Fetch existing profile or create new one
-async function fetchOrCreateUserProfile(user: User): Promise<UserProfile> {
-  const userRef = doc(db, "users", user.uid);
-  const userSnap = await getDoc(userRef);
-
-  if (userSnap.exists()) {
-    return userSnap.data() as UserProfile;
-  } else {
-    return await createBasicUserProfile(user);
+// Cleanup function to properly dispose of listeners when needed
+export function cleanupAuthListeners(): void {
+  if (unsubscribeFromAuth) {
+    unsubscribeFromAuth();
+    unsubscribeFromAuth = null;
   }
-}
-
-// Create basic user profile for new users
-async function createBasicUserProfile(user: User): Promise<UserProfile> {
-  const { Timestamp } = await import("@firebase/firestore");
-
-  const basicProfile: UserProfile = {
-    uid: user.uid,
-    email: user.email || "",
-    displayName: user.displayName || user.email || "",
-    photoURL: user.photoURL || null,
-    isActive: true,
-    lastLoginAt: Timestamp.now(),
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-    emailNotifications: true,
-    pushNotifications: true,
-    theme: "system",
-    language: "en",
-    role: "company",
-    permissions: [],
-    metadata: {
-      deviceInfo: {
-        lastDevice: navigator.userAgent || "unknown",
-        platform: navigator.platform || "unknown",
-      },
-      accountStatus: "active",
-    },
-    onboardingCompleted: false,
-  };
-
-  const userRef = doc(db, "users", user.uid);
-  await setDoc(userRef, basicProfile);
-
-  return basicProfile;
+  
+  if (unsubscribeFromProfile) {
+    unsubscribeFromProfile();
+    unsubscribeFromProfile = null;
+  }
 }
 
 // Sign in function
@@ -251,11 +310,16 @@ export async function signUp(
 export async function signOut(): Promise<void> {
   try {
     await auth.signOut();
-    // Auth state listener will handle state reset
+    // The onAuthStateChanged listener will automatically handle cleaning up state.
   } catch (error) {
     console.error("Sign out error:", error);
-    // Force state reset even if Firebase sign out fails
-    setAuthState(AuthStatus.UNAUTHENTICATED);
+    // Force a state clear as a fallback
+    authStore.set({
+      user: null,
+      profile: null,
+      status: AuthStatus.UNAUTHENTICATED,
+      error: "Failed to sign out cleanly.",
+    });
   }
 }
 
@@ -322,14 +386,22 @@ export function getCurrentAuthState(): AuthState {
 
 // Clear auth state (for testing or forced logout)
 export function clearAuthState(): void {
-  setAuthState(AuthStatus.UNAUTHENTICATED);
+  authStore.set({
+    user: null,
+    profile: null,
+    status: AuthStatus.UNAUTHENTICATED,
+    error: null,
+  });
 }
 
 // Refresh user data
 export async function refreshUserData(): Promise<void> {
   const currentState = get(authStore);
   if (currentState.user) {
-    await handleAuthenticatedUser(currentState.user);
+    // Re-trigger the login update process
+    await handleLoginWrite(currentState.user);
+    // Set up profile listener again
+    setupProfileListener(currentState.user.uid);
   }
 }
 

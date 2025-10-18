@@ -40,6 +40,10 @@
     // No loading state - use server data immediately
     let settingsLoading = $derived(false);
 
+    // Timeout handling for loading states
+    let loadingTimeout = $state<number | null>(null);
+    let showTimeoutError = $state(false);
+
     // Clear timeout when loading completes
     $effect(() => {
       if (!settingsLoading && loadingTimeout) {
