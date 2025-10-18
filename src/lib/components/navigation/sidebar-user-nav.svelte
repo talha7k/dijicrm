@@ -48,29 +48,29 @@
 							class="group data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground data-[state=collapsed]:justify-center group-data-[collapsible=icon]:p-1!"
 							{...props}
 						>
-							<Avatar.Root class="h-8 w-8 rounded-lg group-data-[state=collapsed]:h-6 group-data-[state=collapsed]:w-6">
-								{#if user.photoURL && !imageError}
-									<Avatar.Image
-										class="rounded-full"
-										src={user.photoURL}
-										alt={user.displayName}
-										onerror={handleImageError}
-										onload={handleImageLoad}
-										style={imageLoaded ? 'opacity: 1' : 'opacity: 0'}
-									/>
-								{/if}
-								<Avatar.Fallback class="rounded-lg" style={imageLoaded && !imageError ? 'opacity: 0' : 'opacity: 100'}>
-									{getInitials(user.displayName)}
-								</Avatar.Fallback>
-							</Avatar.Root>
-							{#if sidebar.open}
-								<div
-									class="text-stroke grid flex-1 rounded-md p-1 text-left text-sm leading-tight opacity-80"
-								>
-									<span class="truncate font-semibold">{user.displayName}</span>
-									<span class="truncate text-xs">{user.email}</span>
-								</div>
-							{/if}
+ 							<Avatar.Root class="h-8 w-8 rounded-lg group-data-[state=collapsed]:h-6 group-data-[state=collapsed]:w-6">
+ 								{#if user && user.photoURL && !imageError}
+ 									<Avatar.Image
+ 										class="rounded-full"
+ 										src={user.photoURL}
+ 										alt={user.displayName || 'User'}
+ 										onerror={handleImageError}
+ 										onload={handleImageLoad}
+ 										style={imageLoaded ? 'opacity: 1' : 'opacity: 0'}
+ 									/>
+ 								{/if}
+ 								<Avatar.Fallback class="rounded-lg" style={imageLoaded && !imageError ? 'opacity: 0' : 'opacity: 100'}>
+ 									{getInitials(user?.displayName || 'User')}
+ 								</Avatar.Fallback>
+ 							</Avatar.Root>
+ 							{#if sidebar.open && user}
+ 								<div
+ 									class="text-stroke grid flex-1 rounded-md p-1 text-left text-sm leading-tight opacity-80"
+ 								>
+ 									<span class="truncate font-semibold">{user.displayName || 'User'}</span>
+ 									<span class="truncate text-xs">{user.email || ''}</span>
+ 								</div>
+ 							{/if}
 							<Icon icon="lucide:chevrons-up-down" class="ml-auto size-4 group-data-[state=collapsed]:hidden" />
 						</Sidebar.MenuButton>
 					{/snippet}
@@ -83,25 +83,25 @@
 				>
 					<DropdownMenu.Label class="p-0 font-normal">
 						<div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-							<Avatar.Root class="h-8 w-8 rounded-lg">
-								{#if user.photoURL && !imageError}
-									<Avatar.Image
-										class="rounded-full"
-										src={user.photoURL}
-										alt={user.displayName}
-										onerror={handleImageError}
-										onload={handleImageLoad}
-										style={imageLoaded ? 'opacity: 1' : 'opacity: 0'}
-									/>
-								{/if}
-								<Avatar.Fallback class="rounded-lg" style={imageLoaded && !imageError ? 'opacity: 0' : 'opacity: 100'}>
-									{getInitials(user.displayName)}
-								</Avatar.Fallback>
-							</Avatar.Root>
-							<div class="grid flex-1 text-left text-sm leading-tight">
-								<span class="truncate font-semibold">{user.displayName}</span>
-								<span class="truncate text-xs">{user.email}</span>
-							</div>
+ 							<Avatar.Root class="h-8 w-8 rounded-lg">
+ 								{#if user && user.photoURL && !imageError}
+ 									<Avatar.Image
+ 										class="rounded-full"
+ 										src={user.photoURL}
+ 										alt={user.displayName || 'User'}
+ 										onerror={handleImageError}
+ 										onload={handleImageLoad}
+ 										style={imageLoaded ? 'opacity: 1' : 'opacity: 0'}
+ 									/>
+ 								{/if}
+ 								<Avatar.Fallback class="rounded-lg" style={imageLoaded && !imageError ? 'opacity: 0' : 'opacity: 100'}>
+ 									{getInitials(user?.displayName || 'User')}
+ 								</Avatar.Fallback>
+ 							</Avatar.Root>
+ 							<div class="grid flex-1 text-left text-sm leading-tight">
+ 								<span class="truncate font-semibold">{user?.displayName || 'User'}</span>
+ 								<span class="truncate text-xs">{user?.email || ''}</span>
+ 							</div>
 						</div>
 					</DropdownMenu.Label>
 					<DropdownMenu.Separator />

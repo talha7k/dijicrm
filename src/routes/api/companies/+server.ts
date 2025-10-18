@@ -55,9 +55,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       updatedAt: Timestamp.now() as any,
       settings: {
         timezone: "UTC",
-        currency: "USD",
+        currency: "SAR",
         language: "en",
         emailNotifications: true,
+        vatAmount: 15,
       },
       isActive: true,
       memberCount: 1, // Owner is the first member

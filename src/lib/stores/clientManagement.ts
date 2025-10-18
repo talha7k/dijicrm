@@ -17,6 +17,7 @@ import {
 import { db } from "$lib/firebase";
 import { toast } from "svelte-sonner";
 import { activeCompanyId, companyContext } from "./companyContext";
+import { emailService } from "$lib/services/emailService";
 
 interface ClientManagementState {
   clients: UserProfile[];
@@ -252,6 +253,14 @@ function createClientManagementStore() {
             invitationUrl,
           );
 
+          // Check SMTP config before sending
+          const smtpConfig = emailService.getSMTPConfig();
+          if (!smtpConfig) {
+            throw new Error(
+              "SMTP configuration is required to send emails. Please configure your email settings in the Settings page.",
+            );
+          }
+
           await emailService.sendEmail({
             to: savedClient.email,
             subject: emailTemplate.subject,
@@ -412,6 +421,14 @@ function createClientManagementStore() {
             companyName,
             invitationUrl,
           );
+
+          // Check SMTP config before sending
+          const smtpConfig = emailService.getSMTPConfig();
+          if (!smtpConfig) {
+            throw new Error(
+              "SMTP configuration is required to send emails. Please configure your email settings in the Settings page.",
+            );
+          }
 
           await emailService.sendEmail({
             to: client.email,

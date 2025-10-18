@@ -15,6 +15,7 @@ export interface Company {
     currency: string;
     language: string;
     emailNotifications: boolean;
+    vatAmount: number;
   };
 
   // Metadata

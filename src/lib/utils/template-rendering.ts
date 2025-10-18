@@ -48,12 +48,33 @@ export function renderTemplate(
 
     // Compile and render the template with Handlebars
     const compiledTemplate = Handlebars.compile(template.htmlContent);
-    return compiledTemplate(data);
+    let renderedHtml = compiledTemplate(data);
+
+    // Post-process to remove img tags with empty src for logo and stamp
+    renderedHtml = removeEmptyImageTags(renderedHtml);
+
+    return renderedHtml;
   } catch (error) {
     console.error("Error rendering template with Handlebars:", error);
     // Fallback to simple replacement if Handlebars fails
     return fallbackRenderTemplate(template, data);
   }
+}
+
+/**
+ * Removes img tags with empty src attributes for logo and stamp
+ */
+function removeEmptyImageTags(html: string): string {
+  // Remove img tags where src is empty or just quotes
+  html = html.replace(/<img[^>]*src=[""]\s*[^>]*>/gi, "");
+  html = html.replace(/<img[^>]*src=['']\s*[^>]*>/gi, "");
+
+  // Also remove img tags that have src="{{companyLogo}}" or src="{{companyStamp}}" when those variables are empty
+  // This is a fallback in case the conditionals don't work
+  html = html.replace(/<img[^>]*src="\{\{companyLogo\}\}"[^>]*>/gi, "");
+  html = html.replace(/<img[^>]*src="\{\{companyStamp\}\}"[^>]*>/gi, "");
+
+  return html;
 }
 
 /**
@@ -78,6 +99,9 @@ function fallbackRenderTemplate(
     const value = getPlaceholderValue(placeholder, data);
     html = html.replace(placeholderRegex, value);
   }
+
+  // Remove empty image tags in fallback
+  html = removeEmptyImageTags(html);
 
   return html;
 }
@@ -328,7 +352,7 @@ function getPreviewValue(placeholder: TemplatePlaceholder): any {
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "SAR",
   }).format(amount);
 }
 

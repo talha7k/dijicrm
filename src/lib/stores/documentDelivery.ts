@@ -65,6 +65,14 @@ function createDocumentDeliveryStore() {
           },
         };
 
+        // Check SMTP config before sending
+        const smtpConfig1 = emailService.getSMTPConfig();
+        if (!smtpConfig1) {
+          throw new Error(
+            "SMTP configuration is required to send emails. Please configure your email settings in the Settings page.",
+          );
+        }
+
         // Send email
         const emailResult = await emailService.sendEmail(emailOptions);
 
@@ -150,6 +158,14 @@ function createDocumentDeliveryStore() {
             documentCount: documents.length,
           },
         };
+
+        // Check SMTP config before sending
+        const smtpConfig2 = emailService.getSMTPConfig();
+        if (!smtpConfig2) {
+          throw new Error(
+            "SMTP configuration is required to send emails. Please configure your email settings in the Settings page.",
+          );
+        }
 
         const emailResult = await emailService.sendEmail(emailOptions);
 
@@ -422,6 +438,14 @@ function createDocumentDeliveryStore() {
             completion: true,
           },
         };
+
+        // Check SMTP config before sending
+        const smtpConfig4 = emailService.getSMTPConfig();
+        if (!smtpConfig4) {
+          throw new Error(
+            "SMTP configuration is required to send emails. Please configure your email settings in the Settings page.",
+          );
+        }
 
         const result = await emailService.sendEmail(emailOptions);
         return result.success;

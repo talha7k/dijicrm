@@ -2,8 +2,9 @@ import { json, error, type RequestEvent } from "@sveltejs/kit";
 import {
   validateTemplateData,
   fetchImageAsDataUrl,
+  injectBrandingIntoHtml,
 } from "$lib/utils/template-rendering";
-import { renderTemplate } from "$lib/utils/template-validation";
+import { renderTemplate } from "$lib/utils/template-rendering";
 import type { DocumentTemplate } from "$lib/types/document";
 import type { CompanyBranding } from "$lib/types/branding";
 import { getDb } from "$lib/firebase-admin";
@@ -63,6 +64,9 @@ async function generatePdfFromHtml(
 
     // Set viewport for better PDF rendering
     await page.setViewport({ width: 794, height: 1123 }); // A4 size
+
+    // Emulate print media for better PDF rendering
+    await page.emulateMediaType("print");
 
     // Add minimal CSS for PDF generation - avoid conflicts with template styles
     const styles = `
@@ -157,18 +161,19 @@ async function generatePdfFromHtml(
     // Additional wait for rendering
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    // Generate PDF with better settings
+    // Generate PDF with better settings for print media
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
       margin: {
-        top: "20px",
-        right: "20px",
-        bottom: "20px",
-        left: "20px",
+        top: "0.5in",
+        right: "0.5in",
+        bottom: "0.5in",
+        left: "0.5in",
       },
-      preferCSSPageSize: false,
+      preferCSSPageSize: true,
       displayHeaderFooter: false,
+      scale: 1,
     });
 
     return new Uint8Array(pdfBuffer);
@@ -347,9 +352,8 @@ export const POST = async ({ request, locals }: RequestEvent) => {
             mergedData.companyLogo = logoDataUrl;
             console.log("Successfully converted logo to data URL");
           } else {
-            console.log("Failed to fetch logo, using placeholder");
-            mergedData.companyLogo =
-              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+            console.log("Failed to fetch logo, not setting companyLogo");
+            // Don't set companyLogo if fetch failed
           }
         }
       }
@@ -371,21 +375,18 @@ export const POST = async ({ request, locals }: RequestEvent) => {
             mergedData.companyStamp = stampDataUrl;
             console.log("Successfully converted stamp to data URL");
           } else {
-            console.log("Failed to fetch stamp, using placeholder");
-            mergedData.companyStamp =
-              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+            console.log("Failed to fetch stamp, not setting companyStamp");
+            // Don't set companyStamp if fetch failed
           }
         }
       }
 
       console.log("Branding data added to template data");
     } else {
-      // Provide fallback values when branding cannot be loaded
-      mergedData.companyLogo =
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
-      mergedData.companyStamp =
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
-      console.log("Using fallback branding data (transparent placeholders)");
+      console.log("No branding data available");
+      // Set empty values for logo and stamp so templates can handle them
+      mergedData.companyLogo = "";
+      mergedData.companyStamp = "";
     }
 
     console.log("Final template data keys:", Object.keys(mergedData));
@@ -480,7 +481,15 @@ export const POST = async ({ request, locals }: RequestEvent) => {
       console.log("No images found in rendered HTML");
     }
 
-    // Branding is handled by template placeholders - no forced injection
+    // Inject branding into rendered HTML if available
+    if (branding || mergedData.zatcaQRCode) {
+      const brandingData = {
+        ...branding,
+        zatcaQRCode: mergedData.zatcaQRCode,
+      };
+      renderedHtml = injectBrandingIntoHtml(renderedHtml, brandingData);
+      console.log("Branding injected into HTML");
+    }
 
     if (format === "html") {
       // Return HTML for preview

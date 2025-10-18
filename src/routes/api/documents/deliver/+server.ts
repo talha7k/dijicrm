@@ -108,6 +108,15 @@ export const POST = async ({ request, locals }: RequestEvent) => {
       },
     };
 
+    // Check SMTP config before sending
+    const smtpConfig = emailService.getSMTPConfig();
+    if (!smtpConfig) {
+      throw error(
+        400,
+        "SMTP configuration is required to send emails. Please configure your email settings in the Settings page.",
+      );
+    }
+
     const emailResult = await emailService.sendEmail(emailOptions);
 
     // Create delivery records

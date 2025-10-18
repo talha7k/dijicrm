@@ -9,6 +9,8 @@ import { doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "$lib/firebase";
 import { auth } from "$lib/firebase";
 import { smtpConfigStore } from "./smtpConfig";
+import { setCurrencyConfig } from "$lib/utils/currency";
+import { setVatConfig } from "$lib/utils/vat";
 
 type CompanyContextData = {
   data: CompanyContext | null;
@@ -71,6 +73,20 @@ const switchCompany = async (companyId: string) => {
     (docSnapshot) => {
       if (docSnapshot.exists()) {
         const company = docSnapshot.data() as Company;
+
+        // Initialize currency from company settings
+        const currency = company.settings?.currency || "SAR";
+        setCurrencyConfig({
+          code: currency,
+          symbol: currency,
+        });
+
+        // Initialize VAT from company settings
+        const vatRate = company.settings?.vatAmount || 0.15;
+        setVatConfig({
+          rate: vatRate,
+          enabled: true,
+        });
 
         companyContextData.update((s) => ({
           ...s,

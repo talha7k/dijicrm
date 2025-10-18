@@ -44,15 +44,14 @@ export async function populateSystemVariables(
 
         // Company system variables
         variables.companyName = companyData.name;
-        variables.companyVatNumber = companyData.vatNumber;
+        variables.companyVatNumber =
+          (companyData as any).vatRegistrationNumber || companyData.vatNumber;
 
         // For other company variables, provide fallback values
         // These can be configured through the branding system
         variables.companyEmail = "";
         variables.companyPhone = "";
         variables.companyAddress = "";
-        variables.companyLogo = "";
-        variables.companyStamp = "";
 
         // Order-specific variables
         variables.taxRate = 15; // Default tax rate
@@ -179,8 +178,6 @@ export async function populateSystemVariables(
       companyEmail: "",
       companyPhone: "",
       companyAddress: "",
-      companyLogo: "",
-      companyStamp: "",
       companyVatNumber: "",
       // Order variables with fallback values
       taxRate: 15,

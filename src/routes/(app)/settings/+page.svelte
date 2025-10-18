@@ -21,10 +21,21 @@ import { get } from "svelte/store";
   import { authenticatedFetch } from "$lib/utils/authUtils";
   import { formatDateTime } from "$lib/utils";
   import { compressImage, COMPRESSION_PRESETS } from "$lib/utils/imageCompression";
+  import { formatCurrency, setCurrencyConfig } from "$lib/utils/currency";
   import AlertDialog from "$lib/components/shared/alert-dialog.svelte";
   import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
 
   let mounted = $state(false);
+
+   // Currency settings
+   let selectedCurrency = $state('SAR');
+   let currentCompanyCurrency = $state('SAR');
+   let updatingCurrency = $state(false);
+
+   // VAT settings
+   let vatAmount = $state(15);
+   let currentVatAmount = $state(15);
+   let updatingVat = $state(false);
 
   // Dialog state
   let showAlertDialog = $state(false);
@@ -58,7 +69,99 @@ import { get } from "svelte/store";
     }
   }
 
-  // SMTP Configuration state from hook
+  function getCurrencyDisplayName(currency: string): string {
+    const currencyNames = {
+      SAR: 'Saudi Riyal (SAR)',
+      USD: 'US Dollar (USD)',
+      EUR: 'Euro (EUR)',
+      GBP: 'British Pound (GBP)',
+      AED: 'UAE Dirham (AED)',
+    };
+    return currencyNames[currency as keyof typeof currencyNames] || currency;
+  }
+
+  async function updateCompanyCurrency() {
+    if (!selectedCurrency || selectedCurrency === currentCompanyCurrency) return;
+
+    updatingCurrency = true;
+    try {
+      const companyContextValue = get(companyContext);
+      if (!companyContextValue.data) {
+        throw new Error('No company context available');
+      }
+
+      // Update company settings in database
+      const response = await authenticatedFetch(`/api/companies/${companyContextValue.data.companyId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          settings: {
+            ...companyContextValue.data.company.settings,
+            currency: selectedCurrency,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update currency');
+      }
+
+      // Update local currency configuration
+      setCurrencyConfig({ code: selectedCurrency, symbol: selectedCurrency });
+      currentCompanyCurrency = selectedCurrency;
+
+      showAlert('Currency Updated', `Company currency has been changed to ${getCurrencyDisplayName(selectedCurrency)}`, 'success');
+    } catch (error) {
+      console.error('Error updating currency:', error);
+      showAlert('Update Failed', 'Failed to update company currency. Please try again.', 'error');
+    } finally {
+      updatingCurrency = false;
+    }
+   }
+
+   async function updateCompanyVat() {
+     if (!vatAmount || vatAmount === currentVatAmount) return;
+
+     updatingVat = true;
+     try {
+       const companyContextValue = get(companyContext);
+       if (!companyContextValue.data) {
+         throw new Error('No company context available');
+       }
+
+       // Update company settings in database
+       const response = await authenticatedFetch(`/api/companies/${companyContextValue.data.companyId}`, {
+         method: 'PATCH',
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+           settings: {
+             ...companyContextValue.data.company.settings,
+             vatAmount: vatAmount,
+           },
+         }),
+       });
+
+       if (!response.ok) {
+         throw new Error('Failed to update VAT amount');
+       }
+
+       // Update local VAT configuration
+       currentVatAmount = vatAmount;
+
+       showAlert('VAT Amount Updated', `Company VAT amount has been changed to ${vatAmount}%`, 'success');
+     } catch (error) {
+       console.error('Error updating VAT amount:', error);
+       showAlert('Update Failed', 'Failed to update company VAT amount. Please try again.', 'error');
+     } finally {
+       updatingVat = false;
+     }
+   }
+
+   // SMTP Configuration state from hook
   let smtpConfig = $state({
     enabled: false,
     host: "",
@@ -205,6 +308,14 @@ import { get } from "svelte/store";
       showAlert("Authentication Error", "Company context not available. Please refresh the page.", "error");
       return;
     }
+
+     // Initialize currency from company settings
+     currentCompanyCurrency = companyContextValue.data.company.settings?.currency || 'SAR';
+     selectedCurrency = currentCompanyCurrency;
+
+     // Initialize VAT from company settings
+     currentVatAmount = companyContextValue.data.company.settings?.vatAmount || 15;
+     vatAmount = currentVatAmount;
     const companyId = companyContextValue.data.companyId;
 
     // Initialize company info from context
@@ -873,27 +984,178 @@ import { get } from "svelte/store";
   <DashboardLayout title="Company Settings" description="Manage your company's email, branding, invitations, and data settings">
     <!-- Main Navigation Tabs -->
     <Tabs.Root bind:value={activeSection} class="w-full">
-      <Tabs.List class="grid w-full grid-cols-4">
-        <Tabs.Trigger value="smtp" class="flex items-center space-x-2">
-          <Icon icon="lucide:mail" class="h-4 w-4" />
-          <span>Email</span>
-        </Tabs.Trigger>
-        <Tabs.Trigger value="branding" class="flex items-center space-x-2">
-          <Icon icon="lucide:palette" class="h-4 w-4" />
-          <span>Branding</span>
-        </Tabs.Trigger>
-        <Tabs.Trigger value="invitations" class="flex items-center space-x-2">
-          <Icon icon="lucide:user-plus" class="h-4 w-4" />
-          <span>Invitations</span>
-        </Tabs.Trigger>
-        <Tabs.Trigger value="data" class="flex items-center space-x-2">
-          <Icon icon="lucide:database" class="h-4 w-4" />
-          <span>Data</span>
-        </Tabs.Trigger>
-      </Tabs.List>
+       <Tabs.List class="grid w-full grid-cols-5">
+         <Tabs.Trigger value="general" class="flex items-center space-x-2">
+           <Icon icon="lucide:settings" class="h-4 w-4" />
+           <span>General</span>
+         </Tabs.Trigger>
+         <Tabs.Trigger value="smtp" class="flex items-center space-x-2">
+           <Icon icon="lucide:mail" class="h-4 w-4" />
+           <span>Email</span>
+         </Tabs.Trigger>
+         <Tabs.Trigger value="branding" class="flex items-center space-x-2">
+           <Icon icon="lucide:palette" class="h-4 w-4" />
+           <span>Branding</span>
+         </Tabs.Trigger>
+         <Tabs.Trigger value="invitations" class="flex items-center space-x-2">
+           <Icon icon="lucide:user-plus" class="h-4 w-4" />
+           <span>Invitations</span>
+         </Tabs.Trigger>
+         <Tabs.Trigger value="data" class="flex items-center space-x-2">
+           <Icon icon="lucide:database" class="h-4 w-4" />
+           <span>Data</span>
+         </Tabs.Trigger>
+        </Tabs.List>
 
-      <!-- SMTP Email Configuration Tab -->
-      <Tabs.Content value="smtp" class="space-y-6 mt-6">
+       <!-- General Settings Tab -->
+       <Tabs.Content value="general" class="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle class="flex items-center space-x-2">
+                <Icon icon="lucide:settings" class="h-5 w-5" />
+                <span>General Settings</span>
+              </CardTitle>
+              <CardDescription>
+                Configure your company's basic settings including currency and preferences.
+              </CardDescription>
+            </CardHeader>
+            <CardContent class="space-y-6">
+             <!-- Currency Setting -->
+             <div class="space-y-4">
+               <div>
+                 <Label for="currency">Default Currency</Label>
+                 <p class="text-sm text-muted-foreground mb-3">
+                   Set the default currency for your company. This will be used for all pricing, invoices, and financial displays.
+                 </p>
+                 <Select.Root type="single" bind:value={selectedCurrency}>
+                   <Select.Trigger class="w-full">
+                     {selectedCurrency ? getCurrencyDisplayName(selectedCurrency) : "Select currency"}
+                   </Select.Trigger>
+                   <Select.Content>
+                     <Select.Item value="SAR">Saudi Riyal (SAR)</Select.Item>
+                     <Select.Item value="USD">US Dollar (USD)</Select.Item>
+                     <Select.Item value="EUR">Euro (EUR)</Select.Item>
+                     <Select.Item value="GBP">British Pound (GBP)</Select.Item>
+                     <Select.Item value="AED">UAE Dirham (AED)</Select.Item>
+                   </Select.Content>
+                 </Select.Root>
+               </div>
+
+               {#if selectedCurrency !== currentCompanyCurrency}
+                 <div class="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                   <div class="flex items-center space-x-2">
+                     <Icon icon="lucide:alert-triangle" class="h-4 w-4 text-amber-600" />
+                     <span class="text-sm text-amber-800">
+                       Currency changed from {getCurrencyDisplayName(currentCompanyCurrency)} to {getCurrencyDisplayName(selectedCurrency)}
+                     </span>
+                   </div>
+                   <Button
+                     size="sm"
+                     variant="outline"
+                     onclick={updateCompanyCurrency}
+                     disabled={updatingCurrency}
+                   >
+                     {#if updatingCurrency}
+                       <Icon icon="lucide:loader" class="h-4 w-4 mr-2 animate-spin" />
+                       Updating...
+                     {:else}
+                       <Icon icon="lucide:check" class="h-4 w-4 mr-2" />
+                       Apply Changes
+                     {/if}
+                   </Button>
+                 </div>
+               {/if}
+             </div>
+
+             <!-- Preview -->
+             <div class="space-y-4">
+               <Label>Preview</Label>
+               <div class="p-4 bg-muted/50 rounded-lg">
+                 <p class="text-sm text-muted-foreground mb-2">How currency will appear:</p>
+                 <div class="space-y-2">
+                   <div class="flex justify-between">
+                     <span>Product Price:</span>
+                     <span class="font-medium">{formatCurrency(150.75)}</span>
+                   </div>
+                   <div class="flex justify-between">
+                     <span>Invoice Total:</span>
+                     <span class="font-medium">{formatCurrency(1250.00)}</span>
+                   </div>
+                 </div>
+               </div>
+              </div>
+
+              <!-- VAT Amount Setting -->
+              <div class="space-y-4">
+                <div>
+                  <Label for="vat-amount">VAT %</Label>
+                  <p class="text-sm text-muted-foreground mb-3">
+                    Set the default VAT percentage for your company. This will be used for all pricing calculations and invoices.
+                  </p>
+                  <Input
+                    id="vat-amount"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    bind:value={vatAmount}
+                    placeholder="15"
+                  />
+                </div>
+
+                {#if vatAmount !== currentVatAmount}
+                  <div class="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div class="flex items-center space-x-2">
+                      <Icon icon="lucide:alert-triangle" class="h-4 w-4 text-amber-600" />
+                      <span class="text-sm text-amber-800">
+                        VAT amount changed from {currentVatAmount}% to {vatAmount}%
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onclick={updateCompanyVat}
+                      disabled={updatingVat}
+                    >
+                      {#if updatingVat}
+                        <Icon icon="lucide:loader" class="h-4 w-4 mr-2 animate-spin" />
+                        Updating...
+                      {:else}
+                        <Icon icon="lucide:check" class="h-4 w-4 mr-2" />
+                        Apply Changes
+                      {/if}
+                    </Button>
+                  </div>
+                {/if}
+              </div>
+
+              <!-- VAT Preview -->
+              <div class="space-y-4">
+                <Label>VAT Preview</Label>
+                <div class="p-4 bg-muted/50 rounded-lg">
+                  <p class="text-sm text-muted-foreground mb-2">How VAT will appear in calculations:</p>
+                  <div class="space-y-2">
+                    <div class="flex justify-between">
+                      <span>Product Price:</span>
+                      <span class="font-medium">{formatCurrency(100)}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>VAT ({vatAmount}%):</span>
+                      <span class="font-medium">{formatCurrency(100 * (vatAmount / 100))}</span>
+                    </div>
+                    <div class="flex justify-between border-t pt-2">
+                      <span>Total (incl. VAT):</span>
+                      <span class="font-medium">{formatCurrency(100 * (1 + vatAmount / 100))}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+             </CardContent>
+          </Card>
+       </Tabs.Content>
+
+       <!-- SMTP Email Configuration Tab -->
+       <Tabs.Content value="smtp" class="space-y-6 mt-6">
         <!-- SMTP Email Configuration -->
         <Card>
           <CardHeader>

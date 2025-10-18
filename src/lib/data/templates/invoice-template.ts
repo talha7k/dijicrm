@@ -318,12 +318,14 @@ export const invoiceTemplate: DocumentTemplate = {
           }
         }
 
-        @media print {
-          .invoice-container {
-            padding: 0;
-            max-width: none;
-            box-shadow: none;
-          }
+         @media print {
+           .invoice-container {
+             padding: 0;
+             max-width: none;
+             width: 8.5in;
+             margin: 0 auto;
+             box-shadow: none;
+           }
 
           .zatca-qr-code {
             border: 1px solid #000;
@@ -345,9 +347,11 @@ export const invoiceTemplate: DocumentTemplate = {
             page-break-inside: avoid;
           }
 
-          .totals {
-            page-break-inside: avoid;
-          }
+           .totals {
+             page-break-inside: avoid;
+             min-width: 250px;
+             max-width: 300px;
+           }
 
            .invoice-footer {
              page-break-inside: avoid;
@@ -363,9 +367,11 @@ export const invoiceTemplate: DocumentTemplate = {
 
        <header class="invoice-header">
          <div class="header-left">
-           <div class="company-logo">
-             <img src="{{companyLogo}}" alt="Company Logo" />
-           </div>
+            <div class="company-logo">
+              {{#if companyLogo}}
+              <img src="{{companyLogo}}" alt="Company Logo" />
+              {{/if}}
+            </div>
 
            {{#if zatcaQRCode}}
            <div class="zatca-qr-code">
@@ -461,9 +467,11 @@ export const invoiceTemplate: DocumentTemplate = {
 
        <footer class="invoice-footer">
          <div class="footer-left">
-           <div class="company-stamp">
-             <img src="{{companyStamp}}" alt="Company Stamp" />
-           </div>
+            <div class="company-stamp">
+              {{#if companyStamp}}
+              <img src="{{companyStamp}}" alt="Company Stamp" />
+              {{/if}}
+            </div>
          </div>
          <div class="footer-right">
            <p class="thank-you-message">Thank you for your business!</p>

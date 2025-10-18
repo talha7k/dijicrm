@@ -183,6 +183,14 @@ function createEmailHistoryStore() {
           });
         }
 
+        // Check SMTP config before sending
+        const smtpConfig = emailService.getSMTPConfig();
+        if (!smtpConfig) {
+          throw new Error(
+            "SMTP configuration is required to send emails. Please configure your email settings in the Settings page.",
+          );
+        }
+
         // Send email via email service
         const emailResult = await emailService.sendEmail({
           to: emailData.recipient,

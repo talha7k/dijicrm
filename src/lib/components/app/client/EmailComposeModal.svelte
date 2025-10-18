@@ -8,6 +8,8 @@
   import { documentTypesStore } from '$lib/stores/documentTypes';
   import { toast } from 'svelte-sonner';
   import type { DocumentType } from '$lib/stores/documentTypes';
+  import { emailService } from '$lib/services/emailService';
+  import Icon from '@iconify/svelte';
 
   interface Props {
     clientId: string;
@@ -23,6 +25,7 @@
   let emailMessage = $state('');
   let loading = $state(false);
   let documentTypes = $state<DocumentType[]>([]);
+  let smtpConfigured = $state(false);
 
   // Attachments with document types
   let attachments = $state<Array<{
@@ -32,13 +35,18 @@
     fileSize: number;
   }>>([]);
 
-  // Load document types on mount
+  // Load document types and check SMTP config on mount
   $effect(() => {
     if (open) {
       documentTypesStore.loadDocumentTypes();
       const unsubscribe = documentTypesStore.subscribe((state) => {
         documentTypes = state.data || [];
       });
+
+      // Check SMTP config
+      const smtpConfig = emailService.getSMTPConfig();
+      smtpConfigured = !!smtpConfig;
+
       return unsubscribe;
     }
   });
@@ -161,43 +169,65 @@
       </Dialog.Description>
     </Dialog.Header>
 
-    <div class="space-y-6">
-      <!-- Email Details -->
-      <div class="space-y-4">
-        <div class="space-y-2">
-          <Label for="subject">Subject</Label>
-          <Input
-            id="subject"
-            bind:value={emailSubject}
-            placeholder="Documents from [Your Company]"
-          />
-        </div>
+     <div class="space-y-6">
+       {#if !smtpConfigured}
+         <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+           <div class="flex items-center">
+             <Icon icon="lucide:alert-triangle" class="h-5 w-5 text-yellow-600 mr-2" />
+             <div>
+               <h4 class="text-sm font-medium text-yellow-800">SMTP Configuration Required</h4>
+               <p class="text-sm text-yellow-700 mt-1">
+                 Email sending is disabled because SMTP is not configured. Please <a href="/settings" class="underline hover:no-underline">configure your email settings</a> to send emails.
+               </p>
+             </div>
+           </div>
+         </div>
+       {/if}
 
-        <div class="space-y-2">
-          <Label for="message">Message</Label>
-          <Textarea
-            id="message"
-            bind:value={emailMessage}
-            placeholder="Please find attached the requested documents..."
-            rows={4}
-          />
-        </div>
-      </div>
+       <!-- Email Details -->
+       <div class="space-y-4">
+         <div class="space-y-2">
+           <Label for="subject">Subject</Label>
+           <Input
+             id="subject"
+             bind:value={emailSubject}
+             placeholder="Documents from [Your Company]"
+             disabled={!smtpConfigured}
+           />
+         </div>
 
-      <!-- File Attachments -->
-      <div class="space-y-3">
-        <Label class="text-base font-medium">PDF Attachments</Label>
+         <div class="space-y-2">
+           <Label for="message">Message</Label>
+           <Textarea
+             id="message"
+             bind:value={emailMessage}
+             placeholder="Please find attached the requested documents..."
+             rows={4}
+             disabled={!smtpConfigured}
+           />
+         </div>
+       </div>
 
-        {#if attachments.length > 0}
-          <div class="space-y-2">
-            {#each attachments as attachment, index (attachment.fileName)}
-              <div class="flex items-center gap-3 p-3 border rounded-lg">
-                <div class="flex-1">
-                  <p class="text-sm font-medium">{attachment.fileName}</p>
-                  <p class="text-xs text-muted-foreground">{formatFileSize(attachment.fileSize)}</p>
-                </div>
+       <!-- File Attachments -->
+       <div class="space-y-3">
+         <Label class="text-base font-medium">PDF Attachments</Label>
 
-                <Select.Root
+         {#if !smtpConfigured}
+           <div class="p-3 bg-muted rounded-lg text-center text-muted-foreground">
+             <Icon icon="lucide:mail-off" class="h-8 w-8 mx-auto mb-2" />
+             <p>Email attachments are disabled until SMTP is configured.</p>
+           </div>
+         {:else}
+         {#if attachments.length > 0}
+           <div class="space-y-2">
+             {#each attachments as attachment, index (attachment.fileName)}
+               <div class="flex items-center gap-3 p-3 border rounded-lg">
+                 <div class="flex-1">
+                   <p class="text-sm font-medium">{attachment.fileName}</p>
+                   <p class="text-xs text-muted-foreground">{formatFileSize(attachment.fileSize)}</p>
+                 </div>
+
+                 <Select.Root
                   type="single"
                   value={attachment.documentType}
                   onValueChange={(value) => updateAttachmentType(index, value)}
@@ -252,10 +282,11 @@
               Choose Files
             </Button>
           </div>
-        </div>
-      </div>
+         </div>
+         {/if}
+       </div>
 
-      <!-- Preview -->
+       <!-- Preview -->
       {#if emailSubject || emailMessage || attachments.length > 0}
         <div class="border rounded-lg p-4 bg-muted/50">
           <h4 class="font-medium mb-2">Preview</h4>
@@ -272,9 +303,9 @@
       <Button variant="outline" onclick={handleCancel} disabled={loading}>
         Cancel
       </Button>
-      <Button onclick={handleSend} disabled={loading || attachments.length === 0}>
-        {loading ? 'Sending...' : 'Send Email'}
-      </Button>
+       <Button onclick={handleSend} disabled={loading || attachments.length === 0 || !smtpConfigured}>
+         {loading ? 'Sending...' : 'Send Email'}
+       </Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

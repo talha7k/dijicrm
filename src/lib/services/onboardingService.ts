@@ -87,7 +87,7 @@ async function updateExistingProfile(
       isActive: true,
       settings: {
         timezone: "UTC",
-        currency: "USD",
+        currency: "SAR",
         language: "en",
         emailNotifications: true,
       },

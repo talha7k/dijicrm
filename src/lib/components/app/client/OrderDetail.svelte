@@ -3,14 +3,8 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import { productsStore } from '$lib/stores/products';
   import { paymentsStore } from '$lib/stores/payments';
+  import { formatCurrency } from '$lib/utils/currency';
   import type { Payment } from '$lib/types/document';
-
-  function formatCurrency(amount: number) {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  }
 
   function formatDate(date: Date) {
     return new Intl.DateTimeFormat('en-US', {

@@ -17,10 +17,10 @@ export function getStatusBadge(status: string) {
   return variants[status as keyof typeof variants] || "outline";
 }
 
-export function formatCurrency(amount: number) {
+export function formatCurrency(amount: number, currency: string = "SAR") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: currency,
   }).format(amount);
 }
 

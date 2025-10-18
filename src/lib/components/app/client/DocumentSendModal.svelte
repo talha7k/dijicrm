@@ -11,13 +11,15 @@
   import { documentGenerationStore } from "$lib/stores/documentGeneration";
  import { clientManagementStore } from "$lib/stores/clientManagement";
  import { companyContext } from "$lib/stores/companyContext";
- import { smtpConfigStore } from "$lib/stores/smtpConfig";
- import { get } from "svelte/store";
- import { mapClientDataToTemplate } from "$lib/utils/client-data-mapping";
- import { authenticatedFetch } from "$lib/utils/authUtils";
- import { downloadFileAsBase64 } from "$lib/services/firebaseStorage";
+  import { smtpConfigStore } from "$lib/stores/smtpConfig";
+  import { get } from "svelte/store";
+  import { mapClientDataToTemplate } from "$lib/utils/client-data-mapping";
+  import { authenticatedFetch } from "$lib/utils/authUtils";
+  import { downloadFileAsBase64 } from "$lib/services/firebaseStorage";
   import type { UserProfile } from "$lib/types/user";
   import { toast } from "svelte-sonner";
+  import { emailService } from "$lib/services/emailService";
+  import Icon from '@iconify/svelte';
 
   interface Props {
     clientId: string;
@@ -68,18 +70,23 @@
   let customDocuments = $state<
     { id: string; name: string; uploadedAt: Date; pdfUrl?: string; fileType?: string }[]
   >([]);
+  let smtpConfigured = $state(false);
 
   // Load data when modal opens
   $effect(() => {
     if (open) {
       console.log("📧 [DOCUMENT SEND MODAL] Modal opened, checking SMTP config...");
 
-      // Check SMTP config availability from store
-      const smtpState = get(smtpConfigStore);
-      console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available on modal open:", !!smtpState.config);
-      console.log("📧 [DOCUMENT SEND MODAL] SMTP Config initialized:", smtpState.initialized);
-      console.log("📧 [DOCUMENT SEND MODAL] SMTP Config loading:", smtpState.loading);
-      console.log("📧 [DOCUMENT SEND MODAL] SMTP Config error:", smtpState.error);
+       // Check SMTP config availability from store
+       const smtpState = get(smtpConfigStore);
+       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available on modal open:", !!smtpState.config);
+       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config initialized:", smtpState.initialized);
+       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config loading:", smtpState.loading);
+       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config error:", smtpState.error);
+
+       // Check SMTP config for UI
+       const smtpConfig = emailService.getSMTPConfig();
+       smtpConfigured = !!smtpConfig;
 
       // Subscribe to templates store
       const unsubscribeTemplates = documentTemplatesStore.subscribe((state) => {
@@ -411,18 +418,23 @@
       
       const { emailService } = await import("$lib/services/emailService");
       
-      // Check SMTP config before sending
-      const smtpConfig = emailService.getSMTPConfig();
-      console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available:", !!smtpConfig);
-      console.log("📧 [DOCUMENT SEND MODAL] SMTP Config:", smtpConfig);
+       // Check SMTP config before sending
+       const smtpConfig = emailService.getSMTPConfig();
+       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available:", !!smtpConfig);
+       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config:", smtpConfig);
 
-      console.log("📧 [DOCUMENT SEND MODAL] Calling emailService.sendEmail...");
-      await emailService.sendEmail({
-        to: clientEmail,
-        subject: emailSubject,
-        htmlBody: emailMessage,
-        attachments: attachments.length > 0 ? attachments : undefined,
-      });
+       if (!smtpConfig) {
+         toast.error("SMTP configuration is required to send emails. Please <a href='/settings' class='underline hover:no-underline'>configure your email settings</a> before sending documents.");
+         return;
+       }
+
+       console.log("📧 [DOCUMENT SEND MODAL] Calling emailService.sendEmail...");
+       await emailService.sendEmail({
+         to: clientEmail,
+         subject: emailSubject,
+         htmlBody: emailMessage,
+         attachments: attachments.length > 0 ? attachments : undefined,
+       });
       
       console.log("📧 [DOCUMENT SEND MODAL] Email sent successfully");
 
@@ -471,20 +483,35 @@
       </Dialog.Description>
     </Dialog.Header>
 
-    <div class="space-y-6">
-      <!-- Debug Info (don't remove until told) -->
-      <div class="p-3 bg-card rounded text-xs">
-        <p><strong>Debug Info:</strong></p>
-        <p>Client loaded: {client ? "Yes" : "No"}</p>
-        <p>Templates available: {availableTemplates.length}</p>
-        <p>Custom documents: {customDocuments.length}</p>
-        {#if client}
-          <p>
-            Client name: {client.displayName ||
-              client.firstName + " " + client.lastName}
-          </p>
-        {/if}
-      </div>
+     <div class="space-y-6">
+       {#if !smtpConfigured}
+         <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+           <div class="flex items-center">
+             <Icon icon="lucide:alert-triangle" class="h-5 w-5 text-yellow-600 mr-2" />
+             <div>
+               <h4 class="text-sm font-medium text-yellow-800">SMTP Configuration Required</h4>
+               <p class="text-sm text-yellow-700 mt-1">
+                 Document sending is disabled because SMTP is not configured. Please <a href="/settings" class="underline hover:no-underline">configure your email settings</a> to send documents.
+               </p>
+             </div>
+           </div>
+         </div>
+       {/if}
+
+       <!-- Debug Info (don't remove until told) -->
+       <div class="p-3 bg-card rounded text-xs">
+         <p><strong>Debug Info:</strong></p>
+         <p>Client loaded: {client ? "Yes" : "No"}</p>
+         <p>Templates available: {availableTemplates.length}</p>
+         <p>Custom documents: {customDocuments.length}</p>
+         <p>SMTP configured: {smtpConfigured ? "Yes" : "No"}</p>
+         {#if client}
+           <p>
+             Client name: {client.displayName ||
+               client.firstName + " " + client.lastName}
+           </p>
+         {/if}
+       </div>
 
       <!-- Template Documents -->
       {#if availableTemplates.length > 0}
@@ -720,11 +747,12 @@
       <Button variant="outline" onclick={handleCancel} disabled={loading}>
         Cancel
       </Button>
-      <Button
-        onclick={handleSend}
-        disabled={loading ||
-          (selectedTemplates.length === 0 && selectedCustomDocs.length === 0)}
-      >
+       <Button
+         onclick={handleSend}
+         disabled={loading ||
+           (selectedTemplates.length === 0 && selectedCustomDocs.length === 0) ||
+           !smtpConfigured}
+       >
         {#if loading}
           {#if generationProgress.total > 0}
             Generating ({generationProgress.current}/{generationProgress.total})

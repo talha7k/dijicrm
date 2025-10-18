@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import DashboardLayout from "$lib/components/shared/dashboard-layout.svelte";
+   import { onMount } from "svelte";
+   import { get } from "svelte/store";
+   import { activeCompanyId } from "$lib/stores/companyContext";
+   import DashboardLayout from "$lib/components/shared/dashboard-layout.svelte";
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
@@ -10,12 +12,13 @@
   import { Label } from "$lib/components/ui/label";
   import { Textarea } from "$lib/components/ui/textarea";
 
-   import Icon from "@iconify/svelte";
-   import { requireCompany, requireActiveCompany } from "$lib/utils/auth";
-    import { productsStore } from "$lib/stores/products";
-    import { documentTemplatesStore } from "$lib/stores/documentTemplates";
-    import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
-   import ProductForm from "$lib/components/shared/product-form.svelte";
+    import Icon from "@iconify/svelte";
+    import { requireCompany, requireActiveCompany } from "$lib/utils/auth";
+     import { productsStore } from "$lib/stores/products";
+     import { documentTemplatesStore } from "$lib/stores/documentTemplates";
+
+     import ConfirmDialog from "$lib/components/shared/confirm-dialog.svelte";
+     import ProductForm from "$lib/components/shared/product-form.svelte";
 
     import type { Product } from "$lib/stores/products";
    import type { DocumentTemplate } from "$lib/types/document";
@@ -33,12 +36,15 @@
    let confirmMessage = $state('');
    let productToDelete = $state<Product | null>(null);
 
-   onMount(() => {
-     mounted = true;
-     // Check both company role and active company context
-     requireCompany();
-     requireActiveCompany();
-   });
+    onMount(async () => {
+      mounted = true;
+      // Check both company role and active company context
+      requireCompany();
+      requireActiveCompany();
+
+      // Initialize currency from company settings
+      const companyId = get(activeCompanyId);
+    });
 
 
   let templatesStore = documentTemplatesStore;
@@ -125,12 +131,11 @@ function handleEditProduct(product: Product) {
     }
   }
 
+  import { formatCurrency } from '$lib/utils/currency';
+
   function formatPrice(price?: number): string {
     if (!price) return "Contact for pricing";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(price);
+    return formatCurrency(price);
   }
 </script>
 

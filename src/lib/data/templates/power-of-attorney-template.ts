@@ -18,9 +18,11 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
       <!-- Header -->
       <header class="poa-header" style="text-align: center; margin-bottom: 40px; position: relative;">
         <div style="position: absolute; top: 0; left: 0; right: 0; height: 5px; background: linear-gradient(90deg, #1f2937, #3b82f6); border-radius: 10px 10px 0 0;"></div>
-        <div class="company-logo" style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 50%; display: inline-block; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-          <img src="{{companyLogo}}" alt="Company Logo" style="max-width: 150px; max-height: 80px;" />
-        </div>
+         <div class="company-logo" style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 50%; display: inline-block; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+           {{#if companyLogo}}
+           <img src="{{companyLogo}}" alt="Company Logo" style="max-width: 150px; max-height: 80px;" />
+           {{/if}}
+         </div>
         <h1 style="color: #1f2937; font-size: 32px; margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">POWER OF ATTORNEY</h1>
         <div style="width: 100px; height: 3px; background: #3b82f6; margin: 15px auto;"></div>
         <h2 style="color: #1f2937; font-size: 18px; margin: 10px 0; font-weight: 500; opacity: 0.9;">وكالة قانونية</h2>
@@ -250,9 +252,11 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
       <!-- Footer -->
       <footer class="poa-footer" style="text-align: center; margin-top: 50px; padding-top: 30px; border-top: 3px solid #3b82f6; position: relative;">
         <div style="position: absolute; top: -3px; left: 50%; transform: translateX(-50%); width: 200px; height: 6px; background: linear-gradient(90deg, #1f2937, #3b82f6); border-radius: 3px;"></div>
-        <div class="company-stamp" style="margin-bottom: 25px; display: inline-block; padding: 15px; background: white; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-          <img src="{{companyStamp}}" alt="Company Stamp" style="max-width: 100px; max-height: 100px;" />
-        </div>
+         <div class="company-stamp" style="margin-bottom: 25px; display: inline-block; padding: 15px; background: white; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+           {{#if companyStamp}}
+           <img src="{{companyStamp}}" alt="Company Stamp" style="max-width: 100px; max-height: 100px;" />
+           {{/if}}
+         </div>
         <h4 style="color: #1f2937; font-size: 18px; margin: 0 0 10px 0; font-weight: 600;">{{companyName}}</h4>
         <p style="font-size: 14px; color: #666; margin: 5px 0;">{{companyAddress}}</p>
         <p style="font-size: 14px; color: #666; margin: 5px 0;">{{companyPhone}} | {{companyEmail}}</p>
