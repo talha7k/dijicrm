@@ -4,13 +4,13 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { useSidebar } from '$lib/components/ui/sidebar/index.js';
-	import { userProfile } from '$lib/stores/user';
+	import { userProfile } from '$lib/services/authService';
 	import { isUserDropdownOpen } from '$lib/stores/sidebar';
 	import { getInitials } from '$lib/utils';
 	import Icon from '@iconify/svelte';
 	import { handleLogout } from '$lib/services/authService';
 
-	let user = $derived($userProfile.data);
+	let user = $derived($userProfile);
 	let imageError = $state(false);
 	let imageLoaded = $state(false);
 

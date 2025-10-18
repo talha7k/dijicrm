@@ -4,10 +4,10 @@
 	import Icon from '@iconify/svelte';
 	import { clientNavItems, companyNavItems } from '../../../config';
 	import { isSidebarOpen } from '$lib/stores/sidebar';
-	import { userProfile } from '$lib/stores/user';
+	import { userProfile } from '$lib/services/authService';
 	import { page } from '$app/stores';
 
-	let navItems = $derived($userProfile.data?.role === 'client' ? clientNavItems : companyNavItems);
+	let navItems = $derived($userProfile?.role === 'client' ? clientNavItems : companyNavItems);
 
 	// Function to check if a URL is active
 	function isActive(url: string): boolean {

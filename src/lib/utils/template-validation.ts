@@ -213,11 +213,9 @@ export async function generatePreviewData(
   let branding = null;
   let company = null;
 
-  if (userStore.data?.role === "company") {
+  if (userStore?.role === "company") {
     try {
-      const brandingResult = await brandingService.loadBranding(
-        userStore.data.uid,
-      );
+      const brandingResult = await brandingService.loadBranding(userStore.uid);
       if (brandingResult.success && brandingResult.branding) {
         branding = brandingResult.branding;
       }

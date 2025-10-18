@@ -5,13 +5,13 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { firekitAuth, firekitUploadTask, firekitUser } from 'svelte-firekit';
 	import { toast } from 'svelte-sonner';
-	import { userProfile } from '$lib/stores/user';
+	import { userProfile } from '$lib/services/authService';
 
 	const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes
 	const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 	// State management
-	let user = $derived($userProfile.data);
+	let user = $derived($userProfile);
 	let uploadState = $state({
 		imageUrl: '',
 		selectedImage: null as File | null,
@@ -37,9 +37,16 @@
 	// Handle upload completion
 	async function handleUploadComplete(downloadURL: string) {
 		try {
-			$userProfile.update({
-				photoURL: downloadURL
-			});
+			// Update the user's profile in Firebase
+			const { updateDoc, doc } = await import('firebase/firestore');
+			const { db } = await import('$lib/firebase');
+			
+			if (user?.uid) {
+				await updateDoc(doc(db, 'users', user.uid), {
+					photoURL: downloadURL,
+					updatedAt: new Date()
+				});
+			}
 
 			uploadState.isUploading = false;
 			uploadState.error = '';

@@ -5,10 +5,10 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Textarea } from '$lib/components/ui/textarea';
-	import { userProfile } from '$lib/stores/user';
+	import { userProfile } from '$lib/services/authService';
 	import { toast } from 'svelte-sonner';
 
-	const userData = $derived($userProfile.data);
+	const userData = $derived($userProfile);
 
 	// Create form state with initial values from userData
 	let formData = $state({
@@ -151,19 +151,27 @@
 		if (!validateForm()) return;
 
 		try {
-			await $userProfile.update({
-				displayName: formData.displayName.trim(),
-				email: formData.email.trim(),
-				firstName: formData.firstName.trim() || undefined,
-				lastName: formData.lastName.trim() || undefined,
-				username: formData.username.trim() || undefined,
-				bio: formData.bio.trim() || undefined,
-				phoneNumber: formData.phoneNumber.trim() || undefined,
-				emailNotifications: formData.emailNotifications,
-				pushNotifications: formData.pushNotifications,
-				theme: formData.theme,
-				language: formData.language
-			});
+			// Update the user's profile in Firebase
+			const { updateDoc, doc } = await import('firebase/firestore');
+			const { db } = await import('$lib/firebase');
+			
+			if (userData?.uid) {
+				await updateDoc(doc(db, 'users', userData.uid), {
+					displayName: formData.displayName.trim(),
+					email: formData.email.trim(),
+					firstName: formData.firstName.trim() || undefined,
+					lastName: formData.lastName.trim() || undefined,
+					username: formData.username.trim() || undefined,
+					bio: formData.bio.trim() || undefined,
+					phoneNumber: formData.phoneNumber.trim() || undefined,
+					emailNotifications: formData.emailNotifications,
+					pushNotifications: formData.pushNotifications,
+					theme: formData.theme,
+					language: formData.language,
+					updatedAt: new Date()
+				});
+			}
+			
 			toast.success('Profile updated successfully');
 		} catch (error) {
 			console.error('Failed to update profile:', error);
@@ -353,8 +361,8 @@
 		</div>
 
 		<div class="flex justify-end pt-4 border-t">
-			<Button onclick={saveChanges} disabled={!hasChanges || $userProfile.loading}>
-				{#if $userProfile.loading}
+			<Button onclick={saveChanges} disabled={!hasChanges}>
+				{#if false}
 					Saving...
 				{:else}
 					Save changes

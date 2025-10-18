@@ -28,8 +28,8 @@
 
       // Get current client ID from user profile
       const userProfileData = get(userProfile);
-      if (userProfileData.data?.uid) {
-        currentClientId = userProfileData.data.uid;
+      if (userProfileData?.uid) {
+        currentClientId = userProfileData.uid;
        // Documents are loaded automatically by the store when user profile changes
      }
    });

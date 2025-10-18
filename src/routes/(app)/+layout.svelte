@@ -18,11 +18,11 @@
 </script>
 
 {#if $isLoading}
-  <div class="flex h-full w-full items-center justify-center">
+  <div class="flex h-screen w-full items-center justify-center">
     <Loading message="Initializing application..." size="lg" />
   </div>
 {:else if $authError}
-  <div class="flex h-full w-full items-center justify-center">
+  <div class="flex h-screen w-full items-center justify-center">
     <div class="text-center">
       <p class="text-destructive mb-2">Authentication Error</p>
       <p class="text-sm text-muted-foreground">{$authError}</p>
@@ -50,7 +50,7 @@
   </Sidebar.Provider>
 {:else}
   <!-- User not ready for app - should be handled by auth layout redirects -->
-  <div class="flex h-full w-full items-center justify-center">
+  <div class="flex h-screen w-full items-center justify-center">
     <Loading message="Preparing your workspace..." size="lg" />
   </div>
 {/if}

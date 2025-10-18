@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { userProfile, profileCompleteness } from '$lib/stores/user';
+	import { userProfile } from '$lib/services/authService';
+	import { profileCompleteness } from '$lib/stores/user';
 	import { companyContext, activeCompanyId } from '$lib/stores/companyContext';
-	import { getCompanyRole } from '$lib/utils/company-validation';
 	import type { UserProfile } from '$lib/types/user';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import Label from '$lib/components/ui/label/label.svelte';
@@ -10,7 +10,7 @@
 	import Icon from '@iconify/svelte';
 	import { goto } from '$app/navigation';
 
-	const userData = $derived($userProfile.data);
+	const userData = $derived($userProfile);
 	const companyData = $derived($companyContext.data);
 	const completeness = $derived($profileCompleteness);
 
@@ -50,13 +50,6 @@
 
 	async function refreshProfile() {
 		try {
-			// Force a profile refresh by clearing the current store
-			userProfile.update(store => ({
-				...store,
-				loading: true,
-				error: null
-			}));
-
 			// Import and use the direct read function
 			const { doc, getDoc } = await import('firebase/firestore');
 			const { db } = await import('$lib/firebase');
@@ -67,74 +60,23 @@
 
 				if (profileDoc.exists()) {
 					const profileData = profileDoc.data() as UserProfile;
-					userProfile.update(store => ({
-						...store,
-						data: profileData,
-						loading: false,
-						error: null
-					}));
-					// After refreshing profile, try to initialize company context
+					// The auth service will automatically update when Firebase auth state changes
+					// For now, just trigger a company context refresh
 					setTimeout(() => {
 						get(companyContext).initializeFromUser();
 					}, 100);
-				} else {
-					userProfile.update(store => ({
-						...store,
-						loading: false,
-						error: 'No profile found'
-					}));
 				}
 			}
 		} catch (error) {
 			console.error('Error refreshing profile:', error);
-			userProfile.update(store => ({
-				...store,
-				loading: false,
-				error: 'Failed to refresh profile'
-			}));
 		}
 	}
 
 
 </script>
 
-<!-- Loading State -->
-{#if $userProfile.loading}
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>Company Information</Card.Title>
-			<Card.Description>Loading your profile...</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<div class="flex items-center justify-center py-8">
-				<Icon icon="lucide:loader" class="h-6 w-6 animate-spin text-muted-foreground" />
-			</div>
-		</Card.Content>
-	</Card.Root>
-
-<!-- Error State -->
-{:else if $userProfile.error}
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>Company Information</Card.Title>
-			<Card.Description>Unable to load your profile</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<div class="text-center py-8">
-				<Icon icon="lucide:alert-circle" class="h-8 w-8 text-red-500 mx-auto mb-4" />
-				<p class="text-sm text-muted-foreground mb-4">
-					{$userProfile.error}
-				</p>
-				<Button onclick={() => window.location.reload()}>
-					<Icon icon="lucide:refresh-cw" class="h-4 w-4 mr-2" />
-					Refresh Page
-				</Button>
-			</div>
-		</Card.Content>
-	</Card.Root>
-
 <!-- No Profile Data -->
-{:else if !userData}
+{#if !userData}
 	<Card.Root>
 		<Card.Header>
 			<Card.Title>Company Information</Card.Title>

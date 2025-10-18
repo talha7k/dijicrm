@@ -139,7 +139,7 @@ let deleteDataCounts = $state<{
       // Get current user ID from user store
       let currentUserId = '';
       userProfile.subscribe(profile => {
-        currentUserId = profile.data?.uid || '';
+        currentUserId = profile?.uid || '';
       })();
 
       await clientStore.inviteClient(clientId, currentUserId);

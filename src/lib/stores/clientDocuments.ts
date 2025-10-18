@@ -39,8 +39,8 @@ function createClientDocumentsStore() {
 
   // Subscribe to user profile changes
   const unsubscribeUser = userProfile.subscribe(($userProfile) => {
-    if ($userProfile.data && $userProfile.data.role === "client") {
-      loadClientDocuments($userProfile.data.uid);
+    if ($userProfile && $userProfile.role === "client") {
+      loadClientDocuments($userProfile.uid);
     } else {
       // Clean up listeners and clear data
       if (unsubscribeDocuments) {

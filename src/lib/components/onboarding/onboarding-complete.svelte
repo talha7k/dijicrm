@@ -67,17 +67,8 @@
 
       console.log('Profile creation completed successfully');
 
-      // Immediately update the user profile store with the created data
-      // This bypasses any firekitDoc listener issues
-      userProfile.set({
-        data: createdProfile,
-        loading: false,
-        error: null,
-        update: async (data: Partial<UserProfile>) => {
-          // This will be overridden by the layout, but provide a basic implementation
-          console.log('Profile update called from onboarding:', data);
-        }
-      });
+      // The unified auth service will automatically pick up the profile changes
+      // through the Firebase auth listener, so no manual store update needed
 
       console.log('Profile store updated with created data');
 
@@ -89,8 +80,7 @@
         console.log('Initializing company context after onboarding...');
         await initializeFromUser();
         
-        // Update app state to reflect company readiness
-        app.update(s => ({ ...s, companyReady: true }));
+        // Company readiness will be handled by the unified auth service
         
         console.log('Company context initialized successfully');
         toast.success('Company setup completed successfully!');

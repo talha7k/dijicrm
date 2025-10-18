@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { userProfile } from '$lib/stores/user';
+  import { userProfile } from '$lib/services/authService';
   import { companyContext, activeCompanyId } from '$lib/stores/companyContext';
   import { goto } from '$app/navigation';
   import { get } from 'svelte/store';
@@ -9,8 +9,8 @@
   let switching = $state(false);
 
   let currentCompanyId = $derived(get(activeCompanyId));
-  let companies = $derived($userProfile.data?.companyAssociations || []);
-  let currentCompany = $derived(companies.find(c => c.companyId === currentCompanyId) || companies[0]);
+  let companies = $derived($userProfile?.companyAssociations || []);
+  let currentCompany = $derived(companies.find((c: any) => c.companyId === currentCompanyId) || companies[0]);
   let companyContextData = $derived(get(companyContext));
 
   async function switchCompany(companyId: string) {

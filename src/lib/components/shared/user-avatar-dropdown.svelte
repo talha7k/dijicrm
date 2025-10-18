@@ -4,7 +4,7 @@
     import * as Avatar from "$lib/components/ui/avatar";
     import { Button } from "$lib/components/ui/button";
     import { handleLogout } from "$lib/services/authService";
-    import { userProfile } from "$lib/stores/user";
+    import { userProfile } from "$lib/services/authService";
     import { get } from "svelte/store";
 
     let open = $state(false);
@@ -45,17 +45,17 @@
           {...props}
         >
           <Avatar.Root class="h-8 w-8">
-            {#if get(userProfile)?.data?.photoURL && !imageError}
+            {#if get(userProfile)?.photoURL && !imageError}
               <Avatar.Image
-                src={get(userProfile)?.data?.photoURL}
-                alt={get(userProfile)?.data?.displayName || "User"}
+                src={get(userProfile)?.photoURL}
+                alt={get(userProfile)?.displayName || "User"}
                 onerror={handleImageError}
                 onload={handleImageLoad}
                 style={imageLoaded ? 'opacity: 1' : 'opacity: 0'}
               />
             {/if}
             <Avatar.Fallback style={imageLoaded && !imageError ? 'opacity: 0' : 'opacity: 100'}>
-              {get(userProfile)?.data?.displayName?.charAt(0)?.toUpperCase() || "U"}
+              {get(userProfile)?.displayName?.charAt(0)?.toUpperCase() || "U"}
             </Avatar.Fallback>
           </Avatar.Root>
         </Button>
@@ -65,10 +65,10 @@
     <DropdownMenu.Label class="font-normal">
       <div class="flex flex-col space-y-1">
         <p class="text-sm font-medium leading-none">
-          {get(userProfile)?.data?.displayName || "User"}
+          {get(userProfile)?.displayName || "User"}
         </p>
         <p class="text-xs leading-none text-muted-foreground">
-          {get(userProfile)?.data?.email}
+          {get(userProfile)?.email}
         </p>
       </div>
     </DropdownMenu.Label>
