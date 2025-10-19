@@ -182,8 +182,8 @@ export const businessEstablishmentContractTemplate: DocumentTemplate = {
         </h3>
 
         <div style="background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); border: 2px solid {{secondaryColor}}; padding: 25px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
-          <h4 style="margin: 0 0 15px 0; font-size: 18px; color: {{primaryColor}};">Service Fee Breakdown</h4>
-          <div style="font-size: 24px; font-weight: bold; margin-bottom: 15px; color: {{primaryColor}};">{{formatCurrency serviceFee}} SAR</div>
+          <h4 style="margin: 0 0 15px 0; font-size: 18px; color: {{primaryColor}};">Order Amount Breakdown</h4>
+          <div style="font-size: 24px; font-weight: bold; margin-bottom: 15px; color: {{primaryColor}};">{{formatCurrency orderAmount}} SAR</div>
           <p style="margin: 0; color: #666; font-size: 14px;">(excluding visa, IQAMA, medical check-ups, work permit and medical insurance policy)</p>
         </div>
 
@@ -198,12 +198,12 @@ export const businessEstablishmentContractTemplate: DocumentTemplate = {
           <tbody>
             <tr style="border-bottom: 1px solid #eee;">
               <td style="padding: 15px; font-weight: 500;">Upon signing the contract</td>
-              <td style="padding: 15px; text-align: right; font-weight: 600; color: {{secondaryColor}};">{{formatCurrency (divide serviceFee 2)}} SAR</td>
+              <td style="padding: 15px; text-align: right; font-weight: 600; color: {{secondaryColor}};">{{formatCurrency (divide orderAmount 2)}} SAR</td>
               <td style="padding: 15px; text-align: center; font-weight: 500;">50%</td>
             </tr>
             <tr style="background: {{lightBackgroundColor}};">
               <td style="padding: 15px; font-weight: 500;">Upon MISA issuance processing</td>
-              <td style="padding: 15px; text-align: right; font-weight: 600; color: {{secondaryColor}};">{{formatCurrency (divide serviceFee 2)}} SAR</td>
+              <td style="padding: 15px; text-align: right; font-weight: 600; color: {{secondaryColor}};">{{formatCurrency (divide orderAmount 2)}} SAR</td>
               <td style="padding: 15px; text-align: center; font-weight: 500;">50%</td>
             </tr>
           </tbody>
@@ -250,8 +250,8 @@ export const businessEstablishmentContractTemplate: DocumentTemplate = {
   `,
   placeholders: [
     {
-      key: "serviceFee",
-      label: "Service Fee Amount (SAR)",
+      key: "orderAmount",
+      label: "Order Amount (SAR)",
       type: "number",
       required: true,
     },
@@ -260,21 +260,21 @@ export const businessEstablishmentContractTemplate: DocumentTemplate = {
       label: "Primary Brand Color (hex)",
       type: "text",
       required: false,
-      defaultValue: "#1f2937",
+      defaultValue: "#14532d",
     },
     {
       key: "secondaryColor",
       label: "Secondary Brand Color (hex)",
       type: "text",
       required: false,
-      defaultValue: "#3b82f6",
+      defaultValue: "#22c55e",
     },
     {
       key: "lightBackgroundColor",
       label: "Light Background Color (hex)",
       type: "text",
       required: false,
-      defaultValue: "#f8fafc",
+      defaultValue: "#f0f9f0",
     },
   ],
   tags: [

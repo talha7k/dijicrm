@@ -17,36 +17,36 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
     <div class="poa-container" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1200px; margin: 0 auto; padding: 30px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); color: #333; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-radius: 10px;">
       <!-- Header -->
       <header class="poa-header" style="text-align: center; margin-bottom: 40px; position: relative;">
-        <div style="position: absolute; top: 0; left: 0; right: 0; height: 5px; background: linear-gradient(90deg, #1f2937, #3b82f6); border-radius: 10px 10px 0 0;"></div>
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 5px; background: linear-gradient(90deg, #14532d, #22c55e); border-radius: 10px 10px 0 0;"></div>
          <div class="company-logo" style="margin-bottom: 25px; padding: 20px; background: white; border-radius: 50%; display: inline-block; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
            {{#if companyLogo}}
            <img src="{{companyLogo}}" alt="Company Logo" style="max-width: 150px; max-height: 80px;" />
            {{/if}}
          </div>
-        <h1 style="color: #1f2937; font-size: 32px; margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">POWER OF ATTORNEY</h1>
-        <div style="width: 100px; height: 3px; background: #3b82f6; margin: 15px auto;"></div>
-        <h2 style="color: #1f2937; font-size: 18px; margin: 10px 0; font-weight: 500; opacity: 0.9;">وكالة قانونية</h2>
+         <h1 style="color: #14532d; font-size: 32px; margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">POWER OF ATTORNEY</h1>
+         <div style="width: 100px; height: 3px; background: #22c55e; margin: 15px auto;"></div>
+         <h2 style="color: #14532d; font-size: 18px; margin: 10px 0; font-weight: 500; opacity: 0.9;">وكالة قانونية</h2>
       </header>
 
       <!-- Principal Declaration -->
       <div class="principal-info" style="margin-bottom: 40px; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-        <h3 style="color: #1f2937; font-size: 20px; margin-bottom: 20px; position: relative; padding-bottom: 10px;">
-          <span style="background: white; padding-right: 15px;">Principal Declaration</span>
-          <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #3b82f6, #1f2937);"></div>
-        </h3>
+         <h3 style="color: #14532d; font-size: 20px; margin-bottom: 20px; position: relative; padding-bottom: 10px;">
+           <span style="background: white; padding-right: 15px;">Principal Declaration</span>
+           <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #22c55e, #14532d);"></div>
+         </h3>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
           <!-- Arabic Column -->
-          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-right: 4px solid #1f2937;">
-            <h4 style="color: #1f2937; margin-bottom: 15px; text-align: center; font-size: 16px;">النص العربي</h4>
+           <div style="background: #f0f9f0; padding: 20px; border-radius: 8px; border-right: 4px solid #14532d;">
+             <h4 style="color: #14532d; margin-bottom: 15px; text-align: center; font-size: 16px;">النص العربي</h4>
             <div style="direction: rtl; text-align: right; line-height: 1.8; font-size: 14px;">
                <p style="margin-bottom: 15px;">أنا الموقع أدناه، ({{clientFirstName}} {{clientLastName}})، ({{nationality}}) الجنسية، بموجب جواز سفر رقم ({{passportNumber}})، تاريخ الإصدار ({{passportIssueDate}})، تاريخ الانتهاء ({{passportExpirationDate}})، مكان الإصدار ({{passportIssuePlace}})، بصفتي ({{principalCapacity}})، في شركة ({{companyName}})، تأسست بموجب قوانين ({{country}})، سجل تجاري ({{companyRegistration}})، وعنوانها المسجل ({{companyAddress}})، ("الشركة")، وحسب الصلاحيات الممنوحة لي بموجب _____، أقمت ووكلت كلاً من:</p>
             </div>
           </div>
 
           <!-- English Column -->
-          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6;">
-            <h4 style="color: #3b82f6; margin-bottom: 15px; text-align: center; font-size: 16px;">English Text</h4>
+           <div style="background: #f0f9f0; padding: 20px; border-radius: 8px; border-left: 4px solid #22c55e;">
+             <h4 style="color: #22c55e; margin-bottom: 15px; text-align: center; font-size: 16px;">English Text</h4>
             <div style="line-height: 1.8; font-size: 14px;">
                <p style="margin-bottom: 15px;">I, the undersigned, {{clientFirstName}} {{clientLastName}}, {{nationality}} national, under passport number {{passportNumber}}, date of issuance {{passportIssueDate}}, expiration date {{passportExpirationDate}}, place of issuance {{passportIssuePlace}}, in my capacity as {{principalCapacity}} of {{companyName}}, an entity validly registered under the {{country}} laws with a commercial registration number {{companyRegistration}}, and a registered address at {{companyAddress}} (the "Company"), pursuant to powers granted to me under ____, hereby appoint and authorize:</p>
             </div>
@@ -56,77 +56,77 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
 
       <!-- Attorneys Section -->
       <div class="attorneys-section" style="margin-bottom: 40px;">
-        <h3 style="color: #1f2937; font-size: 20px; margin-bottom: 20px; position: relative; padding-bottom: 10px;">
-          <span style="background: white; padding-right: 15px;">Authorized Attorneys</span>
-          <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #3b82f6, #1f2937);"></div>
-        </h3>
+         <h3 style="color: #14532d; font-size: 20px; margin-bottom: 20px; position: relative; padding-bottom: 10px;">
+           <span style="background: white; padding-right: 15px;">Authorized Attorneys</span>
+           <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #22c55e, #14532d);"></div>
+         </h3>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
           <!-- Attorney 1 -->
-          <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid #3b82f6;">
-            <h4 style="color: #1f2937; margin-bottom: 15px; font-size: 16px;">1. شركة تبادل الكون القابضة</h4>
+           <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid #22c55e;">
+             <h4 style="color: #14532d; margin-bottom: 15px; font-size: 16px;">1. شركة تبادل الكون القابضة</h4>
             <div style="direction: rtl; text-align: right; margin-bottom: 10px;">
               <p style="margin: 0; font-size: 14px; color: #666;">الرقم الموحد: 7038490012</p>
               <p style="margin: 0; font-size: 14px; color: #666;">تاريخ الإصدار: 28/02/2024 م</p>
             </div>
             <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px;">
-              <h5 style="color: #3b82f6; margin-bottom: 8px; font-size: 14px;">TABADL ALKON HOLDING COMPANY</h5>
+              <h5 style="color: #22c55e; margin-bottom: 8px; font-size: 14px;">TABADL ALKON HOLDING COMPANY</h5>
               <p style="margin: 0; font-size: 14px; color: #666;">National No. 7038490012</p>
               <p style="margin: 0; font-size: 14px; color: #666;">Date of Issue. 28/02/2024</p>
             </div>
           </div>
 
           <!-- Attorney 2 -->
-          <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid #3b82f6;">
-            <h4 style="color: #1f2937; margin-bottom: 15px; font-size: 16px;">2. عمر بن عبدالله بن عبدالعزيز الصنيع</h4>
+           <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid #22c55e;">
+             <h4 style="color: #14532d; margin-bottom: 15px; font-size: 16px;">2. عمر بن عبدالله بن عبدالعزيز الصنيع</h4>
             <div style="direction: rtl; text-align: right; margin-bottom: 10px;">
               <p style="margin: 0; font-size: 14px; color: #666;">سجل مدني رقم: 1083945848</p>
               <p style="margin: 0; font-size: 14px; color: #666;">تاريخ انتهاء الهوية: 27/11/2025م</p>
             </div>
             <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px;">
-              <h5 style="color: #3b82f6; margin-bottom: 8px; font-size: 14px;">ALSANEEA, OMER ABDULLAH A.</h5>
+              <h5 style="color: #22c55e; margin-bottom: 8px; font-size: 14px;">ALSANEEA, OMER ABDULLAH A.</h5>
               <p style="margin: 0; font-size: 14px; color: #666;">Civil Register No. 1083945848</p>
               <p style="margin: 0; font-size: 14px; color: #666;">DOE. 27/11/2025</p>
             </div>
           </div>
 
           <!-- Attorney 3 -->
-          <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid #3b82f6;">
-            <h4 style="color: #1f2937; margin-bottom: 15px; font-size: 16px;">3. عمار بن عبد الله بن عبد العزيز الصنيع</h4>
+           <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid #22c55e;">
+             <h4 style="color: #14532d; margin-bottom: 15px; font-size: 16px;">3. عمار بن عبد الله بن عبد العزيز الصنيع</h4>
             <div style="direction: rtl; text-align: right; margin-bottom: 10px;">
               <p style="margin: 0; font-size: 14px; color: #666;">سجل مدني رقم: 1102047741</p>
               <p style="margin: 0; font-size: 14px; color: #666;">تاريخ انتهاء الهوية: 14/07/2029 م</p>
             </div>
             <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px;">
-              <h5 style="color: #3b82f6; margin-bottom: 8px; font-size: 14px;">ALSANEEA, AMAR ABDULLAH A.</h5>
+              <h5 style="color: #22c55e; margin-bottom: 8px; font-size: 14px;">ALSANEEA, AMAR ABDULLAH A.</h5>
               <p style="margin: 0; font-size: 14px; color: #666;">Civil Register No. 1102047741</p>
               <p style="margin: 0; font-size: 14px; color: #666;">DOE. 14/07/2029</p>
             </div>
           </div>
 
           <!-- Attorney 4 -->
-          <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid #3b82f6;">
-            <h4 style="color: #1f2937; margin-bottom: 15px; font-size: 16px;">4. نواف بن عبدالمحسن بن دحيم الحنتوشي العتيبي</h4>
+           <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid #22c55e;">
+             <h4 style="color: #14532d; margin-bottom: 15px; font-size: 16px;">4. نواف بن عبدالمحسن بن دحيم الحنتوشي العتيبي</h4>
             <div style="direction: rtl; text-align: right; margin-bottom: 10px;">
               <p style="margin: 0; font-size: 14px; color: #666;">سجل مدني رقم: 1061231245</p>
               <p style="margin: 0; font-size: 14px; color: #666;">تاريخ انتهاء الهوية: 02/03/2029</p>
             </div>
             <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px;">
-              <h5 style="color: #3b82f6; margin-bottom: 8px; font-size: 14px;">ALOTAIBI, NAWAF ABDULMOHSEN D.</h5>
+              <h5 style="color: #22c55e; margin-bottom: 8px; font-size: 14px;">ALOTAIBI, NAWAF ABDULMOHSEN D.</h5>
               <p style="margin: 0; font-size: 14px; color: #666;">Civil Register No. 1061231245</p>
               <p style="margin: 0; font-size: 14px; color: #666;">DOE. 02/03/2029</p>
             </div>
           </div>
 
           <!-- Attorney 5 -->
-          <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid #3b82f6;">
-            <h4 style="color: #1f2937; margin-bottom: 15px; font-size: 16px;">5. د. عبدالله بن عبدالعزيز بن عبدالله الصنيع</h4>
+           <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid #22c55e;">
+             <h4 style="color: #14532d; margin-bottom: 15px; font-size: 16px;">5. د. عبدالله بن عبدالعزيز بن عبدالله الصنيع</h4>
             <div style="direction: rtl; text-align: right; margin-bottom: 10px;">
               <p style="margin: 0; font-size: 14px; color: #666;">سجل مدني رقم: 1003990619</p>
               <p style="margin: 0; font-size: 14px; color: #666;">تاريخ انتهاء الهوية: 02/ 12 /2039 م</p>
             </div>
             <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px;">
-              <h5 style="color: #3b82f6; margin-bottom: 8px; font-size: 14px;">Dr. ALSANEEA, ABDULLAH ABDULAZIZ A.</h5>
+              <h5 style="color: #22c55e; margin-bottom: 8px; font-size: 14px;">Dr. ALSANEEA, ABDULLAH ABDULAZIZ A.</h5>
               <p style="margin: 0; font-size: 14px; color: #666;">Civil Register No. 1003990619</p>
               <p style="margin: 0; font-size: 14px; color: #666;">DOE. 02/12/2039</p>
             </div>
@@ -136,15 +136,15 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
 
       <!-- Powers Granted - Bilingual -->
       <div class="powers-section" style="margin-bottom: 40px;">
-        <h3 style="color: #1f2937; font-size: 20px; margin-bottom: 20px; position: relative; padding-bottom: 10px;">
-          <span style="background: white; padding-right: 15px;">Powers Granted</span>
-          <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #3b82f6, #1f2937);"></div>
-        </h3>
+         <h3 style="color: #14532d; font-size: 20px; margin-bottom: 20px; position: relative; padding-bottom: 10px;">
+           <span style="background: white; padding-right: 15px;">Powers Granted</span>
+           <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #22c55e, #14532d);"></div>
+         </h3>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
           <!-- Arabic Column -->
-          <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-right: 4px solid #1f2937;">
-            <h4 style="color: #1f2937; margin-bottom: 20px; text-align: center; font-size: 18px;">الصلاحيات الممنوحة (Arabic)</h4>
+           <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-right: 4px solid #14532d;">
+             <h4 style="color: #14532d; margin-bottom: 20px; text-align: center; font-size: 18px;">الصلاحيات الممنوحة (Arabic)</h4>
             <div style="direction: rtl; text-align: right; line-height: 1.8; font-size: 13px;">
               <p style="margin-bottom: 15px;">("الوكلاء الشرعيين")، جميعهم سعوديو الجنسية، وكلاء ينوبون عني بصفتي أعلاه، مجتمعين أو منفردين، ليقوموا مقام الشركة بتأسيس شركة ذات مسؤولية محدودة لشخص او عدد من الأشخاص وذلك وفقاً للأنظمة الواجبة التطبيق في المملكة العربية السعودية، وللوكلاء الشرعيين في سبيل ذلك القيام بما يلي:</p>
               <ol style="padding-right: 20px;">
@@ -168,8 +168,8 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
           </div>
 
           <!-- English Column -->
-          <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid #3b82f6;">
-            <h4 style="color: #3b82f6; margin-bottom: 20px; text-align: center; font-size: 18px;">Powers Granted (English)</h4>
+           <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 4px solid #22c55e;">
+             <h4 style="color: #22c55e; margin-bottom: 20px; text-align: center; font-size: 18px;">Powers Granted (English)</h4>
             <div style="line-height: 1.8; font-size: 13px;">
               <p style="margin-bottom: 15px;">("Attorneys"), all Saudi nationals, as attorneys representing me, jointly and/or severally, in my capacity mentioned above and on behalf of the Company with regards to the establishment of a professional limited liability company for sole or multiple shareholder in compliance with the applicable laws in the Kingdom of Saudi Arabia. For this purpose, the Attorneys are authorized to do the following:</p>
               <ol style="padding-left: 20px;">
@@ -196,21 +196,21 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
 
       <!-- Signatures Section -->
       <div class="signatures-section" style="margin-bottom: 40px;">
-        <h3 style="color: #1f2937; font-size: 20px; margin-bottom: 20px; position: relative; padding-bottom: 10px;">
-          <span style="background: white; padding-right: 15px;">Signatures</span>
-          <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #3b82f6, #1f2937);"></div>
-        </h3>
+         <h3 style="color: #14532d; font-size: 20px; margin-bottom: 20px; position: relative; padding-bottom: 10px;">
+           <span style="background: white; padding-right: 15px;">Signatures</span>
+           <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #22c55e, #14532d);"></div>
+         </h3>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
-          <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; border: 2px dashed #3b82f6;">
-            <h4 style="color: #1f2937; margin-bottom: 20px;">Principal Signature</h4>
+          <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; border: 2px dashed #22c55e;">
+            <h4 style="color: #14532d; margin-bottom: 20px;">Principal Signature</h4>
             <div style="height: 80px; border-bottom: 1px solid #ddd; margin-bottom: 15px;"></div>
               <p style="margin: 5px 0; font-size: 14px; color: #666;">Name: {{clientFirstName}} {{clientLastName}}</p>
             <p style="margin: 5px 0; font-size: 14px; color: #666;">Date: {{currentDate}}</p>
           </div>
 
-          <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; border: 2px dashed #1f2937;">
-            <h4 style="color: #3b82f6; margin-bottom: 20px;">Witness/Notary</h4>
+          <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; border: 2px dashed #14532d;">
+            <h4 style="color: #22c55e; margin-bottom: 20px;">Witness/Notary</h4>
             <div style="height: 80px; border-bottom: 1px solid #ddd; margin-bottom: 15px;"></div>
             <p style="margin: 5px 0; font-size: 14px; color: #666;">Name: ________________________</p>
             <p style="margin: 5px 0; font-size: 14px; color: #666;">Date: ________________________</p>
@@ -219,22 +219,22 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
       </div>
 
       <!-- Signature Text -->
-      <div class="signature-text" style="margin-bottom: 40px; background: #f8fafc; padding: 25px; border-radius: 8px; border: 2px solid #e2e8f0;">
+      <div class="signature-text" style="margin-bottom: 40px; background: #f0f9f0; padding: 25px; border-radius: 8px; border: 2px solid #e2e8f0;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <p style="margin: 0; font-size: 16px; color: #1f2937; font-weight: 500;">حررت هذه الوكالة وصدقت في ____.</p>
-          <p style="margin: 5px 0; font-size: 16px; color: #3b82f6; font-weight: 500;">This power of attorney is ratified and signed on _____.</p>
+          <p style="margin: 0; font-size: 16px; color: #14532d; font-weight: 500;">حررت هذه الوكالة وصدقت في ____.</p>
+          <p style="margin: 5px 0; font-size: 16px; color: #22c55e; font-weight: 500;">This power of attorney is ratified and signed on _____.</p>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
           <div style="text-align: center;">
             <p style="margin-bottom: 10px; font-size: 14px; color: #666;">التوقيع:</p>
-            <div style="height: 60px; border-bottom: 2px solid #1f2937; margin-bottom: 10px;"></div>
+            <div style="height: 60px; border-bottom: 2px solid #14532d; margin-bottom: 10px;"></div>
             <p style="margin: 0; font-size: 12px; color: #666;">Signature</p>
           </div>
 
           <div style="text-align: center;">
             <p style="margin-bottom: 10px; font-size: 14px; color: #666;">Signature:</p>
-            <div style="height: 60px; border-bottom: 2px solid #3b82f6; margin-bottom: 10px;"></div>
+            <div style="height: 60px; border-bottom: 2px solid #22c55e; margin-bottom: 10px;"></div>
             <p style="margin: 0; font-size: 12px; color: #666;">التوقيع</p>
           </div>
         </div>
@@ -250,19 +250,19 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
       </div>
 
       <!-- Footer -->
-      <footer class="poa-footer" style="text-align: center; margin-top: 50px; padding-top: 30px; border-top: 3px solid #3b82f6; position: relative;">
-        <div style="position: absolute; top: -3px; left: 50%; transform: translateX(-50%); width: 200px; height: 6px; background: linear-gradient(90deg, #1f2937, #3b82f6); border-radius: 3px;"></div>
+      <footer class="poa-footer" style="text-align: center; margin-top: 50px; padding-top: 30px; border-top: 3px solid #22c55e; position: relative;">
+        <div style="position: absolute; top: -3px; left: 50%; transform: translateX(-50%); width: 200px; height: 6px; background: linear-gradient(90deg, #14532d, #22c55e); border-radius: 3px;"></div>
          <div class="company-stamp" style="margin-bottom: 25px; display: inline-block; padding: 15px; background: white; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
            {{#if companyStamp}}
            <img src="{{companyStamp}}" alt="Company Stamp" style="max-width: 100px; max-height: 100px;" />
            {{/if}}
          </div>
-        <h4 style="color: #1f2937; font-size: 18px; margin: 0 0 10px 0; font-weight: 600;">{{companyName}}</h4>
-        <p style="font-size: 14px; color: #666; margin: 5px 0;">{{companyAddress}}</p>
-        <p style="font-size: 14px; color: #666; margin: 5px 0;">{{companyPhone}} | {{companyEmail}}</p>
-        <div style="margin-top: 20px; padding: 10px 20px; background: #f8fafc; border-radius: 20px; display: inline-block;">
-          <p style="font-size: 12px; color: #1f2937; margin: 0; font-weight: 500;">Generated on: {{currentDate}}</p>
-        </div>
+         <h4 style="color: #14532d; font-size: 18px; margin: 0 0 10px 0; font-weight: 600;">{{companyName}}</h4>
+         <p style="font-size: 14px; color: #666; margin: 5px 0;">{{companyAddress}}</p>
+         <p style="font-size: 14px; color: #666; margin: 5px 0;">{{companyPhone}} | {{companyEmail}}</p>
+         <div style="margin-top: 20px; padding: 10px 20px; background: #f0f9f0; border-radius: 20px; display: inline-block;">
+           <p style="font-size: 12px; color: #14532d; margin: 0; font-weight: 500;">Generated on: {{currentDate}}</p>
+         </div>
       </footer>
     </div>
   `,

@@ -176,8 +176,9 @@ export async function populateSystemVariables(
           variables.taxAmount = orderData.taxAmount || orderData.vatAmount || 0;
           variables.totalAmount = orderData.total || orderData.totalAmount || 0;
 
-          // For backward compatibility, also set 'total' as an alias for 'totalAmount'
+          // For backward compatibility, also set 'total' and 'orderAmount' as aliases for 'totalAmount'
           variables.total = variables.totalAmount;
+          variables.orderAmount = variables.totalAmount;
 
           // Calculate taxAmount if not provided but we have taxRate and subtotal
           if (!variables.taxAmount && variables.taxRate && variables.subtotal) {
@@ -185,6 +186,8 @@ export async function populateSystemVariables(
               (variables.subtotal * variables.taxRate) / 100;
             // Update totalAmount to include tax
             variables.totalAmount = variables.subtotal + variables.taxAmount;
+            // Also update orderAmount alias
+            variables.orderAmount = variables.totalAmount;
           }
           variables.discountAmount = orderData.discountAmount || 0;
           variables.currency = orderData.currency || "SAR";
@@ -233,6 +236,8 @@ export async function populateSystemVariables(
           variables[systemVar.key] = "Net 30 days";
         } else if (systemVar.key === "taxAmount") {
           variables[systemVar.key] = 0;
+        } else if (systemVar.key === "orderAmount") {
+          variables[systemVar.key] = variables.totalAmount || 0;
         } else {
           variables[systemVar.key] = getDefaultValueForType(systemVar.type);
         }
@@ -261,6 +266,7 @@ export async function populateSystemVariables(
       paymentTerms: "Net 30 days",
       taxAmount: 0,
       total: 0,
+      orderAmount: 0,
     };
 
     // Add fallback values for all system variables
@@ -279,6 +285,8 @@ export async function populateSystemVariables(
           fallbackVariables[systemVar.key] = "Net 30 days";
         } else if (systemVar.key === "taxAmount") {
           fallbackVariables[systemVar.key] = 0;
+        } else if (systemVar.key === "orderAmount") {
+          fallbackVariables[systemVar.key] = fallbackVariables.totalAmount || 0;
         } else {
           fallbackVariables[systemVar.key] = getDefaultValueForType(
             systemVar.type,
