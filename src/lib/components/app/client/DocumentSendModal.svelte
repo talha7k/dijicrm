@@ -46,26 +46,15 @@
 
    let selectedTemplates = $state<string[]>([]);
    let selectedCustomDocs = $state<string[]>([]);
-    let selectedOrderId = $state<string>("");
-    let emailSubject = $state("");
-    let emailMessage = $state("");
-    let loading = $state(false);
-
-    // Legal fields for POA template
-    let companyRegistration = $state("");
-    let nationality = $state("");
-    let principalCapacity = $state("");
-    let passportNumber = $state("");
-    let passportIssueDate = $state("");
-    let passportExpirationDate = $state("");
-    let passportIssuePlace = $state("");
-    let attorneys = $state("");
-
-    let generationProgress = $state({
-      current: 0,
-      total: 0,
-      currentDocument: "",
-    });
+   let selectedOrderId = $state<string>("");
+   let emailSubject = $state("");
+   let emailMessage = $state("");
+   let loading = $state(false);
+   let generationProgress = $state({
+     current: 0,
+     total: 0,
+     currentDocument: "",
+   });
 
    // Client data and generated documents
    let client = $state<UserProfile | null>(null);
@@ -104,9 +93,10 @@
     let logManager = $state<LogManager | null>(null);
     let currentLogs = $state<LogEntry[]>([]);
     let deliveryCheckInterval = $state<NodeJS.Timeout | null>(null);
-    let messageId = $state<string | null>(null);
-    let deliveryCheckCount = $state(0);
-    let maxDeliveryChecks = 30; // Stop checking after 5 minutes (30 * 10s)
+     let messageId = $state<string | null>(null);
+     let deliveryCheckCount = $state(0);
+     let maxDeliveryChecks = 30; // Stop checking after 5 minutes (30 * 10s)
+     let hasInitialized = $state(false);
 
     // Update current logs when log manager changes
     $effect(() => {
@@ -120,67 +110,69 @@
       }
     });
 
-    // Load data when modal opens
-    $effect(() => {
-      if (open) {
-        console.log("📧 [DOCUMENT SEND MODAL] Modal opened, checking SMTP config...");
+     // Load data when modal opens (with guard to prevent re-initialization)
+     $effect(() => {
+       if (open && !hasInitialized) {
+         console.log("📧 [DOCUMENT SEND MODAL] Modal opened, checking SMTP config...");
 
-        // Initialize log manager for this session
-        logManager = createLogManager({ maxEntries: 50 });
+         // Initialize log manager for this session
+         logManager = createLogManager({ maxEntries: 50 });
 
-        // Check SMTP config from company context (one-time check, no listener)
-        const companyData = get(companyContext);
-        const smtpConfig = companyData?.data?.smtpConfig;
-        console.log("📧 [DOCUMENT SEND MODAL] Full company context data:", companyData);
-        console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available on modal open:", !!smtpConfig);
-        console.log("📧 [DOCUMENT SEND MODAL] SMTP Config details:", smtpConfig);
-        console.log("📧 [DOCUMENT SEND MODAL] Company data loading:", companyData?.loading);
-        smtpConfigured = !!smtpConfig;
-        smtpLoading = companyData?.loading || false;
+         // Check SMTP config from company context (one-time check, no listener)
+         const companyData = get(companyContext);
+         const smtpConfig = companyData?.data?.smtpConfig;
+         console.log("📧 [DOCUMENT SEND MODAL] Full company context data:", companyData);
+         console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available on modal open:", !!smtpConfig);
+         console.log("📧 [DOCUMENT SEND MODAL] SMTP Config details:", smtpConfig);
+         console.log("📧 [DOCUMENT SEND MODAL] Company data loading:", companyData?.loading);
+         smtpConfigured = !!smtpConfig;
+         smtpLoading = companyData?.loading || false;
 
-        // Load client orders
-        ordersStore.loadClientOrders(clientId);
+         // Load client orders
+         ordersStore.loadClientOrders(clientId);
 
-       // Subscribe to templates store
-       const unsubscribeTemplates = documentTemplatesStore.subscribe((state) => {
-         availableTemplates = state.data.map((template: any) => ({
-           id: template.id,
-           name: template.name,
-           description: template.description || "",
+         // Subscribe to templates store
+         const unsubscribeTemplates = documentTemplatesStore.subscribe((state) => {
+           console.log("📧 [DOCUMENT SEND MODAL] Templates store state:", state);
+           availableTemplates = state.data.map((template: any) => ({
+             id: template.id,
+             name: template.name,
+             description: template.description || "",
+           }));
+           console.log("📧 [DOCUMENT SEND MODAL] Available templates updated:", availableTemplates.length);
+         });
+
+        // Subscribe to orders store
+        const unsubscribeOrders = ordersStore.subscribe((state) => {
+          orders = state.data || [];
+        });
+
+        // Subscribe to client documents store
+       const unsubscribeDocuments = clientDocumentsStore.subscribe((state) => {
+         customDocuments = state.documents.map((doc: any) => ({
+           id: doc.id,
+           name:
+             doc.data?.documentName ||
+             doc.data?.title ||
+             `Document ${doc.id.slice(-6)}`,
+           uploadedAt: doc.generatedAt?.toDate() || new Date(),
+           pdfUrl: doc.pdfUrl,
+           fileType: "application/pdf",
          }));
        });
 
-       // Subscribe to orders store
-       const unsubscribeOrders = ordersStore.subscribe((state) => {
-         orders = state.data || [];
-       });
-
-       // Subscribe to client documents store
-      const unsubscribeDocuments = clientDocumentsStore.subscribe((state) => {
-        customDocuments = state.documents.map((doc: any) => ({
-          id: doc.id,
-          name:
-            doc.data?.documentName ||
-            doc.data?.title ||
-            `Document ${doc.id.slice(-6)}`,
-          uploadedAt: doc.generatedAt?.toDate() || new Date(),
-          pdfUrl: doc.pdfUrl,
-          fileType: "application/pdf",
-        }));
+      // Subscribe to client management store to get client data
+      const unsubscribeClient = clientManagementStore.subscribe((state) => {
+        client = state.clients.find((c: any) => c.uid === clientId) || null;
       });
 
-       // Subscribe to client management store to get client data
-       const unsubscribeClient = clientManagementStore.subscribe((state) => {
-         client = state.clients.find((c: any) => c.uid === clientId) || null;
-         // Prefill legal fields with client data
-         if (client) {
-           // name is already available from client data
-         }
-       });
+       // Load templates and client documents
+       console.log("📧 [DOCUMENT SEND MODAL] Loading templates...");
+       documentTemplatesStore.loadTemplates();
+       console.log("📧 [DOCUMENT SEND MODAL] Loading client documents...");
+       clientDocumentsStore.loadClientDocuments(clientId);
 
-      // Load templates and client documents
-      documentTemplatesStore.loadTemplates();
-      clientDocumentsStore.loadClientDocuments(clientId);
+      hasInitialized = true;
 
         return () => {
           unsubscribeTemplates();
@@ -188,8 +180,8 @@
           unsubscribeDocuments();
           unsubscribeClient();
         };
-    }
-  });
+      }
+    });
 
   function handleTemplateToggle(templateId: string, checked: boolean) {
     if (checked) {
@@ -213,32 +205,12 @@
      return name.includes('invoice') || name.includes('order') || description.includes('invoice') || description.includes('order');
    }
 
-  function hasOrderTypeSelectedTemplates(): boolean {
-    return selectedTemplates.some(templateId => {
-      const template = availableTemplates.find(t => t.id === templateId);
-      return template && isOrderTypeTemplate(template);
-    });
-  }
-
-  function isPOATemplateSelected(): boolean {
-    return selectedTemplates.some(templateId => {
-      const template = availableTemplates.find(t => t.id === templateId);
-      return template && template.name.toLowerCase().includes('power of attorney');
-    });
-  }
-
-  function areLegalFieldsComplete(): boolean {
-    return !!(
-      companyRegistration &&
-      nationality &&
-      principalCapacity &&
-      passportNumber &&
-      passportIssueDate &&
-      passportExpirationDate &&
-      passportIssuePlace &&
-      attorneys
-    );
-  }
+   function hasOrderTypeSelectedTemplates(): boolean {
+     return selectedTemplates.some(templateId => {
+       const template = availableTemplates.find(t => t.id === templateId);
+       return template && isOrderTypeTemplate(template);
+     });
+   }
 
   async function handlePreview(templateId: string) {
     if (!client) {
@@ -266,20 +238,10 @@
         // Map client data to template variables
         const templateData = mapClientDataToTemplate(client, selectedOrder);
 
-            // Override with actual company name
-            templateData.companyName = companyName;
+           // Override with actual company name
+           templateData.companyName = companyName;
 
-            // Add legal fields if provided
-            if (companyRegistration) templateData.companyRegistration = companyRegistration;
-            if (nationality) templateData.nationality = nationality;
-            if (principalCapacity) templateData.principalCapacity = principalCapacity;
-            if (passportNumber) templateData.passportNumber = passportNumber;
-            if (passportIssueDate) templateData.passportIssueDate = passportIssueDate;
-            if (passportExpirationDate) templateData.passportExpirationDate = passportExpirationDate;
-            if (passportIssuePlace) templateData.passportIssuePlace = passportIssuePlace;
-            if (attorneys) templateData.attorneys = attorneys;
-
-            // Add VAT number for ZATCA QR code
+           // Add VAT number for ZATCA QR code
            const companyVatNumber = get(companyContext).data?.company?.vatNumber;
            if (companyVatNumber) {
              templateData.vatRegistrationNumber = companyVatNumber;
@@ -337,21 +299,11 @@
        // Get selected order if available
        const selectedOrder = orders.find(o => o.id === selectedOrderId);
 
-        // Map client data to template variables
-        const templateData = mapClientDataToTemplate(client, selectedOrder);
-        templateData.companyName = companyName;
+       // Map client data to template variables
+       const templateData = mapClientDataToTemplate(client, selectedOrder);
+       templateData.companyName = companyName;
 
-        // Add legal fields if provided
-        if (companyRegistration) templateData.companyRegistration = companyRegistration;
-        if (nationality) templateData.nationality = nationality;
-        if (principalCapacity) templateData.principalCapacity = principalCapacity;
-        if (passportNumber) templateData.passportNumber = passportNumber;
-        if (passportIssueDate) templateData.passportIssueDate = passportIssueDate;
-        if (passportExpirationDate) templateData.passportExpirationDate = passportExpirationDate;
-        if (passportIssuePlace) templateData.passportIssuePlace = passportIssuePlace;
-        if (attorneys) templateData.attorneys = attorneys;
-
-         // Add VAT number for ZATCA QR code
+        // Add VAT number for ZATCA QR code
         const companyVatNumber = get(companyContext).data?.company?.vatNumber;
         if (companyVatNumber) {
           templateData.vatRegistrationNumber = companyVatNumber;
@@ -770,18 +722,13 @@
       deliveryCheckInterval = null;
     }
 
+    // Reset initialization flag
+    hasInitialized = false;
+
   selectedTemplates = [];
   selectedCustomDocs = [];
   emailSubject = "";
   emailMessage = "";
-  companyRegistration = "";
-  nationality = "";
-  principalCapacity = "";
-  passportNumber = "";
-  passportIssueDate = "";
-  passportExpirationDate = "";
-  passportIssuePlace = "";
-  attorneys = "";
   generatedDocuments = [];
   generationProgress = { current: 0, total: 0, currentDocument: "" };
   deliveryCheckCount = 0;
@@ -871,21 +818,21 @@
                   </p>
                 </div>
                 <div class="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onclick={() => handlePreview(template.id)}
-                      disabled={!client || previewLoading || (isOrderTypeTemplate(template) && !selectedOrderId) || (isPOATemplateSelected() && !areLegalFieldsComplete())}
-                    >
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onclick={() => handlePreview(template.id)}
+                     disabled={!client || previewLoading || (isOrderTypeTemplate(template) && !selectedOrderId)}
+                   >
                      {previewLoading ? "Loading..." : "Preview"}
                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onclick={() =>
-                        downloadDocument(template.id, template.name, "pdf")}
-                      disabled={!client || (isOrderTypeTemplate(template) && !selectedOrderId) || (isPOATemplateSelected() && !areLegalFieldsComplete())}
-                    >
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onclick={() =>
+                       downloadDocument(template.id, template.name, "pdf")}
+                     disabled={!client || (isOrderTypeTemplate(template) && !selectedOrderId)}
+                   >
                      Download PDF
                    </Button>
                 </div>
@@ -944,52 +891,11 @@
                  <Select.Item value={order.id}>{order.title} - {order.totalAmount ? `$${order.totalAmount}` : order.status}</Select.Item>
                {/each}
              </Select.Content>
-        </Select.Root>
-          </div>
-        {/if}
+           </Select.Root>
+         </div>
+       {/if}
 
-        <!-- Legal Fields for POA -->
-        {#if isPOATemplateSelected()}
-          <div class="space-y-3">
-            <Label class="text-base font-medium">Legal Fields for Power of Attorney</Label>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="space-y-2">
-                <Label for="companyRegistration">Company Registration Number</Label>
-                <Input id="companyRegistration" bind:value={companyRegistration} placeholder="Enter company registration number" />
-              </div>
-              <div class="space-y-2">
-                <Label for="nationality">Nationality</Label>
-                <Input id="nationality" bind:value={nationality} placeholder="Enter nationality" />
-              </div>
-              <div class="space-y-2">
-                <Label for="principalCapacity">Principal Capacity</Label>
-                <Input id="principalCapacity" bind:value={principalCapacity} placeholder="Enter principal capacity" />
-              </div>
-              <div class="space-y-2">
-                <Label for="passportNumber">Passport Number</Label>
-                <Input id="passportNumber" bind:value={passportNumber} placeholder="Enter passport number" />
-              </div>
-              <div class="space-y-2">
-                <Label for="passportIssueDate">Passport Issue Date</Label>
-                <Input id="passportIssueDate" type="date" bind:value={passportIssueDate} />
-              </div>
-              <div class="space-y-2">
-                <Label for="passportExpirationDate">Passport Expiration Date</Label>
-                <Input id="passportExpirationDate" type="date" bind:value={passportExpirationDate} />
-              </div>
-              <div class="space-y-2">
-                <Label for="passportIssuePlace">Passport Issue Place</Label>
-                <Input id="passportIssuePlace" bind:value={passportIssuePlace} placeholder="Enter passport issue place" />
-              </div>
-              <div class="space-y-2">
-                <Label for="attorneys">Authorized Attorneys (JSON)</Label>
-                <Textarea id="attorneys" bind:value={attorneys} placeholder="Enter attorneys as JSON array" rows={3} />
-              </div>
-            </div>
-          </div>
-        {/if}
-
-        <!-- Email Customization -->
+       <!-- Email Customization -->
       <Card.Root>
         <Card.Header>
           <Card.Title class="text-base">Email Message</Card.Title>
@@ -1092,17 +998,16 @@
     {/if}
 
     <Dialog.Footer>
-       <Button variant="outline" onclick={handleCancel} disabled={loading}>
-         Cancel
-       </Button>
-          <Button
-            onclick={handleSend}
-            disabled={loading || smtpLoading ||
-              (selectedTemplates.length === 0 && selectedCustomDocs.length === 0) ||
-              !smtpConfigured ||
-              (hasOrderTypeSelectedTemplates() && !selectedOrderId) ||
-              (isPOATemplateSelected() && !areLegalFieldsComplete())}
-          >
+      <Button variant="outline" onclick={handleCancel} disabled={loading}>
+        Cancel
+      </Button>
+         <Button
+           onclick={handleSend}
+           disabled={loading || smtpLoading ||
+             (selectedTemplates.length === 0 && selectedCustomDocs.length === 0) ||
+             !smtpConfigured ||
+             (hasOrderTypeSelectedTemplates() && !selectedOrderId)}
+         >
         {#if loading}
           {#if generationProgress.total > 0}
             Generating ({generationProgress.current}/{generationProgress.total})
@@ -1133,18 +1038,19 @@
         deliveryCheckInterval = null;
       }
 
-      showProgressDialog = false;
-      // Reset form when user closes the dialog
-      selectedTemplates = [];
-      selectedCustomDocs = [];
-      emailSubject = "";
-      emailMessage = "";
-      generatedDocuments = [];
-      generationProgress = { current: 0, total: 0, currentDocument: "" };
-      messageId = null;
-      deliveryCheckCount = 0;
-      open = false;
-      onSendComplete?.();
+       showProgressDialog = false;
+       // Reset form when user closes the dialog
+       selectedTemplates = [];
+       selectedCustomDocs = [];
+       emailSubject = "";
+       emailMessage = "";
+       generatedDocuments = [];
+       generationProgress = { current: 0, total: 0, currentDocument: "" };
+       messageId = null;
+       deliveryCheckCount = 0;
+       hasInitialized = false; // Reset for next open
+       open = false;
+       onSendComplete?.();
     }}
   />
 {/if}

@@ -265,11 +265,16 @@ class EmailService {
       );
 
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        sentDate: doc.data().sentDate?.toDate() || new Date(),
-      }));
+      return querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          sentDate: data.sentDate?.toDate
+            ? data.sentDate.toDate()
+            : data.sentDate || new Date(),
+        };
+      });
     } catch (error) {
       console.error("Failed to get email history:", error);
       return [];

@@ -40,7 +40,7 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
           <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-right: 4px solid #1f2937;">
             <h4 style="color: #1f2937; margin-bottom: 15px; text-align: center; font-size: 16px;">النص العربي</h4>
             <div style="direction: rtl; text-align: right; line-height: 1.8; font-size: 14px;">
-               <p style="margin-bottom: 15px;">أنا الموقع أدناه، ({{clientFirstName}} {{clientLastName}})، ({{nationality}}) الجنسية، بموجب جواز سفر رقم ({{passportNumber}})، تاريخ الإصدار ({{passportIssueDate}})، تاريخ الانتهاء ({{passportExpirationDate}})، مكان الإصدار ({{passportIssuePlace}})، بصفتي ({{principalCapacity}})، في شركة ({{companyName}})، تأسست بموجب قوانين ({{countryOfOrigin}})، سجل تجاري ({{companyRegistration}})، وعنوانها المسجل ({{companyAddress}})، ("الشركة")، وحسب الصلاحيات الممنوحة لي بموجب _____، أقمت ووكلت كلاً من:</p>
+               <p style="margin-bottom: 15px;">أنا الموقع أدناه، ({{clientFirstName}} {{clientLastName}})، ({{nationality}}) الجنسية، بموجب جواز سفر رقم ({{passportNumber}})، تاريخ الإصدار ({{passportIssueDate}})، تاريخ الانتهاء ({{passportExpirationDate}})، مكان الإصدار ({{passportIssuePlace}})، بصفتي ({{principalCapacity}})، في شركة ({{companyName}})، تأسست بموجب قوانين ({{country}})، سجل تجاري ({{companyRegistration}})، وعنوانها المسجل ({{companyAddress}})، ("الشركة")، وحسب الصلاحيات الممنوحة لي بموجب _____، أقمت ووكلت كلاً من:</p>
             </div>
           </div>
 
@@ -48,7 +48,7 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
           <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6;">
             <h4 style="color: #3b82f6; margin-bottom: 15px; text-align: center; font-size: 16px;">English Text</h4>
             <div style="line-height: 1.8; font-size: 14px;">
-               <p style="margin-bottom: 15px;">I, the undersigned, {{clientFirstName}} {{clientLastName}}, {{nationality}} national, under passport number {{passportNumber}}, date of issuance {{passportIssueDate}}, expiration date {{passportExpirationDate}}, place of issuance {{passportIssuePlace}}, in my capacity as {{principalCapacity}} of {{companyName}}, an entity validly registered under the {{countryOfOrigin}} laws with a commercial registration number {{companyRegistration}}, and a registered address at {{companyAddress}} (the "Company"), pursuant to powers granted to me under ____, hereby appoint and authorize:</p>
+               <p style="margin-bottom: 15px;">I, the undersigned, {{clientFirstName}} {{clientLastName}}, {{nationality}} national, under passport number {{passportNumber}}, date of issuance {{passportIssueDate}}, expiration date {{passportExpirationDate}}, place of issuance {{passportIssuePlace}}, in my capacity as {{principalCapacity}} of {{companyName}}, an entity validly registered under the {{country}} laws with a commercial registration number {{companyRegistration}}, and a registered address at {{companyAddress}} (the "Company"), pursuant to powers granted to me under ____, hereby appoint and authorize:</p>
             </div>
           </div>
         </div>
@@ -273,7 +273,6 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
       type: "text",
       required: true,
     },
-
     {
       key: "nationality",
       label: "Nationality",
@@ -281,8 +280,8 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
       required: true,
     },
     {
-      key: "capacity",
-      label: "Capacity",
+      key: "principalCapacity",
+      label: "Principal Capacity",
       type: "text",
       required: true,
     },

@@ -7,6 +7,7 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Label } from '$lib/components/ui/label/index.js';
+  import { Textarea } from '$lib/components/ui/textarea/index.js';
   import { Switch } from '$lib/components/ui/switch/index.js';
   import * as Card from '$lib/components/ui/card/index.js';
   import { toast } from 'svelte-sonner';
@@ -22,17 +23,25 @@
   let saving = $state(false);
 
   let formData = $state({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phoneNumber: '',
-    isActive: true,
-    street: '',
-    city: '',
-    state: '',
-    country: '',
-    postalCode: ''
-  });
+     firstName: '',
+     lastName: '',
+     email: '',
+     phoneNumber: '',
+     isActive: true,
+     street: '',
+     city: '',
+     state: '',
+     country: '',
+     postalCode: '',
+     companyRegistration: '',
+     nationality: '',
+     principalCapacity: '',
+     passportNumber: '',
+     passportIssueDate: '',
+     passportExpirationDate: '',
+     passportIssuePlace: '',
+     attorneys: ''
+   });
 
   let errors = $state({
     firstName: '',
@@ -50,18 +59,26 @@
     // Load client data
     client = clientStore.getClient(clientId);
     if (client) {
-      formData = {
-        firstName: client.firstName || '',
-        lastName: client.lastName || '',
-        email: client.email,
-        phoneNumber: client.phoneNumber || '',
-        isActive: client.isActive,
-        street: client.address?.street || '',
-        city: client.address?.city || '',
-        state: client.address?.state || '',
-        country: client.address?.country || '',
-        postalCode: client.address?.postalCode || ''
-      };
+       formData = {
+         firstName: client.firstName || '',
+         lastName: client.lastName || '',
+         email: client.email,
+         phoneNumber: client.phoneNumber || '',
+         isActive: client.isActive,
+         street: client.address?.street || '',
+         city: client.address?.city || '',
+         state: client.address?.state || '',
+         country: client.address?.country || '',
+         postalCode: client.address?.postalCode || '',
+         companyRegistration: client.legalInfo?.companyRegistration || '',
+         nationality: client.legalInfo?.nationality || '',
+         principalCapacity: client.legalInfo?.principalCapacity || '',
+         passportNumber: client.legalInfo?.passportNumber || '',
+         passportIssueDate: client.legalInfo?.passportIssueDate || '',
+         passportExpirationDate: client.legalInfo?.passportExpirationDate || '',
+         passportIssuePlace: client.legalInfo?.passportIssuePlace || '',
+         attorneys: client.legalInfo?.attorneys || ''
+       };
     }
     loading = false;
   });
@@ -107,15 +124,25 @@
         postalCode: formData.postalCode
       } : undefined;
 
-      await clientStore.updateClient(clientId, {
-        displayName: `${formData.firstName} ${formData.lastName}`,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phoneNumber: formData.phoneNumber || undefined,
-        isActive: formData.isActive,
-        address
-      });
+       await clientStore.updateClient(clientId, {
+         displayName: `${formData.firstName} ${formData.lastName}`,
+         firstName: formData.firstName,
+         lastName: formData.lastName,
+         email: formData.email,
+         phoneNumber: formData.phoneNumber || undefined,
+         isActive: formData.isActive,
+         address,
+         legalInfo: {
+           companyRegistration: formData.companyRegistration || undefined,
+           nationality: formData.nationality || undefined,
+           principalCapacity: formData.principalCapacity || undefined,
+           passportNumber: formData.passportNumber || undefined,
+           passportIssueDate: formData.passportIssueDate || undefined,
+           passportExpirationDate: formData.passportExpirationDate || undefined,
+           passportIssuePlace: formData.passportIssuePlace || undefined,
+           attorneys: formData.attorneys || undefined
+         }
+       });
 
       toast.success('Client updated successfully!');
       goto('/clients');
@@ -268,9 +295,47 @@
                 disabled={saving}
               />
             </div>
-          </div>
+           </div>
 
-          <div class="flex items-center justify-between p-4 border rounded-lg">
+           <div class="space-y-4">
+             <Label>Legal Information (Optional)</Label>
+             <div class="grid grid-cols-2 gap-4">
+               <div class="space-y-2">
+                 <Label for="companyRegistration">Company Registration</Label>
+                 <Input id="companyRegistration" bind:value={formData.companyRegistration} placeholder="Enter company registration" disabled={saving} />
+               </div>
+               <div class="space-y-2">
+                 <Label for="nationality">Nationality</Label>
+                 <Input id="nationality" bind:value={formData.nationality} placeholder="Enter nationality" disabled={saving} />
+               </div>
+               <div class="space-y-2">
+                 <Label for="principalCapacity">Principal Capacity</Label>
+                 <Input id="principalCapacity" bind:value={formData.principalCapacity} placeholder="Enter principal capacity" disabled={saving} />
+               </div>
+               <div class="space-y-2">
+                 <Label for="passportNumber">Passport Number</Label>
+                 <Input id="passportNumber" bind:value={formData.passportNumber} placeholder="Enter passport number" disabled={saving} />
+               </div>
+               <div class="space-y-2">
+                 <Label for="passportIssueDate">Passport Issue Date</Label>
+                 <Input id="passportIssueDate" type="date" bind:value={formData.passportIssueDate} disabled={saving} />
+               </div>
+               <div class="space-y-2">
+                 <Label for="passportExpirationDate">Passport Expiration Date</Label>
+                 <Input id="passportExpirationDate" type="date" bind:value={formData.passportExpirationDate} disabled={saving} />
+               </div>
+               <div class="space-y-2">
+                 <Label for="passportIssuePlace">Passport Issue Place</Label>
+                 <Input id="passportIssuePlace" bind:value={formData.passportIssuePlace} placeholder="Enter passport issue place" disabled={saving} />
+               </div>
+               <div class="space-y-2">
+                 <Label for="attorneys">Authorized Attorneys (JSON)</Label>
+                 <Textarea id="attorneys" bind:value={formData.attorneys} placeholder="Enter attorneys as JSON array" rows={3} disabled={saving} />
+               </div>
+             </div>
+           </div>
+
+           <div class="flex items-center justify-between p-4 border rounded-lg">
             <div class="space-y-1">
               <Label for="isActive">Account Status</Label>
               <p class="text-sm text-muted-foreground">

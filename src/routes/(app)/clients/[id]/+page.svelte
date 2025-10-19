@@ -115,14 +115,9 @@
 
   onMount(async () => {
     try {
-      // Load client data
-      client = clientStore.getClient(clientId);
-      if (!client) {
-        toast.error('Client not found');
-        goto('/clients');
-        return;
-      }
-
+      // Load clients first
+      await clientStore.loadClients();
+      
       // Load products and orders
       await productStore.loadProducts();
       productStore.subscribe((state) => {
@@ -138,17 +133,34 @@
          clientOrders = state.data || [];
        });
 
-      // Load email history for this client
-      if (client.email) {
-        await emailHistoryStore.loadEmailsForClient(client.email);
-      }
-
     } catch (error) {
       console.error('Error loading client data:', error);
       toast.error('Failed to load client data');
     } finally {
       loading = false;
     }
+  });
+  
+  // Reactive effect to get client data
+  $effect(() => {
+    const unsubscribe = clientStore.subscribe((state) => {
+      if (!state.loading) {
+        const foundClient = state.clients.find((c) => c.uid === clientId);
+        if (foundClient) {
+          client = foundClient;
+          // Load email history for this client
+          if (foundClient.email && emailHistory.data.length === 0) {
+            emailHistoryStore.loadEmailsForClient(foundClient.email);
+          }
+        } else if (!state.error && state.clients.length > 0) {
+          // Client not found but clients are loaded
+          toast.error('Client not found');
+          goto('/clients');
+        }
+      }
+    });
+    
+    return unsubscribe;
   });
 
   function handleBack() {

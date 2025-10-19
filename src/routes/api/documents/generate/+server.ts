@@ -359,6 +359,10 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     const legalDefaults = {
       companyRegistration: mergedData.companyRegistration || "123456789",
       nationality: mergedData.nationality || "Saudi",
+      principalName:
+        mergedData.principalName || mergedData.clientName || "John Doe",
+      principalNationality:
+        mergedData.principalNationality || mergedData.nationality || "Saudi",
       principalCapacity: mergedData.principalCapacity || "Director",
       passportNumber: mergedData.passportNumber || "P123456789",
       passportIssueDate: mergedData.passportIssueDate || "2020-01-01",

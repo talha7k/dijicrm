@@ -72,6 +72,8 @@ export async function populateSystemVariables(
         variables.clientName =
           clientData.displayName ||
           `${clientData.firstName || ""} ${clientData.lastName || ""}`.trim();
+        variables.clientFirstName = clientData.firstName || "";
+        variables.clientLastName = clientData.lastName || "";
         variables.clientEmail = clientData.email;
         variables.clientPhone = clientData.phoneNumber || "";
         variables.clientAddress = clientData.address
@@ -79,6 +81,31 @@ export async function populateSystemVariables(
           : "";
         variables.clientVatNumber = ""; // Not available in UserProfile
         variables.clientCompanyName = ""; // Not available in UserProfile
+
+        // Legal information from client's legalInfo
+        if (clientData.legalInfo) {
+          variables.companyRegistration =
+            clientData.legalInfo.companyRegistration ||
+            variables.companyRegistration;
+          variables.nationality =
+            clientData.legalInfo.nationality || variables.nationality;
+          variables.principalCapacity =
+            clientData.legalInfo.principalCapacity ||
+            variables.principalCapacity;
+          variables.passportNumber =
+            clientData.legalInfo.passportNumber || variables.passportNumber;
+          variables.passportIssueDate =
+            clientData.legalInfo.passportIssueDate ||
+            variables.passportIssueDate;
+          variables.passportExpirationDate =
+            clientData.legalInfo.passportExpirationDate ||
+            variables.passportExpirationDate;
+          variables.passportIssuePlace =
+            clientData.legalInfo.passportIssuePlace ||
+            variables.passportIssuePlace;
+          variables.attorneys =
+            clientData.legalInfo.attorneys || variables.attorneys;
+        }
       }
     }
 
