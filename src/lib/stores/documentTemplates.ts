@@ -40,12 +40,21 @@ function createDocumentTemplatesStore() {
       }
     },
 
-    loadTemplates: async () => {
+    loadTemplates: async (companyId?: string) => {
+      console.log(
+        "🔍 [TEMPLATES STORE] loadTemplates called with companyId:",
+        companyId,
+      );
       store.update((state) => ({ ...state, loading: true, error: null }));
 
       try {
-        const companyId = get(activeCompanyId);
-        if (!companyId) {
+        const activeCompanyIdValue = companyId || get(activeCompanyId);
+        console.log(
+          "🔍 [TEMPLATES STORE] activeCompanyIdValue:",
+          activeCompanyIdValue,
+        );
+        if (!activeCompanyIdValue) {
+          console.error("❌ [TEMPLATES STORE] No active company ID");
           store.update((state) => ({
             ...state,
             error: "No active company",
@@ -60,9 +69,13 @@ function createDocumentTemplatesStore() {
         }
 
         // Query Firebase for templates
+        console.log(
+          "🔍 [TEMPLATES STORE] Querying templates for company:",
+          activeCompanyIdValue,
+        );
         const templatesQuery = query(
           collection(db, "documentTemplates"),
-          where("companyId", "==", companyId),
+          where("companyId", "==", activeCompanyIdValue),
           where("isActive", "==", true),
         );
 
@@ -70,10 +83,22 @@ function createDocumentTemplatesStore() {
         unsubscribe = onSnapshot(
           templatesQuery,
           (querySnapshot) => {
+            console.log(
+              "🔍 [TEMPLATES STORE] Query snapshot received:",
+              querySnapshot.size,
+              "documents",
+            );
             const templates: DocumentTemplate[] = [];
 
             querySnapshot.forEach((doc) => {
               const data = doc.data();
+              console.log(
+                "🔍 [TEMPLATES STORE] Template found:",
+                doc.id,
+                data.name,
+                "isActive:",
+                data.isActive,
+              );
               templates.push({
                 id: doc.id,
                 ...data,
@@ -82,15 +107,38 @@ function createDocumentTemplatesStore() {
               } as DocumentTemplate);
             });
 
-            store.update((state) => ({
-              ...state,
-              data: templates,
-              loading: false,
-              error: null,
-            }));
+            console.log(
+              "🔍 [TEMPLATES STORE] Total templates loaded:",
+              templates.length,
+            );
+            console.log(
+              "🔍 [TEMPLATES STORE] Template objects:",
+              templates.map((t) => ({
+                id: t.id,
+                name: t.name,
+                isActive: t.isActive,
+              })),
+            );
+
+            store.update((state) => {
+              console.log(
+                "🔍 [TEMPLATES STORE] Updating store with",
+                templates.length,
+                "templates",
+              );
+              return {
+                ...state,
+                data: templates,
+                loading: false,
+                error: null,
+              };
+            });
           },
           (error) => {
-            console.error("Error loading templates:", error);
+            console.error(
+              "❌ [TEMPLATES STORE] Error loading templates:",
+              error,
+            );
             store.update((state) => ({
               ...state,
               error: error.message,
@@ -170,10 +218,11 @@ export const documentTemplatesStore = createDocumentTemplatesStore();
 
 export async function getDocumentTemplate(
   templateId: string,
+  companyId?: string,
 ): Promise<DocumentTemplate | null> {
   try {
-    const companyId = get(activeCompanyId);
-    if (!companyId) {
+    const activeCompanyIdValue = companyId || get(activeCompanyId);
+    if (!activeCompanyIdValue) {
       throw new Error("No active company");
     }
 

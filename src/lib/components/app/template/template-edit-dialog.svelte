@@ -146,41 +146,42 @@
      </CardContent>
    </Card>
 
-   <!-- HTML Editor -->
-   <Card>
-     <CardHeader>
-       <CardTitle>HTML Template Content</CardTitle>
-       <CardDescription>
-         Write your HTML template with variable placeholders. Use {'{{variableName}}'} syntax for dynamic content.
-       </CardDescription>
-     </CardHeader>
-     <CardContent>
-       <BasicEditor
-         initialContent={editorContent}
-         showVariableReference={false}
-         showCssEditor={false}
-         {showPrintPreview}
-         bind:content={editorContent}
-       />
-     </CardContent>
-   </Card>
+    <!-- NOTE: Keep action buttons above the editor -->
+    <!-- Actions -->
+    <div class="flex justify-between">
+      <Button variant="outline" onclick={onCancel}>
+        Cancel
+      </Button>
+      <div class="flex gap-2">
+        <Button variant="outline" onclick={handlePreview}>
+          <Icon icon="lucide:eye" class="h-4 w-4 mr-2" />
+          Preview
+        </Button>
+        <Button onclick={handleSave}>
+          <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
+          {initialTemplate && initialTemplate.id ? 'Update' : 'Create'} Template
+        </Button>
+      </div>
+    </div>
 
-   <!-- Actions -->
-   <div class="flex justify-between">
-     <Button variant="outline" onclick={onCancel}>
-       Cancel
-     </Button>
-     <div class="flex gap-2">
-       <Button variant="outline" onclick={handlePreview}>
-         <Icon icon="lucide:eye" class="h-4 w-4 mr-2" />
-         Preview
-       </Button>
-       <Button onclick={handleSave}>
-         <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
-         {initialTemplate ? 'Update' : 'Create'} Template
-       </Button>
-     </div>
-   </div>
+    <!-- HTML Editor -->
+    <Card>
+      <CardHeader>
+        <CardTitle>HTML Template Content</CardTitle>
+        <CardDescription>
+          Write your HTML template with variable placeholders. Use {'{{variableName}}'} syntax for dynamic content.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <BasicEditor
+          initialContent={editorContent}
+          showVariableReference={false}
+          showCssEditor={false}
+          {showPrintPreview}
+          bind:content={editorContent}
+        />
+      </CardContent>
+    </Card>
  </div>
 
  <!-- Template Preview Dialog -->
