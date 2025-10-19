@@ -69,7 +69,10 @@ class EmailService {
     }
   }
 
-  async sendEmail(options: EmailOptions): Promise<EmailResult> {
+  async sendEmail(
+    options: EmailOptions,
+    onLog?: (message: string) => void,
+  ): Promise<EmailResult> {
     console.log("📧 [EMAIL SERVICE] sendEmail called");
     console.log("📧 [EMAIL SERVICE] To:", options.to);
     console.log("📧 [EMAIL SERVICE] Subject:", options.subject);
@@ -127,11 +130,19 @@ class EmailService {
           );
           const errorData = await response.json();
           console.log("📧 [EMAIL SERVICE] API error response:", errorData);
+          // Add server logs to client logs if available
+          if (errorData.logs && onLog) {
+            errorData.logs.forEach((logMessage: string) => onLog(logMessage));
+          }
           throw new Error(errorData.error || "Failed to send email via SMTP");
         }
 
         const responseData = await response.json();
         console.log("📧 [EMAIL SERVICE] API success response:", responseData);
+        // Add server logs to client logs
+        if (responseData.logs && onLog) {
+          responseData.logs.forEach((logMessage: string) => onLog(logMessage));
+        }
         result = {
           success: true,
           messageId: responseData.messageId,

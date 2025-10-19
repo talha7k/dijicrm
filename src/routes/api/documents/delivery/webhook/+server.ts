@@ -1,10 +1,12 @@
 import { json, error } from "@sveltejs/kit";
 import { Timestamp } from "firebase-admin/firestore";
-import type { DocumentDelivery } from "$lib/types/document";
-import { documentDeliveryStore } from "$lib/stores/documentDelivery";
+import { getDb } from "$lib/firebase-admin";
 
 export const POST = async ({ request }: any) => {
   try {
+    const db = getDb();
+    if (!db) throw error(500, "Database not initialized");
+
     const body = await request.json();
     const { events } = body; // Email service webhook format
 
@@ -24,12 +26,20 @@ export const POST = async ({ request }: any) => {
         ...additionalData
       } = event;
 
-      // Find delivery by email service ID
-      // In a real implementation, you'd query the database
-      // For now, we'll simulate finding the delivery
-      const deliveryId = `delivery-${sg_message_id}`; // Mock mapping
+      // Find email record by message ID
+      const emailQuery = await db
+        .collection("emailHistory")
+        .where("messageId", "==", sg_message_id)
+        .limit(1)
+        .get();
 
-      let status: DocumentDelivery["status"];
+      if (emailQuery.empty) {
+        console.warn(`No email record found for message ID: ${sg_message_id}`);
+        continue;
+      }
+
+      const emailDoc = emailQuery.docs[0];
+      let status: string;
       let deliveredAt: Timestamp | undefined;
       let errorMessage: string | undefined;
 
@@ -55,15 +65,24 @@ export const POST = async ({ request }: any) => {
           continue;
       }
 
-      // Update delivery status
-      documentDeliveryStore.updateDeliveryStatus(deliveryId, status, {
-        deliveredAt,
-        errorMessage,
+      // Update email record status
+      const updateData: any = {
+        status,
         ...additionalData,
-      });
+      };
+
+      if (deliveredAt) {
+        updateData.deliveredAt = deliveredAt;
+      }
+
+      if (errorMessage) {
+        updateData.errorMessage = errorMessage;
+      }
+
+      await emailDoc.ref.update(updateData);
 
       processedEvents.push({
-        deliveryId,
+        emailId: emailDoc.id,
         eventType,
         status,
         timestamp,
@@ -89,45 +108,57 @@ export const POST = async ({ request }: any) => {
 // Alternative polling endpoint for services that don't support webhooks
 export const GET = async ({ url }: any) => {
   try {
-    const deliveryId = url.searchParams.get("deliveryId");
+    const db = getDb();
+    if (!db) throw error(500, "Database not initialized");
+
+    const emailId = url.searchParams.get("emailId");
     const emailServiceId = url.searchParams.get("emailServiceId");
 
-    if (!deliveryId && !emailServiceId) {
-      throw error(
-        400,
-        "Either deliveryId or emailServiceId parameter required",
-      );
+    if (!emailId && !emailServiceId) {
+      throw error(400, "Either emailId or emailServiceId parameter required");
+    }
+
+    // Find email record
+    let emailDoc;
+    if (emailServiceId) {
+      const emailQuery = await db
+        .collection("emailHistory")
+        .where("messageId", "==", emailServiceId)
+        .limit(1)
+        .get();
+
+      if (emailQuery.empty) {
+        throw error(404, "Email record not found");
+      }
+
+      emailDoc = emailQuery.docs[0];
+    } else {
+      emailDoc = await db.collection("emailHistory").doc(emailId).get();
+
+      if (!emailDoc.exists) {
+        throw error(404, "Email record not found");
+      }
     }
 
     // In a real implementation, you'd poll the email service API
     // For now, simulate polling response
-    const mockStatus = {
-      deliveryId: deliveryId || "mock-delivery-id",
-      status: Math.random() > 0.8 ? "delivered" : "sent", // 80% delivered
+    const mockStatus = Math.random() > 0.8 ? "delivered" : "sent"; // 80% delivered
+
+    // Update email record status
+    const updateData: any = {
+      status: mockStatus,
       lastChecked: Timestamp.now(),
-      emailServiceResponse: {
-        message_id: emailServiceId || "mock-message-id",
-        status: "delivered",
-        delivered_at: new Date().toISOString(),
-      },
     };
 
-    // Update delivery status if found
-    if (deliveryId) {
-      documentDeliveryStore.updateDeliveryStatus(
-        deliveryId,
-        mockStatus.status as DocumentDelivery["status"],
-        {
-          deliveredAt:
-            mockStatus.status === "delivered"
-              ? (Timestamp.now() as any)
-              : undefined,
-        },
-      );
+    if (mockStatus === "delivered") {
+      updateData.deliveredAt = Timestamp.now();
     }
+
+    await emailDoc.ref.update(updateData);
 
     return json({
       success: true,
+      emailId: emailDoc.id,
       status: mockStatus,
     });
   } catch (err) {

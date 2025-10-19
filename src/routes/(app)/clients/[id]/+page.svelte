@@ -6,8 +6,8 @@
    import { clientManagementStore } from '$lib/stores/clientManagement';
    import { productsStore } from '$lib/stores/products';
 
-     import { ordersStore } from '$lib/stores/orders';
-     import { documentDeliveryStore } from '$lib/stores/documentDelivery';
+      import { ordersStore } from '$lib/stores/orders';
+
      import { getVatConfig } from '$lib/utils/vat';
     import { collection, query, where, getDocs } from 'firebase/firestore';
     import { db } from '$lib/firebase';
@@ -26,9 +26,10 @@
    import PDFUploadModal from '$lib/components/app/client/PDFUploadModal.svelte';
    import EmailComposeModal from '$lib/components/app/client/EmailComposeModal.svelte';
    import PaymentModal from '$lib/components/app/client/PaymentModal.svelte';
-     import EmailHistory from '$lib/components/app/client/EmailHistory.svelte';
-      import DocumentHistory from '$lib/components/app/client/DocumentHistory.svelte';
-      import OrderCard from '$lib/components/app/client/OrderCard.svelte';
+    import EmailHistory from '$lib/components/app/client/EmailHistory.svelte';
+       import DocumentHistory from '$lib/components/app/client/DocumentHistory.svelte';
+       import OrderCard from '$lib/components/app/client/OrderCard.svelte';
+       import PrivateDocuments from '$lib/components/app/client/PrivateDocuments.svelte';
 
     
     import { emailHistoryStore } from '$lib/stores/emailHistory';
@@ -46,7 +47,7 @@
       name: string;
       type: 'template' | 'generated' | 'uploaded';
       sentDate: Date;
-      status: 'sent' | 'delivered' | 'opened' | 'failed';
+      status: 'sent' | 'delivered' | 'opened' | 'failed' | 'complained';
       fileSize?: number;
       downloadUrl?: string;
       previewUrl?: string;
@@ -54,10 +55,10 @@
 
   // Company access is checked at layout level
 
-    const clientStore = clientManagementStore;
-    const productStore = productsStore;
-    const orderStore = ordersStore;
-    const deliveryStore = documentDeliveryStore;
+     const clientStore = clientManagementStore;
+     const productStore = productsStore;
+   const orderStore = ordersStore;
+
   const clientId = page.params.id as string;
 
   let client = $state<UserProfile | undefined>(undefined);
@@ -71,29 +72,25 @@
 
     let clientDocuments = $state<DocumentRecord[]>([]);
 
-   // Subscribe to document delivery store
-   $effect(() => {
-     const unsubscribe = deliveryStore.subscribe((state) => {
-       // Transform deliveries to match DocumentHistory interface
-       if (client?.email) {
-         const deliveries = deliveryStore.getClientDeliveries(client.email);
-         clientDocuments = deliveries.map(delivery => ({
-           id: delivery.id,
-           name: `Document-${delivery.documentId}.pdf`, // TODO: Get actual document name
-           type: 'generated' as const, // TODO: Determine actual type
-           sentDate: delivery.sentAt?.toDate() || new Date(),
-           status: delivery.status === 'delivered' ? 'delivered' :
-                   delivery.status === 'sent' ? 'sent' :
-                   delivery.status === 'bounced' ? 'failed' : 'sent',
-           fileSize: undefined, // TODO: Get actual file size
-           downloadUrl: '#', // TODO: Implement download URL
-           previewUrl: delivery.status === 'delivered' ? '#' : undefined,
-         }));
-       }
-     });
-
-     return unsubscribe;
-   });
+    // Transform email history to document records for Documents tab
+    $effect(() => {
+      if (client?.email && emailHistory.data.length > 0) {
+        clientDocuments = emailHistory.data
+          .filter(email => email.attachments && email.attachments.length > 0)
+          .flatMap(email => 
+            email.attachments!.map((attachment, index) => ({
+              id: `${email.id}-${index}`,
+              name: attachment.filename,
+              type: attachment.documentType as any || 'generated' as const,
+              sentDate: email.sentDate,
+              status: email.status === 'bounced' ? 'failed' : email.status as any,
+              fileSize: attachment.size,
+              downloadUrl: '#', // TODO: Implement download URL from email service
+              previewUrl: email.status === 'delivered' ? '#' : undefined,
+            }))
+          );
+      }
+    });
 
    let emailHistory = $state<{ data: EmailRecord[]; loading: boolean; error: string | null }>({ data: [], loading: false, error: null });
 
@@ -526,12 +523,12 @@
             </svg>
             Documents
           </Tabs.Trigger>
-          <Tabs.Trigger value="templates" class="text-xs sm:text-sm">
-            <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
-            </svg>
-            Templates
-          </Tabs.Trigger>
+           <Tabs.Trigger value="private-documents" class="text-xs sm:text-sm">
+             <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+             </svg>
+             Private Documents
+           </Tabs.Trigger>
        </Tabs.List>
 
       <Tabs.Content value="overview" class="space-y-6">
@@ -691,30 +688,28 @@
             Upload
           </Button>
         </div>
-        <DocumentHistory
-          documents={clientDocuments}
-          onDownload={(document) => {
-            // TODO: Implement download functionality
-            console.log('Download document:', document);
-            toast.success('Download started');
-          }}
-onPreview={(document) => {
-             documentToPreview = document;
-             showDocumentPreviewModal = true;
+         <DocumentHistory
+           emails={emailHistory.data}
+           onDownload={(document) => {
+             // TODO: Implement download functionality
+             console.log('Download document:', document);
+             toast.success('Download started');
            }}
-          onResend={(documentId) => {
-            // TODO: Implement resend functionality
-            console.log('Resend document:', documentId);
-            toast.success('Document resent successfully');
-          }}
-        />
+ onPreview={(document) => {
+              documentToPreview = document;
+              showDocumentPreviewModal = true;
+            }}
+           onResend={(emailId) => {
+             // TODO: Implement resend functionality
+             console.log('Resend email:', emailId);
+             toast.success('Email resent successfully');
+           }}
+         />
       </Tabs.Content>
 
-       <Tabs.Content value="templates" class="space-y-6">
-         <div class="text-center text-muted-foreground py-8">
-           Template data management coming soon...
-         </div>
-       </Tabs.Content>
+        <Tabs.Content value="private-documents" class="space-y-6">
+          <PrivateDocuments {clientId} />
+        </Tabs.Content>
     </Tabs.Root>
 
     <!-- Order Creation Modal -->

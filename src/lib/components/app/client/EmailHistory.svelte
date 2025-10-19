@@ -9,7 +9,7 @@
       id: string;
       subject: string;
       sentDate: Date;
-      status: 'sent' | 'delivered' | 'opened' | 'bounced';
+      status: 'sent' | 'delivered' | 'opened' | 'bounced' | 'complained';
       recipient: string;
       opened?: boolean;
       preview?: string;
@@ -35,14 +35,18 @@
     let filteredEmails = $state<EmailRecord[]>([]);
     let expandedEmails = $state<Set<string>>(new Set());
 
-    // Load document types for filtering and filter emails
-    $effect(() => {
-      const unsubscribe = documentTypesStore.subscribe((state) => {
-        documentTypes = state.data || [];
-      });
-      documentTypesStore.loadDocumentTypes();
-      return unsubscribe;
-    });
+     // Load document types on mount
+     $effect(() => {
+       documentTypesStore.loadDocumentTypes();
+     });
+
+     // Subscribe to document types store
+     $effect(() => {
+       const unsubscribe = documentTypesStore.subscribe((state) => {
+         documentTypes = state.data || [];
+       });
+       return unsubscribe;
+     });
 
     // Filter emails based on selected document type
     $effect(() => {

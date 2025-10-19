@@ -68,6 +68,42 @@ A clear separation between server-side and client-side data fetching is crucial.
 
 All stores must be centralized in src/lib/stores/. Use Svelte stores for global state with Firebase real-time listeners for reactive data.
 
+##### Reactive Subscriptions - Important Guidelines
+
+**AVOID continuous store subscriptions in modal/dialog components** as they can cause infinite reactive effect cycles and browser crashes.
+
+**When to use one-time checks vs subscriptions:**
+
+- **Use one-time checks with `get(store)`** for modal components that need initial state but don't need live updates:
+
+  ```typescript
+  // ✅ CORRECT: One-time check for modals
+  const companyData = get(companyContext);
+  const smtpConfig = companyData?.data?.smtpConfig;
+  smtpConfigured = !!smtpConfig;
+  ```
+
+- **Use subscriptions only when** the component needs to react to changes over time:
+  ```typescript
+  // ✅ CORRECT: Subscription for dashboard components
+  const unsubscribe = companyContext.subscribe((data) => {
+    // Update UI when company data changes
+  });
+  ```
+
+**Why this matters:**
+
+- Modal components have limited lifespans and typically only need initial state
+- Continuous subscriptions in modals create reactive dependencies that can loop infinitely
+- One-time checks are more performant and prevent memory leaks
+- The `DocumentSendModal.svelte` is a good example of correct implementation
+
+**Common anti-patterns to avoid:**
+
+- Subscribing to stores inside `$effect` in modal components
+- Creating multiple subscriptions that depend on each other
+- Not properly cleaning up subscriptions in modal cleanup functions
+
 ##### Persisted Store Updates
 
 When using persisted stores (e.g., `svelte-persisted-store`), always update the cached data directly after database operations to prevent stale data issues. Instead of calling refresh functions that may skip fetching due to cache checks, update the store's underlying data directly:

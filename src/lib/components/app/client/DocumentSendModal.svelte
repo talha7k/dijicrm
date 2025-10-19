@@ -16,15 +16,17 @@
    import { ordersStore } from "$lib/stores/orders";
   import { get } from "svelte/store";
   import { mapClientDataToTemplate } from "$lib/utils/client-data-mapping";
-   import { authenticatedFetch } from "$lib/utils/authUtils";
+
    import { downloadFileAsBase64 } from "$lib/services/firebaseStorage";
    import type { UserProfile } from "$lib/types/user";
    import type { DocumentTemplate } from "$lib/types/document";
    import { toast } from "svelte-sonner";
    import { emailService } from "$lib/services/emailService";
-   import { onMount } from "svelte";
-   import Icon from '@iconify/svelte';
-   import TemplatePreviewDialog from '$lib/components/shared/template-preview-dialog.svelte';
+    import { onMount } from "svelte";
+    import Icon from '@iconify/svelte';
+    import TemplatePreviewDialog from '$lib/components/shared/template-preview-dialog.svelte';
+    import ProgressDialog from '$lib/components/ui/progress-dialog.svelte';
+    import { createLogManager, type LogManager, type LogEntry } from '$lib/utils/logManager';
 
   interface Props {
     clientId: string;
@@ -81,23 +83,49 @@
   let customDocuments = $state<
     { id: string; name: string; uploadedAt: Date; pdfUrl?: string; fileType?: string }[]
   >([]);
-  let smtpConfigured = $state(false);
-  let smtpLoading = $state(true);
+    let smtpConfigured = $state(false);
+    let smtpLoading = $state(true);
 
-   // Load data when modal opens
-   $effect(() => {
-     if (open) {
-       console.log("📧 [DOCUMENT SEND MODAL] Modal opened, checking SMTP config...");
+    // Progress dialog state
+    let showProgressDialog = $state(false);
+    let progressValue = $state(0);
+    let isProcessComplete = $state(false);
+    let logManager = $state<LogManager | null>(null);
+    let currentLogs = $state<LogEntry[]>([]);
+    let deliveryCheckInterval = $state<NodeJS.Timeout | null>(null);
+    let messageId = $state<string | null>(null);
+    let deliveryCheckCount = $state(0);
+    let maxDeliveryChecks = 30; // Stop checking after 5 minutes (30 * 10s)
 
-       // Check SMTP config from company context (one-time check, no listener)
-       const companyData = get(companyContext);
-       const smtpConfig = companyData?.data?.smtpConfig;
-       console.log("📧 [DOCUMENT SEND MODAL] Full company context data:", companyData);
-       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available on modal open:", !!smtpConfig);
-       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config details:", smtpConfig);
-       console.log("📧 [DOCUMENT SEND MODAL] Company data loading:", companyData?.loading);
-       smtpConfigured = !!smtpConfig;
-       smtpLoading = companyData?.loading || false;
+    // Update current logs when log manager changes
+    $effect(() => {
+      if (logManager) {
+        const unsubscribe = logManager.store.subscribe(logs => {
+          currentLogs = logs;
+        });
+        return unsubscribe;
+      } else {
+        currentLogs = [];
+      }
+    });
+
+    // Load data when modal opens
+    $effect(() => {
+      if (open) {
+        console.log("📧 [DOCUMENT SEND MODAL] Modal opened, checking SMTP config...");
+
+        // Initialize log manager for this session
+        logManager = createLogManager({ maxEntries: 50 });
+
+        // Check SMTP config from company context (one-time check, no listener)
+        const companyData = get(companyContext);
+        const smtpConfig = companyData?.data?.smtpConfig;
+        console.log("📧 [DOCUMENT SEND MODAL] Full company context data:", companyData);
+        console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available on modal open:", !!smtpConfig);
+        console.log("📧 [DOCUMENT SEND MODAL] SMTP Config details:", smtpConfig);
+        console.log("📧 [DOCUMENT SEND MODAL] Company data loading:", companyData?.loading);
+        smtpConfigured = !!smtpConfig;
+        smtpLoading = companyData?.loading || false;
 
         // Load client orders
         ordersStore.loadClientOrders(clientId);
@@ -243,24 +271,7 @@
     previewTemplate = null;
   }
 
-  async function generateSampleTemplates() {
-    try {
-      const response = await authenticatedFetch("/api/sample-data", {
-        method: "POST",
-      });
 
-      if (response.ok) {
-        toast.success("Sample templates generated successfully!");
-        // Reload templates
-        documentTemplatesStore.loadTemplates();
-      } else {
-        toast.error("Failed to generate sample templates");
-      }
-    } catch (error) {
-      console.error("Error generating sample templates:", error);
-      toast.error("Failed to generate sample templates");
-    }
-  }
 
   async function downloadDocument(
     templateId: string,
@@ -353,26 +364,49 @@
   }
 
   async function handleSend() {
+    if (!logManager) {
+      logManager = createLogManager({ maxEntries: 50 });
+    }
+
+    // Reset progress state
+    showProgressDialog = true;
+    progressValue = 0;
+    isProcessComplete = false;
+    deliveryCheckCount = 0;
+    logManager.clear();
+
+    logManager.info("Starting document sending process...");
+
     if (selectedTemplates.length === 0 && selectedCustomDocs.length === 0) {
+      logManager.error("No documents selected");
       toast.error("Please select at least one document to send");
+      showProgressDialog = false;
       return;
     }
 
     if (!client) {
+      logManager.error("Client data not available");
       toast.error("Client data not available");
+      showProgressDialog = false;
       return;
     }
 
+    logManager.info(`Sending documents to ${clientName} (${clientEmail})`);
+
     if (!emailSubject.trim()) {
       emailSubject = `Documents from ${clientName}`;
+      logManager.info("Using default email subject");
     }
 
     if (!emailMessage.trim()) {
       emailMessage = `Please find attached the requested documents.`;
+      logManager.info("Using default email message");
     }
 
     loading = true;
     generatedDocuments = [];
+
+    logManager.info(`Selected ${selectedTemplates.length} templates and ${selectedCustomDocs.length} custom documents`);
 
     try {
       // Get company information
@@ -387,10 +421,15 @@
         currentDocument: "",
       };
 
+      logManager.info(`Starting document generation for ${selectedTemplates.length} templates`);
+
       for (let i = 0; i < selectedTemplates.length; i++) {
         const templateId = selectedTemplates[i];
         const template = availableTemplates.find((t) => t.id === templateId);
-        if (!template) continue;
+        if (!template) {
+          logManager.warning(`Template ${templateId} not found, skipping`);
+          continue;
+        }
 
         // Update progress before generation
         generationProgress = {
@@ -398,6 +437,9 @@
           total: selectedTemplates.length,
           currentDocument: template.name,
         };
+
+        progressValue = (i / selectedTemplates.length) * 30; // 30% for document generation
+        logManager.info(`Generating document: ${template.name}`);
 
         // Add a small delay to ensure UI updates
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -412,6 +454,9 @@
           // Override with actual company name
           templateData.companyName = companyName;
 
+          logManager.info(`Making API call to generate document: ${template.name}`);
+          const startTime = Date.now();
+
           // Generate PDF document
            const result = await documentGenerationStore.generateDocument(
              templateId,
@@ -420,6 +465,9 @@
              companyId,
              selectedOrderId || undefined,
            );
+
+          const duration = Date.now() - startTime;
+          logManager.success(`Document generated successfully: ${template.name}.pdf (${duration}ms)`);
 
           generatedDocuments.push({
             id: templateId,
@@ -439,9 +487,12 @@
              `Failed to generate document from template ${templateId}:`,
              error,
            );
+           logManager.error(`Failed to generate document: ${template.name} - ${error instanceof Error ? error.message : 'Unknown error'}`);
            // Error toast is now handled by the document generation store
          }
       }
+
+      logManager.info(`Document generation completed. Generated ${generatedDocuments.length} documents`);
 
       // Prepare attachments (generated documents + custom documents)
       const attachments = [
@@ -454,13 +505,19 @@
       ];
 
       // Add custom documents
+      logManager.info(`Preparing ${selectedCustomDocs.length} custom documents for attachment`);
+
       for (const customDocId of selectedCustomDocs) {
         const customDoc = customDocuments.find(doc => doc.id === customDocId);
         if (customDoc?.pdfUrl) {
           const storagePath = extractStoragePathFromUrl(customDoc.pdfUrl);
           if (storagePath) {
             try {
+              logManager.info(`Making API call to download custom document: ${customDoc.name}`);
+              const downloadStartTime = Date.now();
               const base64Content = await downloadFileAsBase64(storagePath);
+              const downloadDuration = Date.now() - downloadStartTime;
+
               if (base64Content) {
                 attachments.push({
                   filename: customDoc.name,
@@ -468,76 +525,204 @@
                   type: customDoc.fileType || "application/pdf",
                   encoding: "base64" as const,
                 });
+                logManager.success(`Custom document downloaded and attached: ${customDoc.name} (${downloadDuration}ms, ${(base64Content.length * 0.75 / 1024).toFixed(1)}KB)`);
+              } else {
+                logManager.warning(`Failed to download content for: ${customDoc.name}`);
               }
             } catch (error) {
               console.error(`Failed to download custom document ${customDocId}:`, error);
+              logManager.error(`Failed to attach custom document: ${customDoc.name} - ${error instanceof Error ? error.message : 'Unknown error'}`);
               toast.error(`Failed to attach ${customDoc.name}`);
             }
+          } else {
+            logManager.warning(`Invalid storage path for custom document: ${customDoc.name}`);
           }
+        } else {
+          logManager.warning(`Custom document not found or missing PDF URL: ${customDocId}`);
         }
       }
 
+      progressValue = 60; // 60% after preparing attachments
+
       // Send email with attachments
-      console.log("📧 [DOCUMENT SEND MODAL] About to send email");
-      console.log("📧 [DOCUMENT SEND MODAL] Attachments count:", attachments.length);
-      console.log("📧 [DOCUMENT SEND MODAL] To:", clientEmail);
-      console.log("📧 [DOCUMENT SEND MODAL] Subject:", emailSubject);
-      
-       const { emailService } = await import("$lib/services/emailService");
+      logManager.info(`Preparing to send email with ${attachments.length} attachments`);
+      logManager.info(`Recipient: ${clientEmail}`);
+      logManager.info(`Subject: ${emailSubject}`);
+      logManager.info(`Message length: ${emailMessage.length} characters`);
 
-       // Check SMTP config using reactive state
-       console.log("📧 [DOCUMENT SEND MODAL] SMTP Config available:", smtpConfigured);
+      // Calculate total attachment size
+      const totalSize = attachments.reduce((sum, att) => sum + (att.content.length * 0.75), 0);
+      logManager.info(`Total attachment size: ${(totalSize / 1024).toFixed(1)}KB`);
 
-        if (!smtpConfigured) {
-          toast.error("SMTP configuration is required to send emails. Please <a href='/settings' class='underline hover:no-underline'>configure your email settings</a> before sending documents.");
-          return;
-        }
+      progressValue = 70; // 70% before email sending
 
-        // Get current SMTP config for email service
-        const companyData = get(companyContext);
-        const smtpConfig = companyData?.data?.smtpConfig;
+      const { emailService } = await import("$lib/services/emailService");
 
-       console.log("📧 [DOCUMENT SEND MODAL] Calling emailService.sendEmail...");
-       await emailService.sendEmail({
-         to: clientEmail,
-         subject: emailSubject,
-         htmlBody: emailMessage,
-         attachments: attachments.length > 0 ? attachments : undefined,
-       });
-      
-      console.log("📧 [DOCUMENT SEND MODAL] Email sent successfully");
+      // Check SMTP config using reactive state
+      if (!smtpConfigured) {
+        logManager.error("SMTP configuration is required to send emails");
+        toast.error("SMTP configuration is required to send emails. Please <a href='/settings' class='underline hover:no-underline'>configure your email settings</a> before sending documents.");
+        showProgressDialog = false;
+        return;
+      }
+
+      logManager.info("SMTP configuration verified, initiating email transmission...");
+
+      progressValue = 80; // 80% during email sending
+
+      const emailStartTime = Date.now();
+      logManager.info("Making API call to email service...");
+
+      const emailResult = await emailService.sendEmail({
+        to: clientEmail,
+        subject: emailSubject,
+        htmlBody: emailMessage,
+        attachments: attachments.length > 0 ? attachments : undefined,
+      });
+
+      const emailDuration = Date.now() - emailStartTime;
+
+      if (emailResult.success) {
+        logManager.success(`Email sent successfully in ${emailDuration}ms`);
+        logManager.info(`Message ID: ${emailResult.messageId}`);
+        logManager.info(`Delivery ID: ${emailResult.deliveryId}`);
+        logManager.info("Email record stored in database for delivery tracking");
+
+        // Store messageId for delivery tracking
+        messageId = emailResult.messageId || null;
+        logManager.info(`Will monitor delivery status for messageId: ${messageId}`);
+
+        // Start checking delivery status every 10 seconds
+        logManager.info("Starting delivery status monitoring (checks every 10s for 5 minutes)...");
+        deliveryCheckInterval = setInterval(checkDeliveryStatus, 10000);
+
+        // Initial check after a short delay
+        setTimeout(checkDeliveryStatus, 2000);
+      } else {
+        logManager.error(`Email sending failed: ${emailResult.error}`);
+        throw new Error(emailResult.error || "Email sending failed");
+      }
+
+      progressValue = 100; // 100% after successful sending
 
       const totalDocuments =
         generatedDocuments.length + selectedCustomDocs.length;
+      logManager.success(`Process completed! Sent ${totalDocuments} document${totalDocuments > 1 ? "s" : ""} to ${clientName}`);
+
       toast.success(
         `Successfully sent ${totalDocuments} document${totalDocuments > 1 ? "s" : ""} to ${clientName}`,
       );
 
-      // Reset form
-      selectedTemplates = [];
-      selectedCustomDocs = [];
-      emailSubject = "";
-      emailMessage = "";
-      generatedDocuments = [];
-      generationProgress = { current: 0, total: 0, currentDocument: "" };
-      open = false;
+      // Mark process as complete
+      isProcessComplete = true;
+      logManager.info("All documents sent successfully! You can now close this dialog.");
 
-      onSendComplete?.();
+      // Don't auto-close - let user control when to close
+      // Reset form only when user explicitly closes the dialog
     } catch (error) {
       console.error("Error sending documents:", error);
+      logManager.error(`Process failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       toast.error("Failed to send documents");
+      showProgressDialog = false;
     } finally {
       loading = false;
     }
   }
 
+  // Check delivery status
+  async function checkDeliveryStatus() {
+    if (!messageId || !logManager) return;
+
+    deliveryCheckCount++;
+    const isLastCheck = deliveryCheckCount >= maxDeliveryChecks;
+
+    try {
+      if (deliveryCheckCount === 1) {
+        logManager.info("Starting delivery status monitoring...");
+      } else {
+        logManager.info(`Checking delivery status... (${deliveryCheckCount}/${maxDeliveryChecks})`);
+      }
+
+      // Get email history for the client to find delivery updates
+      const { emailService } = await import("$lib/services/emailService");
+      const emailHistory = await emailService.getEmailHistoryForClient(clientEmail);
+
+      logManager.info(`Found ${emailHistory.length} emails in history for ${clientEmail}`);
+
+      // Find the most recent email with our messageId
+      const recentEmail = emailHistory.find(email => email.messageId === messageId);
+
+      if (recentEmail) {
+        const status = recentEmail.status;
+        const sentDate = recentEmail.sentDate;
+        const timeSinceSent = sentDate ? Math.floor((Date.now() - sentDate.toDate().getTime()) / 1000) : 0;
+
+        logManager.info(`Found email record: status=${status}, sent ${timeSinceSent}s ago`);
+
+        if (status === 'delivered') {
+          logManager.success(`✅ Email delivered successfully to ${clientEmail} (${timeSinceSent}s after sending)`);
+          if (deliveryCheckInterval) {
+            clearInterval(deliveryCheckInterval);
+            deliveryCheckInterval = null;
+          }
+        } else if (status === 'bounced') {
+          logManager.error(`❌ Email bounced: ${recentEmail.errorMessage || 'Unknown bounce reason'}`);
+          if (deliveryCheckInterval) {
+            clearInterval(deliveryCheckInterval);
+            deliveryCheckInterval = null;
+          }
+        } else if (status === 'sent') {
+          if (isLastCheck) {
+            logManager.warning(`⏰ Stopped monitoring after ${maxDeliveryChecks * 10}s. Email status: sent (delivery confirmation may come later via webhook)`);
+          } else {
+            logManager.info(`📤 Email sent ${timeSinceSent}s ago, still waiting for delivery confirmation...`);
+          }
+        } else {
+          logManager.info(`📧 Email status: ${status}`);
+        }
+      } else {
+        logManager.warning(`No email record found with messageId: ${messageId}`);
+        logManager.info(`Available messageIds: ${emailHistory.map(e => e.messageId).join(', ')}`);
+
+        if (isLastCheck) {
+          logManager.warning(`⏰ Stopped monitoring after ${maxDeliveryChecks * 10}s. Email may have been sent but delivery tracking is unavailable.`);
+        } else {
+          logManager.info("Delivery status not yet available, will check again...");
+        }
+      }
+
+      // Stop checking after max attempts
+      if (isLastCheck && deliveryCheckInterval) {
+        logManager.info("Delivery monitoring completed. You can close this dialog.");
+        clearInterval(deliveryCheckInterval);
+        deliveryCheckInterval = null;
+      }
+
+    } catch (error) {
+      logManager.warning(`Could not check delivery status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      if (isLastCheck && deliveryCheckInterval) {
+        clearInterval(deliveryCheckInterval);
+        deliveryCheckInterval = null;
+      }
+    }
+  }
+
   function handleCancel() {
+    // Clear any ongoing delivery checks
+    if (deliveryCheckInterval) {
+      clearInterval(deliveryCheckInterval);
+      deliveryCheckInterval = null;
+    }
+
     selectedTemplates = [];
     selectedCustomDocs = [];
     emailSubject = "";
     emailMessage = "";
     generatedDocuments = [];
     generationProgress = { current: 0, total: 0, currentDocument: "" };
+    deliveryCheckCount = 0;
+    messageId = null;
     closePreview();
     showTemplatePreviewDialog = false;
     previewTemplate = null;
@@ -648,12 +833,9 @@
       {:else}
         <div class="text-center py-8 text-muted-foreground">
           <p>No document templates available.</p>
-          <p class="text-sm mb-4">
+          <p class="text-sm">
             Create templates in the Templates section to generate documents.
           </p>
-          <Button variant="outline" onclick={generateSampleTemplates}>
-            Generate Sample Templates
-          </Button>
         </div>
       {/if}
 
@@ -827,5 +1009,37 @@
         {/if}
       </Button>
     </Dialog.Footer>
-  </Dialog.Content>
+   </Dialog.Content>
 </Dialog.Root>
+
+<!-- Progress Dialog -->
+{#if logManager}
+  <ProgressDialog
+    open={showProgressDialog}
+    title="Sending Documents"
+    progress={progressValue}
+    logs={currentLogs}
+    isComplete={isProcessComplete}
+    completionMessage="Documents sent successfully! The dialog will remain open to show delivery status updates."
+    onClose={() => {
+      // Clear delivery status checking
+      if (deliveryCheckInterval) {
+        clearInterval(deliveryCheckInterval);
+        deliveryCheckInterval = null;
+      }
+
+      showProgressDialog = false;
+      // Reset form when user closes the dialog
+      selectedTemplates = [];
+      selectedCustomDocs = [];
+      emailSubject = "";
+      emailMessage = "";
+      generatedDocuments = [];
+      generationProgress = { current: 0, total: 0, currentDocument: "" };
+      messageId = null;
+      deliveryCheckCount = 0;
+      open = false;
+      onSendComplete?.();
+    }}
+  />
+{/if}

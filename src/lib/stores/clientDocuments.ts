@@ -42,6 +42,7 @@ function createClientDocumentsStore() {
     if ($userProfile && $userProfile.role === "client") {
       loadClientDocuments($userProfile.uid);
     } else {
+      // For admin/company users, don't auto-load - they need to specify which client
       // Clean up listeners and clear data
       if (unsubscribeDocuments) {
         unsubscribeDocuments();
@@ -246,6 +247,61 @@ function createClientDocumentsStore() {
     });
   }
 
+  function loadClientPrivateDocuments(clientId: string) {
+    store.update((state) => ({ ...state, loading: true, error: null }));
+
+    try {
+      // Clean up previous listeners
+      if (unsubscribeClientUploaded) {
+        unsubscribeClientUploaded();
+      }
+
+      // Set up real-time listener for client uploaded documents
+      const clientUploadedQuery = query(
+        collection(db, "clientDocuments"),
+        where("clientId", "==", clientId),
+      );
+
+      unsubscribeClientUploaded = onSnapshot(
+        clientUploadedQuery,
+        (querySnapshot) => {
+          const clientUploadedDocuments: ClientDocument[] = [];
+
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            clientUploadedDocuments.push({
+              id: doc.id,
+              ...data,
+              uploadedAt: data.uploadedAt,
+            } as ClientDocument);
+          });
+
+          store.update((state) => ({
+            ...state,
+            clientUploadedDocuments,
+            loading: false,
+          }));
+        },
+        (error) => {
+          console.error("Error loading client private documents:", error);
+          store.update((state) => ({
+            ...state,
+            error: error.message,
+            loading: false,
+          }));
+        },
+      );
+    } catch (error) {
+      console.error("Error setting up client documents listener:", error);
+      store.update((state) => ({
+        ...state,
+        error:
+          error instanceof Error ? error.message : "Failed to load documents",
+        loading: false,
+      }));
+    }
+  }
+
   return {
     subscribe: store.subscribe,
     unsubscribe: () => {
@@ -278,6 +334,7 @@ function createClientDocumentsStore() {
       });
     },
     loadClientDocuments,
+    loadClientPrivateDocuments,
     markAsViewed,
     getDocumentsByStatus,
     getDocumentDelivery,

@@ -3,23 +3,29 @@ import { get } from "svelte/store";
 import { companyContext } from "./companyContext";
 import type { UserProfile } from "$lib/types/user";
 import { emailService } from "$lib/services/emailService";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "$lib/firebase";
 
 export interface EmailRecord {
   id: string;
   subject: string;
   sentDate: Date;
-  status: "sent" | "delivered" | "opened" | "bounced";
+  status: "sent" | "delivered" | "opened" | "bounced" | "complained";
   recipient: string;
   opened?: boolean;
   preview?: string;
   messageId?: string;
   deliveryId?: string;
+  deliveredAt?: Date;
+  errorMessage?: string;
+  lastChecked?: Date;
   attachments?: Array<{
     filename: string;
     size: number;
     type: string;
     documentType?: string; // e.g., "Invoice", "Contract", "Report"
   }>;
+  metadata?: Record<string, any>;
 }
 
 interface EmailHistoryState {
@@ -27,72 +33,6 @@ interface EmailHistoryState {
   loading: boolean;
   error: string | null;
 }
-
-// Mock email data - in real implementation, this would come from Firebase
-const mockEmailHistory: EmailRecord[] = [
-  {
-    id: "email-001",
-    subject: "Invoice INV-2024-001 - Payment Due",
-    sentDate: new Date("2024-12-01"),
-    status: "delivered" as const,
-    recipient: "client@example.com",
-    opened: true,
-    preview:
-      "Your invoice for December services is now available. Please review and process payment by the due date.",
-    messageId: "msg-001",
-    deliveryId: "del-001",
-    attachments: [
-      {
-        filename: "Invoice-2024-001.pdf",
-        size: 245760,
-        type: "application/pdf",
-      },
-    ],
-  },
-  {
-    id: "email-002",
-    subject: "Payment Reminder - Invoice INV-2024-001",
-    sentDate: new Date("2024-12-20"),
-    status: "opened" as const,
-    recipient: "client@example.com",
-    opened: true,
-    preview:
-      "This is a friendly reminder that payment for invoice INV-2024-001 is due soon.",
-    messageId: "msg-002",
-    deliveryId: "del-002",
-  },
-  {
-    id: "email-003",
-    subject: "Service Agreement - Please Review",
-    sentDate: new Date("2024-11-15"),
-    status: "delivered" as const,
-    recipient: "client@example.com",
-    opened: false,
-    preview:
-      "Please find attached the service agreement for our upcoming project. Please review and let us know if you have any questions.",
-    messageId: "msg-003",
-    deliveryId: "del-003",
-    attachments: [
-      {
-        filename: "Service-Agreement.pdf",
-        size: 512000,
-        type: "application/pdf",
-      },
-    ],
-  },
-  {
-    id: "email-004",
-    subject: "Welcome to Our Client Portal",
-    sentDate: new Date("2024-10-01"),
-    status: "bounced" as const,
-    recipient: "client@example.com",
-    opened: false,
-    preview:
-      "Welcome to our client portal! You can now access all your documents and invoices online.",
-    messageId: "msg-004",
-    deliveryId: "del-004",
-  },
-];
 
 function createEmailHistoryStore() {
   const store = writable<EmailHistoryState>({
@@ -122,7 +62,11 @@ function createEmailHistoryStore() {
           preview: email.preview || "",
           messageId: email.messageId,
           deliveryId: email.deliveryId,
+          deliveredAt: email.deliveredAt,
+          errorMessage: email.errorMessage,
+          lastChecked: email.lastChecked,
           attachments: email.attachments || [],
+          metadata: email.metadata || {},
         }));
 
         store.update((state) => ({
@@ -142,16 +86,19 @@ function createEmailHistoryStore() {
       }
     },
 
-    async sendEmail(emailData: {
-      subject: string;
-      message: string;
-      recipient: string;
-      attachments: Array<{
-        file: File;
-        documentType: string;
-        filename: string;
-      }>;
-    }) {
+    async sendEmail(
+      emailData: {
+        subject: string;
+        message: string;
+        recipient: string;
+        attachments: Array<{
+          file: File;
+          documentType: string;
+          filename: string;
+        }>;
+      },
+      onLog?: (message: string) => void,
+    ) {
       try {
         // Convert files to base64 for email service
         const emailAttachments: Array<{
@@ -195,16 +142,19 @@ function createEmailHistoryStore() {
         }
 
         // Send email via email service
-        const emailResult = await emailService.sendEmail({
-          to: emailData.recipient,
-          subject: emailData.subject,
-          htmlBody: emailData.message,
-          attachments: emailAttachments.map((att) => ({
-            filename: att.filename,
-            content: att.content,
-            type: att.type,
-          })),
-        });
+        const emailResult = await emailService.sendEmail(
+          {
+            to: emailData.recipient,
+            subject: emailData.subject,
+            htmlBody: emailData.message,
+            attachments: emailAttachments.map((att) => ({
+              filename: att.filename,
+              content: att.content,
+              type: att.type,
+            })),
+          },
+          onLog,
+        );
 
         if (!emailResult.success) {
           throw new Error(emailResult.error || "Failed to send email");
@@ -264,9 +214,25 @@ function createEmailHistoryStore() {
     },
 
     async getEmailDetails(emailId: string) {
-      // In real implementation, this would fetch full email content from storage
-      const email = mockEmailHistory.find((e) => e.id === emailId);
-      return email || null;
+      try {
+        const emailDoc = await getDoc(doc(db, "emailHistory", emailId));
+
+        if (!emailDoc.exists()) {
+          return null;
+        }
+
+        const emailData = emailDoc.data();
+        return {
+          id: emailDoc.id,
+          ...emailData,
+          sentDate: emailData.sentDate?.toDate() || new Date(),
+          deliveredAt: emailData.deliveredAt?.toDate(),
+          lastChecked: emailData.lastChecked?.toDate(),
+        } as EmailRecord;
+      } catch (error) {
+        console.error("Failed to get email details:", error);
+        return null;
+      }
     },
   };
 }

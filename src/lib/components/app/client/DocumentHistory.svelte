@@ -1,28 +1,70 @@
-<script lang="ts">
-  import { Badge } from '$lib/components/ui/badge';
-  import * as Card from '$lib/components/ui/card';
-  import Button from '$lib/components/ui/button/button.svelte';
+ <script lang="ts">
+   import { Badge } from '$lib/components/ui/badge';
+   import * as Card from '$lib/components/ui/card';
+   import Button from '$lib/components/ui/button/button.svelte';
 
-  interface DocumentRecord {
-    id: string;
-    name: string;
-    type: 'template' | 'generated' | 'uploaded';
-    sentDate: Date;
-    status: 'sent' | 'delivered' | 'opened' | 'failed';
-    fileSize?: number;
-    downloadUrl?: string;
-    previewUrl?: string;
-  }
+   interface EmailRecord {
+     id: string;
+     subject: string;
+     sentDate: Date;
+     status: 'sent' | 'delivered' | 'opened' | 'bounced' | 'complained';
+     recipient: string;
+     opened?: boolean;
+     preview?: string;
+     attachments?: Array<{
+       filename: string;
+       size: number;
+       type: string;
+       documentType?: string;
+     }>;
+   }
 
-  interface Props {
-    documents: DocumentRecord[];
-    loading?: boolean;
-    onDownload?: (document: DocumentRecord) => void;
-    onPreview?: (document: DocumentRecord) => void;
-    onResend?: (documentId: string) => void;
-  }
+   interface DocumentSummary {
+     id: string;
+     name: string;
+     type: 'template' | 'generated' | 'uploaded';
+     sentDate: Date;
+     status: 'sent' | 'delivered' | 'opened' | 'failed';
+     fileSize?: number;
+     downloadUrl?: string;
+     previewUrl?: string;
+     emailId: string;
+     emailSubject: string;
+   }
 
-  let { documents, loading = false, onDownload, onPreview, onResend }: Props = $props();
+   interface Props {
+     emails: EmailRecord[];
+     loading?: boolean;
+     onDownload?: (document: DocumentSummary) => void;
+     onPreview?: (document: DocumentSummary) => void;
+     onResend?: (emailId: string) => void;
+   }
+
+   let { emails, loading = false, onDownload, onPreview, onResend }: Props = $props();
+
+   // Extract document summaries from email attachments
+   let documentSummaries = $derived.by(() => {
+     const summaries: DocumentSummary[] = [];
+     emails.forEach(email => {
+       if (email.attachments && email.attachments.length > 0) {
+         email.attachments.forEach(attachment => {
+           summaries.push({
+             id: `${email.id}-${attachment.filename}`,
+             name: attachment.filename,
+             type: attachment.documentType === 'template' ? 'template' : attachment.documentType === 'generated' ? 'generated' : 'uploaded',
+             sentDate: email.sentDate,
+             status: email.status === 'sent' ? 'sent' : email.status === 'delivered' ? 'delivered' : email.status === 'opened' ? 'opened' : 'failed',
+             fileSize: attachment.size,
+             downloadUrl: '#', // TODO: Implement actual download URL
+             previewUrl: email.status === 'delivered' ? '#' : undefined,
+             emailId: email.id,
+             emailSubject: email.subject
+           });
+         });
+       }
+     });
+     return summaries;
+   });
 
   function getStatusBadge(status: string) {
     const variants = {
@@ -79,30 +121,30 @@
   }
 </script>
 
-<Card.Root>
-  <Card.Header>
-    <Card.Title>Document History</Card.Title>
-    <Card.Description>
-      All documents sent to or received from this client
-    </Card.Description>
-  </Card.Header>
-  <Card.Content>
-    {#if loading}
-      <div class="flex items-center justify-center p-8">
-        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-        <span class="ml-2 text-sm">Loading documents...</span>
-      </div>
-    {:else if documents.length === 0}
-      <div class="text-center py-8 text-muted-foreground">
-        <svg class="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-        </svg>
-        <p>No documents found for this client.</p>
-        <p class="text-sm">Documents sent to this client will appear here.</p>
-      </div>
-    {:else}
-      <div class="space-y-4">
-        {#each documents as document}
+   <Card.Root>
+   <Card.Header>
+     <Card.Title>Document History</Card.Title>
+     <Card.Description>
+       Summary of documents sent via email to this client
+     </Card.Description>
+   </Card.Header>
+   <Card.Content>
+     {#if loading}
+       <div class="flex items-center justify-center p-8">
+         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+         <span class="ml-2 text-sm">Loading documents...</span>
+       </div>
+     {:else if documentSummaries.length === 0}
+       <div class="text-center py-8 text-muted-foreground">
+         <svg class="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+         </svg>
+         <p>No documents found for this client.</p>
+         <p class="text-sm">Documents sent to this client will appear here.</p>
+       </div>
+     {:else}
+       <div class="space-y-4">
+         {#each documentSummaries as document}
           <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
             <div class="flex items-center space-x-3 flex-1 min-w-0">
               <div class="flex-shrink-0">
@@ -110,15 +152,18 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={getFileIcon(document.type)}/>
                 </svg>
               </div>
-              <div class="flex-1 min-w-0">
-                <h4 class="font-medium text-sm truncate">{document.name}</h4>
-                <p class="text-xs text-muted-foreground">
-                  {getTypeLabel(document.type)} • Sent {formatDate(document.sentDate)}
-                  {#if document.fileSize}
-                    • {formatFileSize(document.fileSize)}
-                  {/if}
-                </p>
-              </div>
+               <div class="flex-1 min-w-0">
+                 <h4 class="font-medium text-sm truncate">{document.name}</h4>
+                 <p class="text-xs text-muted-foreground">
+                   {getTypeLabel(document.type)} • Sent {formatDate(document.sentDate)}
+                   {#if document.fileSize}
+                     • {formatFileSize(document.fileSize)}
+                   {/if}
+                 </p>
+                 <p class="text-xs text-muted-foreground">
+                   From email: {document.emailSubject}
+                 </p>
+               </div>
             </div>
             <div class="flex items-center space-x-2 flex-shrink-0">
               <Badge variant={getStatusBadge(document.status)} class="text-xs">

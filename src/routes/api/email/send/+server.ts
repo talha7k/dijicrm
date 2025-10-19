@@ -3,30 +3,34 @@ import type { RequestHandler } from "./$types";
 import type { EmailOptions, SMTPConfig } from "$lib/services/emailService";
 import nodemailer from "nodemailer";
 
+// Logger that collects messages for client-side display
+const logs: string[] = [];
+function log(message: string) {
+  logs.push(message);
+  console.log(message);
+}
+
 export const POST: RequestHandler = async ({ request, locals }) => {
-  console.log("📧 [EMAIL API] Email send request received");
-  console.log("📧 [EMAIL API] User:", locals.user?.uid || "undefined");
+  log("📧 [EMAIL API] Email send request received");
+  log("📧 [EMAIL API] User:", locals.user?.uid || "undefined");
 
   try {
     // Get current user from locals (set by auth hooks)
     const user = locals.user;
     if (!user || !user.uid) {
-      console.log("📧 [EMAIL API] No user found in locals, returning 401");
+      log("📧 [EMAIL API] No user found in locals, returning 401");
       throw error(401, "Unauthorized");
     }
 
-    console.log("📧 [EMAIL API] User authenticated:", user.uid);
+    log("📧 [EMAIL API] User authenticated:", user.uid);
 
     let requestBody;
     try {
       requestBody = await request.json();
-      console.log("📧 [EMAIL API] Request body parsed successfully");
-      console.log(
-        "📧 [EMAIL API] Request body keys:",
-        Object.keys(requestBody),
-      );
+      log("📧 [EMAIL API] Request body parsed successfully");
+      log("📧 [EMAIL API] Request body keys:", Object.keys(requestBody));
     } catch (parseError) {
-      console.log("📧 [EMAIL API] Failed to parse request body:", parseError);
+      log("📧 [EMAIL API] Failed to parse request body:", parseError);
       throw error(400, "Invalid JSON in request body");
     }
 
@@ -40,48 +44,48 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       companyId: string;
     } = requestBody;
 
-    console.log("📧 [EMAIL API] Company ID:", companyId);
-    console.log("📧 [EMAIL API] SMTP enabled:", smtpConfig?.enabled);
-    console.log("📧 [EMAIL API] Email to:", emailOptions?.to);
-    console.log("📧 [EMAIL API] Email subject:", emailOptions?.subject);
-    console.log(
+    log("📧 [EMAIL API] Company ID:", companyId);
+    log("📧 [EMAIL API] SMTP enabled:", smtpConfig?.enabled);
+    log("📧 [EMAIL API] Email to:", emailOptions?.to);
+    log("📧 [EMAIL API] Email subject:", emailOptions?.subject);
+    log(
       "📧 [EMAIL API] Attachments count:",
       emailOptions?.attachments?.length || 0,
     );
 
     if (!companyId) {
-      console.log("📧 [EMAIL API] Missing company ID");
+      log("📧 [EMAIL API] Missing company ID");
       throw error(400, "Company ID is required");
     }
 
     if (!smtpConfig || !smtpConfig.enabled) {
-      console.log("📧 [EMAIL API] SMTP not configured or disabled");
+      log("📧 [EMAIL API] SMTP not configured or disabled");
       throw error(400, "SMTP configuration is required and must be enabled");
     }
 
-    console.log("📧 [EMAIL API] SMTP Host:", smtpConfig.host);
-    console.log("📧 [EMAIL API] SMTP Port:", smtpConfig.port);
-    console.log("📧 [EMAIL API] SMTP Secure:", smtpConfig.secure);
+    log("📧 [EMAIL API] SMTP Host:", smtpConfig.host);
+    log("📧 [EMAIL API] SMTP Port:", smtpConfig.port);
+    log("📧 [EMAIL API] SMTP Secure:", smtpConfig.secure);
 
     // Validate required fields
     if (!smtpConfig.host || !smtpConfig.host.trim()) {
-      console.log("📧 [EMAIL API] Missing SMTP host");
+      log("📧 [EMAIL API] Missing SMTP host");
       throw error(400, "SMTP host is required");
     }
     if (!smtpConfig.auth.user || !smtpConfig.auth.user.trim()) {
-      console.log("📧 [EMAIL API] Missing SMTP username");
+      log("📧 [EMAIL API] Missing SMTP username");
       throw error(400, "SMTP username is required");
     }
     if (!smtpConfig.auth.pass || !smtpConfig.auth.pass.trim()) {
-      console.log("📧 [EMAIL API] Missing SMTP password");
+      log("📧 [EMAIL API] Missing SMTP password");
       throw error(400, "SMTP password is required");
     }
     if (!smtpConfig.fromEmail || !smtpConfig.fromEmail.trim()) {
-      console.log("📧 [EMAIL API] Missing from email");
+      log("📧 [EMAIL API] Missing from email");
       throw error(400, "From email is required");
     }
 
-    console.log("📧 [EMAIL API] Creating SMTP transporter...");
+    log("📧 [EMAIL API] Creating SMTP transporter...");
 
     // Create transporter with SMTP config
     const transporter = nodemailer.createTransport({
@@ -97,17 +101,27 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         rejectUnauthorized: false, // Allow self-signed certificates
       },
       debug: true, // Always enable debug for now
-      logger: true, // Always enable logger for now
+      logger: {
+        debug: (message: string) => log(`[NODEMAILER DEBUG] ${message}`),
+        info: (message: string) => log(`[NODEMAILER INFO] ${message}`),
+        warn: (message: string) => log(`[NODEMAILER WARN] ${message}`),
+        error: (message: string) => log(`[NODEMAILER ERROR] ${message}`),
+      },
     });
 
-    console.log("📧 [EMAIL API] Verifying SMTP connection...");
+    log("📧 [EMAIL API] Verifying SMTP connection...");
+
+    // Verify connection
+    await transporter.verify();
+
+    log("📧 [EMAIL API] SMTP connection verified successfully");
 
     // Verify connection
     await transporter.verify();
 
     console.log("📧 [EMAIL API] SMTP connection verified successfully");
 
-    console.log("📧 [EMAIL API] Preparing email options...");
+    log("📧 [EMAIL API] Preparing email options...");
 
     // Prepare email options
     const mailOptions = {
@@ -117,7 +131,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       html: emailOptions.htmlBody,
       text: emailOptions.textBody,
       attachments: emailOptions.attachments?.map((attachment) => {
-        console.log(
+        log(
           "📧 [EMAIL API] Processing attachment:",
           attachment.filename,
           "Size:",
@@ -132,25 +146,19 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       }),
     };
 
-    console.log("📧 [EMAIL API] Sending email...");
-    console.log("📧 [EMAIL API] From:", mailOptions.from);
-    console.log("📧 [EMAIL API] To:", mailOptions.to);
-    console.log("📧 [EMAIL API] Subject:", mailOptions.subject);
-    console.log(
-      "📧 [EMAIL API] HTML body length:",
-      mailOptions.html?.length || 0,
-    );
-    console.log(
-      "📧 [EMAIL API] Attachments:",
-      mailOptions.attachments?.length || 0,
-    );
+    log("📧 [EMAIL API] Sending email...");
+    log("📧 [EMAIL API] From:", mailOptions.from);
+    log("📧 [EMAIL API] To:", mailOptions.to);
+    log("📧 [EMAIL API] Subject:", mailOptions.subject);
+    log("📧 [EMAIL API] HTML body length:", mailOptions.html?.length || 0);
+    log("📧 [EMAIL API] Attachments:", mailOptions.attachments?.length || 0);
 
     // Send email
     const info = await transporter.sendMail(mailOptions);
 
-    console.log("📧 [EMAIL API] Email sent successfully!");
-    console.log("📧 [EMAIL API] Message ID:", info.messageId);
-    console.log("📧 [EMAIL API] Response:", info.response);
+    log("📧 [EMAIL API] Email sent successfully!");
+    log("📧 [EMAIL API] Message ID:", info.messageId);
+    log("📧 [EMAIL API] Response:", info.response);
 
     return json({
       success: true,
@@ -158,8 +166,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       deliveryId: `smtp-${Date.now()}`,
     });
   } catch (err) {
-    console.error("📧 [EMAIL API] ERROR:", err);
-    console.error(
+    log("📧 [EMAIL API] ERROR:", err);
+    log(
       "📧 [EMAIL API] Error stack:",
       err instanceof Error ? err.stack : "No stack trace",
     );
@@ -197,6 +205,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       {
         success: false,
         error: errorMessage,
+        logs: logs.slice(), // Return logs even on error
       },
       { status: statusCode },
     );

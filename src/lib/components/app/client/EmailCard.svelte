@@ -6,7 +6,7 @@
     id: string;
     subject: string;
     sentDate: Date;
-    status: 'sent' | 'delivered' | 'opened' | 'bounced';
+    status: 'sent' | 'delivered' | 'opened' | 'bounced' | 'complained';
     recipient: string;
     opened?: boolean;
     preview?: string;
