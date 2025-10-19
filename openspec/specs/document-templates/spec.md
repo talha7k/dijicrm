@@ -1,12 +1,21 @@
-### Requirement: Document Template Creation
+### Requirement: Simplified Document Template Creation
 
-Company users SHALL be able to create and manage HTML-based document templates with placeholder values for dynamic content insertion via a dedicated creation page, stored in Firebase.
+Company users SHALL be able to create and manage HTML-based document templates using Handlebars syntax with automatic system variable integration, stored in Firebase.
 
 #### Scenario: Create invoice template
 
 - **WHEN** company user navigates to template creation page
-- **THEN** they can define HTML structure with placeholders like {{clientName}}, {{amount}}, {{dueDate}}
+- **THEN** they can define HTML structure with Handlebars placeholders like {{clientName}}, {{formatCurrency totalAmount}}
+- **AND** system variables are automatically available without complex setup
 - **AND** template is saved and validated for proper HTML structure
+
+#### Scenario: Enhanced Template Editor
+
+- **WHEN** company user uses the template editor
+- **THEN** they have access to live preview with proper data rendering
+- **THEN** mathematical operations are supported ({{divide serviceFee 2}})
+- **THEN** conditional logic is available ({{#if companyLogo}})
+- **AND** professional placeholder images are shown in preview
 
 #### Scenario: Create template in Firebase
 
@@ -14,12 +23,7 @@ Company users SHALL be able to create and manage HTML-based document templates w
 - **THEN** template document is created in Firebase templates collection
 - **AND** associated with companyId
 - **AND** version history is maintained
-
-#### Scenario: Template preview
-
-- **WHEN** company user previews a template on creation page
-- **THEN** sample data is inserted into placeholders
-- **AND** rendered HTML is displayed for review
+- **AND** no complex variable management required
 
 ### Requirement: Sample Templates
 
@@ -60,18 +64,30 @@ Company users SHALL be able to organize, edit, and version their document templa
 - **AND** filtered by companyId
 - **AND** real-time updates via listeners
 
-### Requirement: Placeholder System
+### Requirement: Simplified Variable System
 
-Templates SHALL support a comprehensive placeholder system for dynamic content insertion.
+Templates SHALL support a streamlined variable system using Handlebars with automatic system variable population.
 
-#### Scenario: Standard placeholders
+#### Scenario: System Variables
 
-- **WHEN** template uses standard placeholders
-- **THEN** system recognizes {{clientName}}, {{companyName}}, {{date}}, {{amount}}
-- **AND** replaces with appropriate data during generation
+- **WHEN** template uses system variables
+- **THEN** system automatically populates {{clientName}}, {{companyName}}, {{currentDate}}
+- **AND** includes branding variables {{companyLogo}}, {{primaryColor}}, {{secondaryColor}}
+- **AND** provides legal variables {{companyRegistration}}, {{nationality}}, {{passportNumber}}
+- **AND** no manual variable setup required
 
-#### Scenario: Custom placeholders
+#### Scenario: Advanced Template Features
 
-- **WHEN** template includes custom placeholders
-- **THEN** system allows definition of custom field mappings
-- **AND** validates that all placeholders have corresponding data
+- **WHEN** template requires advanced features
+- **THEN** Handlebars helpers are available: formatCurrency, formatDate, divide, multiply
+- **THEN** conditional blocks work: {{#if companyLogo}}...{{/if}}
+- **THEN** loops are supported: {{#each items}}...{{/each}}
+- **AND** all features work out-of-the-box without complex configuration
+
+#### Scenario: Template Preview with Real Data
+
+- **WHEN** previewing template in editor
+- **THEN** system uses realistic sample data for all variables
+- **AND** includes proper placeholder images for companyLogo and companyStamp
+- **AND** applies default colors for branding variables
+- **AND** shows accurate representation of final document

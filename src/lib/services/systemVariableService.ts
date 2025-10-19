@@ -2,12 +2,27 @@ import { getDb } from "$lib/firebase-admin";
 import { SYSTEM_VARIABLE_CATALOG } from "$lib/types/templateVariable";
 import type { Company } from "$lib/types/company";
 import type { UserProfile } from "$lib/types/user";
+import { BrandingService } from "$lib/services/brandingService";
 
 /**
  * Service for automatically populating system variables from database data
  * System variables are auto-populated from existing data (clients, orders, etc.)
  * and don't require user management
  */
+
+/**
+ * Returns a placeholder SVG for company logo
+ */
+function getCompanyLogoPlaceholder(): string {
+  return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIiBzdHJva2U9IiNkMWQ1ZGIiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiPkNvbXBhbnkgTG9nbzwvdGV4dD4KPC9zdmc+";
+}
+
+/**
+ * Returns a placeholder SVG for company stamp
+ */
+function getCompanyStampPlaceholder(): string {
+  return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIiBzdHJva2U9IiNkMWQ1ZGIiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTkiPkNvbXBhbnkgU3RhbXA8L3RleHQ+Cjwvc3ZnPg==";
+}
 
 export interface SystemVariableContext {
   companyId: string;
@@ -46,6 +61,39 @@ export async function populateSystemVariables(
         variables.companyName = companyData.name;
         variables.companyVatNumber =
           (companyData as any).vatRegistrationNumber || companyData.vatNumber;
+
+        // Fetch company branding data for logo and stamp
+        try {
+          const brandingService = new BrandingService();
+          const brandingResult = await brandingService.loadBranding(
+            context.companyId,
+          );
+
+          if (brandingResult.success && brandingResult.branding) {
+            variables.companyLogo =
+              brandingResult.branding.logoUrl || getCompanyLogoPlaceholder();
+            variables.companyStamp =
+              brandingResult.branding.stampImageUrl ||
+              getCompanyStampPlaceholder();
+            variables.primaryColor =
+              brandingResult.branding.primaryColor || "#1f2937";
+            variables.secondaryColor =
+              brandingResult.branding.secondaryColor || "#3b82f6";
+          } else {
+            // Fallback to placeholder values if branding not configured
+            variables.companyLogo = getCompanyLogoPlaceholder();
+            variables.companyStamp = getCompanyStampPlaceholder();
+            variables.primaryColor = "#1f2937";
+            variables.secondaryColor = "#3b82f6";
+          }
+
+          // Always set light background color
+          variables.lightBackgroundColor = "#f8fafc";
+        } catch (error) {
+          console.warn("Failed to fetch company branding:", error);
+          variables.companyLogo = getCompanyLogoPlaceholder();
+          variables.companyStamp = getCompanyStampPlaceholder();
+        }
 
         // For other company variables, provide fallback values
         // These can be configured through the branding system

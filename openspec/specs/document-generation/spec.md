@@ -2,26 +2,28 @@
 
 ## Purpose
 
-The document generation system converts HTML templates into professional PDF documents with company branding support for invoices, contracts, and other business documents.
+The document generation system converts HTML templates into professional PDF documents with company branding support for invoices, contracts, and other business documents using a simplified variable system.
 
 ## Requirements
 
 ### Requirement: Template Rendering
 
-The system SHALL render HTML templates by replacing placeholders with actual data values.
+The system SHALL render HTML templates using Handlebars with automatic system variable population and simplified data management.
 
 #### Scenario: Invoice generation
 
 - **WHEN** invoice is created for a client
 - **THEN** system retrieves appropriate template
-- **AND** replaces all placeholders with client and invoice data
-- **AND** generates final HTML document
+- **AND** automatically populates system variables (client data, company info, branding)
+- **AND** replaces all placeholders with actual data using Handlebars rendering
+- **AND** generates final HTML document with proper fallbacks
 
 #### Scenario: Batch document generation
 
 - **WHEN** case requires multiple documents
 - **THEN** system generates all required documents in parallel
 - **AND** associates each document with the case
+- **AND** applies consistent branding across all documents
 
 ### Requirement: PDF Conversion
 
@@ -57,22 +59,30 @@ Generated HTML documents SHALL be converted to PDF format for professional prese
 - **THEN** the document generates successfully without branding elements
 - **AND** uses default styling and layout
 
-### Requirement: Branding Data Integration
+### Requirement: Enhanced Branding Data Integration
 
-Document generation SHALL load and apply company branding data from Firebase during PDF creation.
+Document generation SHALL load and apply company branding data with automatic fallbacks during PDF creation.
 
 #### Scenario: Load Branding on Generation
 
 - **WHEN** a document generation request is initiated
-- **THEN** company branding data is fetched from Firebase
-- **AND** branding elements are applied to the document template
-- **AND** generation proceeds with branding integration
+- **THEN** company branding data is fetched from BrandingService
+- **AND** branding elements (logo, stamp, colors) are applied to the document template
+- **AND** professional SVG placeholders are used when branding is not configured
+- **AND** generation proceeds with seamless branding integration
 
-#### Scenario: Branding Data Caching
+#### Scenario: Branding Fallbacks
 
-- **WHEN** multiple documents are generated for the same company
-- **THEN** branding data is cached to improve performance
-- **AND** cache is invalidated when branding settings change
+- **WHEN** company has no configured branding
+- **THEN** system uses professional placeholder SVGs for logo and stamp
+- **AND** applies default color scheme (primary: #1f2937, secondary: #3b82f6)
+- **AND** ensures documents always have professional appearance
+
+#### Scenario: Color Variable Integration
+
+- **WHEN** template uses color variables ({{primaryColor}}, {{secondaryColor}})
+- **THEN** system populates from company branding or uses defaults
+- **AND** ensures consistent theming across all template elements
 
 ### Requirement: Document Versioning
 
@@ -91,18 +101,45 @@ The system SHALL maintain version history for all generated documents.
 - **THEN** system provides access to version history
 - **AND** allows comparison between versions
 
-### Requirement: Generation Validation
+### Requirement: Enhanced Template Features
 
-The system SHALL validate that all required data is available before document generation.
+The system SHALL support advanced template features using Handlebars with mathematical operations and conditional logic.
 
-#### Scenario: Data completeness check
+#### Scenario: Mathematical Operations
 
-- **WHEN** initiating document generation
-- **THEN** system verifies all placeholders have corresponding data
-- **AND** fails gracefully with clear error messages if data is missing
+- **WHEN** template requires calculations (e.g., payment splits)
+- **THEN** system supports {{divide serviceFee 2}}, {{multiply quantity rate}}
+- **AND** provides formatCurrency helper for proper currency formatting
+- **AND** handles add, subtract operations for complex calculations
 
-#### Scenario: Template integrity
+#### Scenario: Conditional Logic
 
-- **WHEN** generating document
-- **THEN** system validates template HTML structure
-- **AND** ensures no malicious content in templates
+- **WHEN** template needs conditional content
+- **THEN** system supports {{#if companyLogo}} conditional blocks
+- **AND** supports {{#each items}} loops for dynamic content
+- **AND** provides proper fallbacks for missing conditional data
+
+#### Scenario: Enhanced Data Integration
+
+- **WHEN** generating documents for clients with legal information
+- **THEN** system automatically populates legal fields from client.legalInfo
+- **AND** includes companyRegistration, nationality, passport details
+- **AND** reduces manual data entry requirements
+
+### Requirement: Simplified Generation Validation
+
+The system SHALL validate template rendering with comprehensive error handling and fallbacks.
+
+#### Scenario: Template Rendering Validation
+
+- **WHEN** rendering template with Handlebars
+- **THEN** system validates helper function availability
+- **AND** provides clear error messages for missing variables
+- **AND** uses placeholder data for preview rendering
+
+#### Scenario: Data Completeness with Fallbacks
+
+- **WHEN** required data is missing during generation
+- **THEN** system uses intelligent fallbacks (placeholder images, default values)
+- **AND** logs warnings for missing data but continues generation
+- **AND** ensures documents are always generated successfully

@@ -23,7 +23,24 @@ function addPlaceholderImages(data: Record<string, any>): Record<string, any> {
   // ZATCA QR code placeholder
   if (!enhancedData.zatcaQRCode || enhancedData.zatcaQRCode.trim() === "") {
     enhancedData.zatcaQRCode =
-      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y5ZmFmYiIgc3Ryb2tlPSIjZDVkN2RiIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8dGV4dCB4PSI1MCIgeT0iNTAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5YTNhZSI+UVI8L3RleHQ+Cjwvc3ZnPg==";
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjlhZmJpIiBzdHJva2U9IiNkNWQ3ZGIiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjUwIiB5PSI1MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOTlhM2FlIj5RUjwvdGV4dD4KPC9zdmc+";
+  }
+
+  // Color fallbacks for branding
+  if (!enhancedData.primaryColor || enhancedData.primaryColor.trim() === "") {
+    enhancedData.primaryColor = "#1f2937";
+  }
+  if (
+    !enhancedData.secondaryColor ||
+    enhancedData.secondaryColor.trim() === ""
+  ) {
+    enhancedData.secondaryColor = "#3b82f6";
+  }
+  if (
+    !enhancedData.lightBackgroundColor ||
+    enhancedData.lightBackgroundColor.trim() === ""
+  ) {
+    enhancedData.lightBackgroundColor = "#f8fafc";
   }
 
   return enhancedData;
@@ -72,6 +89,9 @@ export function renderTemplate(
     Handlebars.registerHelper("formatCurrency", formatCurrency);
     Handlebars.registerHelper("formatDate", formatDate);
     Handlebars.registerHelper("multiply", (a: number, b: number) => a * b);
+    Handlebars.registerHelper("divide", (a: number, b: number) => a / b);
+    Handlebars.registerHelper("add", (a: number, b: number) => a + b);
+    Handlebars.registerHelper("subtract", (a: number, b: number) => a - b);
 
     // Compile and render the template with Handlebars
     const compiledTemplate = Handlebars.compile(template.htmlContent);
@@ -98,6 +118,14 @@ export function generatePreviewData(): Record<string, any> {
   for (const variable of SYSTEM_VARIABLE_CATALOG) {
     previewData[variable.key] = variable.exampleValue;
   }
+
+  // Override image variables with proper placeholders
+  previewData.companyLogo =
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIiBzdHJva2U9IiNkMWQ1ZGIiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiPkNvbXBhbnkgTG9nbzwvdGV4dD4KPC9zdmc+";
+  previewData.companyStamp =
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIiBzdHJva2U9IiNkMWQ1ZGIiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTkiPkNvbXBhbnkgU3RhbXA8L3RleHQ+Cjwvc3ZnPg==";
+  previewData.zatcaQRCode =
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjlhZmJpIiBzdHJva2U9IiNkNWQ3ZGIiIHN0cm9rZS13aWR0aD0iMiIvPgogIDx0ZXh0IHg9IjUwIiB5PSI1MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOTlhM2FlIj5RUjwvdGV4dD4KPC9zdmc+";
 
   // Add sample order items for {{#each}} loops
   previewData.items = [
