@@ -355,6 +355,19 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     // Merge system variables with existing data
     const mergedData = { ...systemVariables, ...data };
 
+    // Add defaults for legal fields if missing (for POA and similar templates)
+    const legalDefaults = {
+      companyRegistration: mergedData.companyRegistration || "123456789",
+      nationality: mergedData.nationality || "Saudi",
+      principalCapacity: mergedData.principalCapacity || "Director",
+      passportNumber: mergedData.passportNumber || "P123456789",
+      passportIssueDate: mergedData.passportIssueDate || "2020-01-01",
+      passportExpirationDate: mergedData.passportExpirationDate || "2030-01-01",
+      passportIssuePlace: mergedData.passportIssuePlace || "Riyadh",
+      attorneys: mergedData.attorneys || "[]",
+    };
+    Object.assign(mergedData, legalDefaults);
+
     // Add branding data to template data
     if (branding) {
       // Fetch and convert logo to data URL if available

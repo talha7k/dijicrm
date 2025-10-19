@@ -3,27 +3,36 @@
   import { requireCompany } from '$lib/utils/auth';
   import { clientManagementStore } from '$lib/stores/clientManagement';
   import { userProfile } from '$lib/stores/user';
-  import Button from '$lib/components/ui/button/button.svelte';
-  import { Input } from '$lib/components/ui/input/index.js';
-  import { Label } from '$lib/components/ui/label/index.js';
-  import * as Card from '$lib/components/ui/card/index.js';
-  import { toast } from 'svelte-sonner';
+   import Button from '$lib/components/ui/button/button.svelte';
+   import { Input } from '$lib/components/ui/input/index.js';
+   import { Label } from '$lib/components/ui/label/index.js';
+   import { Textarea } from '$lib/components/ui/textarea/index.js';
+   import * as Card from '$lib/components/ui/card/index.js';
+   import { toast } from 'svelte-sonner';
 
    // Company access is checked at layout level
 
   const clientStore = clientManagementStore;
 
-  let formData = $state({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phoneNumber: '',
-    street: '',
-    city: '',
-    state: '',
-    country: '',
-    postalCode: ''
-  });
+   let formData = $state({
+     firstName: '',
+     lastName: '',
+     email: '',
+     phoneNumber: '',
+     street: '',
+     city: '',
+     state: '',
+     country: '',
+     postalCode: '',
+     companyRegistration: '',
+     nationality: '',
+     principalCapacity: '',
+     passportNumber: '',
+     passportIssueDate: '',
+     passportExpirationDate: '',
+     passportIssuePlace: '',
+     attorneys: ''
+   });
 
   let errors = $state({
     firstName: '',
@@ -80,13 +89,23 @@
         postalCode: formData.postalCode
       } : undefined;
 
-       await clientStore.addClient({
-         email: formData.email,
-         firstName: formData.firstName,
-         lastName: formData.lastName,
-         phoneNumber: formData.phoneNumber || undefined,
-         address
-        });
+        await clientStore.addClient({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phoneNumber: formData.phoneNumber || undefined,
+          address,
+          legalInfo: {
+            companyRegistration: formData.companyRegistration || undefined,
+            nationality: formData.nationality || undefined,
+            principalCapacity: formData.principalCapacity || undefined,
+            passportNumber: formData.passportNumber || undefined,
+            passportIssueDate: formData.passportIssueDate || undefined,
+            passportExpirationDate: formData.passportExpirationDate || undefined,
+            passportIssuePlace: formData.passportIssuePlace || undefined,
+            attorneys: formData.attorneys || undefined
+          }
+         });
 
        toast.success('Client added successfully!');
       goto('/clients');
@@ -236,10 +255,48 @@
                 <p class="text-sm text-destructive">{errors.postalCode}</p>
               {/if}
             </div>
-          </div>
-        </div>
+           </div>
+         </div>
 
-        <div class="flex justify-end space-x-4">
+         <div class="space-y-4">
+           <Label>Legal Information (Optional)</Label>
+           <div class="grid grid-cols-2 gap-4">
+             <div class="space-y-2">
+               <Label for="companyRegistration">Company Registration</Label>
+               <Input id="companyRegistration" bind:value={formData.companyRegistration} placeholder="Enter company registration" />
+             </div>
+             <div class="space-y-2">
+               <Label for="nationality">Nationality</Label>
+               <Input id="nationality" bind:value={formData.nationality} placeholder="Enter nationality" />
+             </div>
+             <div class="space-y-2">
+               <Label for="principalCapacity">Principal Capacity</Label>
+               <Input id="principalCapacity" bind:value={formData.principalCapacity} placeholder="Enter principal capacity" />
+             </div>
+             <div class="space-y-2">
+               <Label for="passportNumber">Passport Number</Label>
+               <Input id="passportNumber" bind:value={formData.passportNumber} placeholder="Enter passport number" />
+             </div>
+             <div class="space-y-2">
+               <Label for="passportIssueDate">Passport Issue Date</Label>
+               <Input id="passportIssueDate" type="date" bind:value={formData.passportIssueDate} />
+             </div>
+             <div class="space-y-2">
+               <Label for="passportExpirationDate">Passport Expiration Date</Label>
+               <Input id="passportExpirationDate" type="date" bind:value={formData.passportExpirationDate} />
+             </div>
+             <div class="space-y-2">
+               <Label for="passportIssuePlace">Passport Issue Place</Label>
+               <Input id="passportIssuePlace" bind:value={formData.passportIssuePlace} placeholder="Enter passport issue place" />
+             </div>
+             <div class="space-y-2">
+               <Label for="attorneys">Authorized Attorneys (JSON)</Label>
+               <Textarea id="attorneys" bind:value={formData.attorneys} placeholder="Enter attorneys as JSON array" rows={3} />
+             </div>
+           </div>
+         </div>
+
+         <div class="flex justify-end space-x-4">
           <Button type="button" variant="outline" onclick={handleCancel} disabled={isSubmitting}>
             Cancel
           </Button>

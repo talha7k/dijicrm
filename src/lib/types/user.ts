@@ -58,6 +58,18 @@ export interface UserProfile {
     accountStatus: "invited" | "active" | "inactive" | "added";
   };
 
+  // Legal information for document generation
+  legalInfo?: {
+    companyRegistration?: string;
+    nationality?: string;
+    principalCapacity?: string;
+    passportNumber?: string;
+    passportIssueDate?: string;
+    passportExpirationDate?: string;
+    passportIssuePlace?: string;
+    attorneys?: string;
+  };
+
   // Onboarding completion tracking
   onboardingCompleted?: boolean;
 

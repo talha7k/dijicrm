@@ -12,7 +12,7 @@ function log(message: string) {
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   log("📧 [EMAIL API] Email send request received");
-  log("📧 [EMAIL API] User:", locals.user?.uid || "undefined");
+  log(`📧 [EMAIL API] User: ${locals.user?.uid || "undefined"}`);
 
   try {
     // Get current user from locals (set by auth hooks)
@@ -22,15 +22,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       throw error(401, "Unauthorized");
     }
 
-    log("📧 [EMAIL API] User authenticated:", user.uid);
+    log(`📧 [EMAIL API] User authenticated: ${user.uid}`);
 
     let requestBody;
     try {
       requestBody = await request.json();
       log("📧 [EMAIL API] Request body parsed successfully");
-      log("📧 [EMAIL API] Request body keys:", Object.keys(requestBody));
+      log(`📧 [EMAIL API] Request body keys: ${Object.keys(requestBody)}`);
     } catch (parseError) {
-      log("📧 [EMAIL API] Failed to parse request body:", parseError);
+      log(`📧 [EMAIL API] Failed to parse request body: ${parseError}`);
       throw error(400, "Invalid JSON in request body");
     }
 
@@ -44,13 +44,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       companyId: string;
     } = requestBody;
 
-    log("📧 [EMAIL API] Company ID:", companyId);
-    log("📧 [EMAIL API] SMTP enabled:", smtpConfig?.enabled);
-    log("📧 [EMAIL API] Email to:", emailOptions?.to);
-    log("📧 [EMAIL API] Email subject:", emailOptions?.subject);
+    log(`📧 [EMAIL API] Company ID: ${companyId}`);
+    log(`📧 [EMAIL API] SMTP enabled: ${smtpConfig?.enabled}`);
+    log(`📧 [EMAIL API] Email to: ${emailOptions?.to}`);
+    log(`📧 [EMAIL API] Email subject: ${emailOptions?.subject}`);
     log(
-      "📧 [EMAIL API] Attachments count:",
-      emailOptions?.attachments?.length || 0,
+      `📧 [EMAIL API] Attachments count: ${emailOptions?.attachments?.length || 0}`,
     );
 
     if (!companyId) {
@@ -63,9 +62,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       throw error(400, "SMTP configuration is required and must be enabled");
     }
 
-    log("📧 [EMAIL API] SMTP Host:", smtpConfig.host);
-    log("📧 [EMAIL API] SMTP Port:", smtpConfig.port);
-    log("📧 [EMAIL API] SMTP Secure:", smtpConfig.secure);
+    log(`📧 [EMAIL API] SMTP Host: ${smtpConfig.host}`);
+    log(`📧 [EMAIL API] SMTP Port: ${smtpConfig.port}`);
+    log(`📧 [EMAIL API] SMTP Secure: ${smtpConfig.secure}`);
 
     // Validate required fields
     if (!smtpConfig.host || !smtpConfig.host.trim()) {
@@ -100,14 +99,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       tls: {
         rejectUnauthorized: false, // Allow self-signed certificates
       },
-      debug: true, // Always enable debug for now
-      logger: {
-        debug: (message: string) => log(`[NODEMAILER DEBUG] ${message}`),
-        info: (message: string) => log(`[NODEMAILER INFO] ${message}`),
-        warn: (message: string) => log(`[NODEMAILER WARN] ${message}`),
-        error: (message: string) => log(`[NODEMAILER ERROR] ${message}`),
-      },
-    });
+    } as any);
 
     log("📧 [EMAIL API] Verifying SMTP connection...");
 
@@ -132,10 +124,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       text: emailOptions.textBody,
       attachments: emailOptions.attachments?.map((attachment) => {
         log(
-          "📧 [EMAIL API] Processing attachment:",
-          attachment.filename,
-          "Size:",
-          attachment.content.length,
+          `📧 [EMAIL API] Processing attachment: ${attachment.filename} Size: ${attachment.content.length}`,
         );
         return {
           filename: attachment.filename,
@@ -147,18 +136,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     };
 
     log("📧 [EMAIL API] Sending email...");
-    log("📧 [EMAIL API] From:", mailOptions.from);
-    log("📧 [EMAIL API] To:", mailOptions.to);
-    log("📧 [EMAIL API] Subject:", mailOptions.subject);
-    log("📧 [EMAIL API] HTML body length:", mailOptions.html?.length || 0);
-    log("📧 [EMAIL API] Attachments:", mailOptions.attachments?.length || 0);
+    log(`📧 [EMAIL API] From: ${mailOptions.from}`);
+    log(`📧 [EMAIL API] To: ${mailOptions.to}`);
+    log(`📧 [EMAIL API] Subject: ${mailOptions.subject}`);
+    log(`📧 [EMAIL API] HTML body length: ${mailOptions.html?.length || 0}`);
+    log(`📧 [EMAIL API] Attachments: ${mailOptions.attachments?.length || 0}`);
 
     // Send email
     const info = await transporter.sendMail(mailOptions);
 
     log("📧 [EMAIL API] Email sent successfully!");
-    log("📧 [EMAIL API] Message ID:", info.messageId);
-    log("📧 [EMAIL API] Response:", info.response);
+    log(`📧 [EMAIL API] Message ID: ${info.messageId}`);
+    log(`📧 [EMAIL API] Response: ${info.response}`);
 
     return json({
       success: true,
@@ -166,10 +155,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       deliveryId: `smtp-${Date.now()}`,
     });
   } catch (err) {
-    log("📧 [EMAIL API] ERROR:", err);
+    log(`📧 [EMAIL API] ERROR: ${err}`);
     log(
-      "📧 [EMAIL API] Error stack:",
-      err instanceof Error ? err.stack : "No stack trace",
+      `📧 [EMAIL API] Error stack: ${err instanceof Error ? err.stack : "No stack trace"}`,
     );
 
     let errorMessage = "Unknown SMTP error";

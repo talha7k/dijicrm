@@ -41,6 +41,16 @@ export function mapClientDataToTemplate(
     clientBio: client.bio || "",
     clientUsername: client.username || "",
 
+    // Legal information
+    companyRegistration: client.legalInfo?.companyRegistration || "",
+    nationality: client.legalInfo?.nationality || "",
+    principalCapacity: client.legalInfo?.principalCapacity || "",
+    passportNumber: client.legalInfo?.passportNumber || "",
+    passportIssueDate: client.legalInfo?.passportIssueDate || "",
+    passportExpirationDate: client.legalInfo?.passportExpirationDate || "",
+    passportIssuePlace: client.legalInfo?.passportIssuePlace || "",
+    attorneys: client.legalInfo?.attorneys || "",
+
     // Current date for document generation
     currentDate: formatDate(new Date()),
     currentDateTime: new Date().toISOString(),

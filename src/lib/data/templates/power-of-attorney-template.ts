@@ -40,7 +40,7 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
           <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-right: 4px solid #1f2937;">
             <h4 style="color: #1f2937; margin-bottom: 15px; text-align: center; font-size: 16px;">النص العربي</h4>
             <div style="direction: rtl; text-align: right; line-height: 1.8; font-size: 14px;">
-              <p style="margin-bottom: 15px;">أنا الموقع أدناه، ({{principalName}})، ({{principalNationality}}) الجنسية، بموجب جواز سفر رقم ({{passportNumber}})، تاريخ الإصدار ({{passportIssueDate}})، مكان الإصدار ({{passportIssuePlace}})، بصفتي ({{principalCapacity}})، في شركة ({{companyName}})، تأسست بموجب قوانين ({{countryOfOrigin}})، سجل تجاري ({{companyRegistration}})، وعنوانها المسجل ({{companyAddress}})، ("الشركة")، وحسب الصلاحيات الممنوحة لي بموجب _____، أقمت ووكلت كلاً من:</p>
+               <p style="margin-bottom: 15px;">أنا الموقع أدناه، ({{clientFirstName}} {{clientLastName}})، ({{nationality}}) الجنسية، بموجب جواز سفر رقم ({{passportNumber}})، تاريخ الإصدار ({{passportIssueDate}})، تاريخ الانتهاء ({{passportExpirationDate}})، مكان الإصدار ({{passportIssuePlace}})، بصفتي ({{principalCapacity}})، في شركة ({{companyName}})، تأسست بموجب قوانين ({{countryOfOrigin}})، سجل تجاري ({{companyRegistration}})، وعنوانها المسجل ({{companyAddress}})، ("الشركة")، وحسب الصلاحيات الممنوحة لي بموجب _____، أقمت ووكلت كلاً من:</p>
             </div>
           </div>
 
@@ -48,7 +48,7 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
           <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6;">
             <h4 style="color: #3b82f6; margin-bottom: 15px; text-align: center; font-size: 16px;">English Text</h4>
             <div style="line-height: 1.8; font-size: 14px;">
-              <p style="margin-bottom: 15px;">I, the undersigned, {{principalName}}, {{principalNationality}} national, under passport number {{passportNumber}}, date of issuance {{passportIssueDate}}, place of issuance {{passportIssuePlace}}, in my capacity as {{principalCapacity}} of {{companyName}}, an entity validly registered under the {{countryOfOrigin}} laws with a commercial registration number {{companyRegistration}}, and a registered address at {{companyAddress}} (the "Company"), pursuant to powers granted to me under ____, hereby appoint and authorize:</p>
+               <p style="margin-bottom: 15px;">I, the undersigned, {{clientFirstName}} {{clientLastName}}, {{nationality}} national, under passport number {{passportNumber}}, date of issuance {{passportIssueDate}}, expiration date {{passportExpirationDate}}, place of issuance {{passportIssuePlace}}, in my capacity as {{principalCapacity}} of {{companyName}}, an entity validly registered under the {{countryOfOrigin}} laws with a commercial registration number {{companyRegistration}}, and a registered address at {{companyAddress}} (the "Company"), pursuant to powers granted to me under ____, hereby appoint and authorize:</p>
             </div>
           </div>
         </div>
@@ -205,7 +205,7 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
           <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); text-align: center; border: 2px dashed #3b82f6;">
             <h4 style="color: #1f2937; margin-bottom: 20px;">Principal Signature</h4>
             <div style="height: 80px; border-bottom: 1px solid #ddd; margin-bottom: 15px;"></div>
-            <p style="margin: 5px 0; font-size: 14px; color: #666;">Name: {{principalName}}</p>
+              <p style="margin: 5px 0; font-size: 14px; color: #666;">Name: {{clientFirstName}} {{clientLastName}}</p>
             <p style="margin: 5px 0; font-size: 14px; color: #666;">Date: {{currentDate}}</p>
           </div>
 
@@ -273,21 +273,16 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
       type: "text",
       required: true,
     },
+
     {
-      key: "principalName",
-      label: "Principal Name",
+      key: "nationality",
+      label: "Nationality",
       type: "text",
       required: true,
     },
     {
-      key: "principalNationality",
-      label: "Principal Nationality",
-      type: "text",
-      required: true,
-    },
-    {
-      key: "principalCapacity",
-      label: "Principal Capacity",
+      key: "capacity",
+      label: "Capacity",
       type: "text",
       required: true,
     },
@@ -300,6 +295,12 @@ export const powerOfAttorneyTemplate: DocumentTemplate = {
     {
       key: "passportIssueDate",
       label: "Passport Issue Date",
+      type: "date",
+      required: true,
+    },
+    {
+      key: "passportExpirationDate",
+      label: "Passport Expiration Date",
       type: "date",
       required: true,
     },

@@ -27,6 +27,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - **COMMIT CONTROLS**: Do not run git commands (`git add`, `git commit`, `git push`) automatically; only execute when explicitly requested by the user
 - **USE BUN**: Always use `bun` instead of `npm` for package management
 - **CHECK OFTEN**: Run `bun check` frequently to validate TypeScript and catch errors early
+- **NO LINTING**: Never run the linter (`bun run lint`, `eslint`, etc.) as it messes up quotes and creates errors
 - **THEME COLORS**: Always use theme colors from the design system rather than hardcoded color values
 - **LOADING STATES**: Always implement proper loading states using `@src/lib/components/ui/loading/**` for consistent UI experience
 - **SERVER FETCHING**: Avoid calling data fetching logic in components; use server-side files (load functions) for data fetching as this is a SvelteKit project

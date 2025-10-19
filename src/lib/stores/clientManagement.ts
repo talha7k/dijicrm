@@ -301,6 +301,7 @@ function createClientManagementStore() {
       lastName: string;
       phoneNumber?: string;
       address?: UserProfile["address"];
+      legalInfo?: UserProfile["legalInfo"];
     }) {
       try {
         const companyId = get(activeCompanyId);
@@ -326,6 +327,7 @@ function createClientManagementStore() {
           role: "client" as const,
           permissions: [],
           address: clientData.address,
+          legalInfo: clientData.legalInfo,
           companyAssociations: [
             {
               companyId,
