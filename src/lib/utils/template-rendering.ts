@@ -1,8 +1,5 @@
-import type {
-  DocumentTemplate,
-  TemplatePlaceholder,
-} from "$lib/types/document";
-import type { CompanyBranding } from "$lib/types/branding";
+import type { DocumentTemplate } from "$lib/types/document";
+import { SYSTEM_VARIABLE_CATALOG } from "$lib/types/templateVariable";
 import Handlebars from "handlebars";
 
 /**
@@ -85,186 +82,43 @@ export function renderTemplate(
     return renderedHtml;
   } catch (error) {
     console.error("Error rendering template with Handlebars:", error);
-    // Fallback to simple replacement if Handlebars fails
-    return fallbackRenderTemplate(template, data);
+    throw new Error(
+      `Template rendering failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
 /**
- * Fallback template rendering using simple regex replacement
+ * Generates preview data using system variables
  */
-function fallbackRenderTemplate(
-  template: DocumentTemplate,
-  data: Record<string, any>,
-): string {
-  let html = template.htmlContent;
-
-  // Replace all placeholders in the format {{placeholderKey}}
-  for (const placeholder of template.placeholders) {
-    if (!placeholder || typeof placeholder.key !== "string") {
-      console.error(
-        `Invalid placeholder found in template ${template.id}:`,
-        placeholder,
-      );
-      continue;
-    }
-    const placeholderRegex = new RegExp(`{{${placeholder.key}}}`, "g");
-    const value = getPlaceholderValue(placeholder, data);
-    html = html.replace(placeholderRegex, value);
-  }
-
-  // No post-processing - return HTML as-is
-
-  return html;
-}
-
-/**
- * Injects company branding into rendered HTML
- * Note: All branding (logo, stamp, colors) is handled by the template itself via placeholders
- * This function returns the HTML unchanged to respect template design
- */
-export function injectBrandingIntoHtml(
-  html: string,
-  branding: CompanyBranding,
-): string {
-  // Return HTML unchanged - template handles all styling and branding via placeholders
-  return html;
-}
-
-/**
- * Gets the value for a placeholder from the provided data
- */
-function getPlaceholderValue(
-  placeholder: TemplatePlaceholder,
-  data: Record<string, any>,
-): string {
-  const value = data[placeholder.key];
-
-  if (value === undefined || value === null) {
-    // Return default value or empty string
-    return placeholder.defaultValue || "";
-  }
-
-  // Format the value based on placeholder type
-  switch (placeholder.type) {
-    case "currency":
-      return formatCurrency(value);
-    case "date":
-      return formatDate(value);
-    case "boolean":
-      return value ? "Yes" : "No";
-    default:
-      return String(value);
-  }
-}
-
-/**
- * Generates preview data for template placeholders and system variables
- */
-export function generatePreviewData(
-  template: DocumentTemplate,
-): Record<string, any> {
+export function generatePreviewData(): Record<string, any> {
   const previewData: Record<string, any> = {};
 
-  // Add system variables commonly used in templates
-  const systemVariables = {
-    // Date/Time variables
-    currentDate: new Date().toLocaleDateString(),
-    currentTime: new Date().toLocaleTimeString(),
-    currentDateTime: new Date().toLocaleString(),
-
-    // Document/Order variables
-    orderNumber: "INV-2024-001",
-    documentId: "DOC-123456",
-    documentType: "Invoice",
-    subtotal: 1275.0,
-    totalAmount: 1466.25,
-    discountAmount: 0.0,
-    currency: "SAR",
-    itemCount: 3,
-    orderDate: new Date().toLocaleDateString(),
-    dueDate: new Date(
-      Date.now() + 30 * 24 * 60 * 60 * 1000,
-    ).toLocaleDateString(),
-    paymentStatus: "Pending",
-    orderStatus: "Processing",
-
-    // Company variables
-    companyName: "Your Company Name",
-    companyEmail: "info@yourcompany.com",
-    companyPhone: "+966 11 123 4567",
-    companyAddress: "123 Business St, Riyadh, Saudi Arabia",
-    companyLogo:
-      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkNvbXBhbnkgTG9nbzwvdGV4dD48L3N2Zz4=",
-    companyStamp:
-      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkNvbXBhbnkgU3RhbXA8L3RleHQ+PC9zdmc+",
-    taxRate: 15,
-    paymentTerms: "Net 30 days",
-    taxAmount: 150.0,
-    total: 1150.0,
-
-    // Client variables
-    clientName: "Ahmed Al-Rashid",
-    clientEmail: "ahmed.alrashid@clientcompany.com",
-    clientPhone: "+966 50 123 4567",
-    clientAddress:
-      "456 King Fahd Road, Al Olaya District, Riyadh 12345, Saudi Arabia",
-    clientVatNumber: "123456789012345",
-    clientCompanyName: "Client Company Ltd",
-
-    // Order items for {{#each}} loops
-    items: [
-      {
-        description: "Professional Web Development Services",
-        quantity: 1,
-        rate: 850.0,
-      },
-      {
-        description: "UI/UX Design Consultation",
-        quantity: 2,
-        rate: 125.0,
-      },
-      {
-        description: "Project Management & Quality Assurance",
-        quantity: 1,
-        rate: 175.0,
-      },
-    ],
-
-    // ZATCA QR Code (placeholder)
-    zatcaQRCode:
-      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPldBVENBIFE8L3RleHQ+PC9zdmc+",
-  };
-
-  // Add all system variables
-  Object.assign(previewData, systemVariables);
-
-  // Add template-specific placeholders
-  for (const placeholder of template.placeholders) {
-    previewData[placeholder.key] = getPreviewValue(placeholder);
+  // Add all system variables with sample values
+  for (const variable of SYSTEM_VARIABLE_CATALOG) {
+    previewData[variable.key] = variable.exampleValue;
   }
+
+  // Add sample order items for {{#each}} loops
+  previewData.items = [
+    {
+      description: "Professional Web Development Services",
+      quantity: 1,
+      rate: 850.0,
+    },
+    {
+      description: "UI/UX Design Consultation",
+      quantity: 2,
+      rate: 125.0,
+    },
+    {
+      description: "Project Management & Quality Assurance",
+      quantity: 1,
+      rate: 175.0,
+    },
+  ];
 
   return previewData;
-}
-
-/**
- * Gets a preview value for a placeholder
- */
-function getPreviewValue(placeholder: TemplatePlaceholder): any {
-  switch (placeholder.type) {
-    case "text":
-      return `Sample ${placeholder.label}`;
-    case "number":
-      return 123.45;
-    case "currency":
-      return 999.99;
-    case "date":
-      return new Date().toISOString().split("T")[0];
-    case "boolean":
-      return true;
-    default:
-      return `Sample ${placeholder.label}`;
-  }
 }
 
 /**
@@ -290,23 +144,22 @@ function formatDate(date: string | Date): string {
 }
 
 /**
- * Validates that all required placeholders have values in the data
+ * Validates that all required data keys are present in the data object
  */
 export function validateTemplateData(
-  template: DocumentTemplate,
   data: Record<string, any>,
+  requiredKeys: string[] = [],
 ): { isValid: boolean; missingFields: string[] } {
   const missingFields: string[] = [];
 
-  for (const placeholder of template.placeholders) {
-    if (placeholder.required) {
-      const value = data[placeholder.key];
-      if (value === undefined || value === null || value === "") {
-        // For image fields, allow empty/placeholder values
-        if (placeholder.type !== "image") {
-          missingFields.push(placeholder.label);
-        }
-      }
+  for (const key of requiredKeys) {
+    if (
+      !(key in data) ||
+      data[key] === undefined ||
+      data[key] === null ||
+      data[key] === ""
+    ) {
+      missingFields.push(key);
     }
   }
 
@@ -332,44 +185,4 @@ export function extractPlaceholdersFromHtml(html: string): string[] {
   }
 
   return placeholders;
-}
-
-/**
- * Validates template HTML and returns any issues
- */
-export function validateTemplateHtml(
-  html: string,
-  definedPlaceholders: TemplatePlaceholder[],
-): { isValid: boolean; issues: string[] } {
-  const issues: string[] = [];
-  const usedPlaceholders = extractPlaceholdersFromHtml(html);
-  const definedKeys = definedPlaceholders.map((p) => p.key);
-
-  // Check for undefined placeholders
-  for (const usedPlaceholder of usedPlaceholders) {
-    if (!definedKeys.includes(usedPlaceholder)) {
-      issues.push(`Undefined placeholder: {{${usedPlaceholder}}}`);
-    }
-  }
-
-  // Check for unused defined placeholders (warning, not error)
-  for (const definedPlaceholder of definedKeys) {
-    if (!usedPlaceholders.includes(definedPlaceholder)) {
-      issues.push(
-        `Unused placeholder: {{${definedPlaceholder}}} (consider removing from definition)`,
-      );
-    }
-  }
-
-  // Basic HTML validation
-  if (!html.trim()) {
-    issues.push("Template HTML cannot be empty");
-  }
-
-  return {
-    isValid:
-      issues.filter((issue) => !issue.includes("consider removing")).length ===
-      0,
-    issues,
-  };
 }

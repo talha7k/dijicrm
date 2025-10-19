@@ -7,7 +7,7 @@
   import { renderTemplate, generatePreviewData } from '$lib/utils/template-rendering';
   import type { DocumentTemplate } from '$lib/types/document';
   import { Timestamp } from '@firebase/firestore';
-  import VariableReference from './variable-reference.svelte';
+
   import CssTextareas from './css-textareas.svelte';
 
   interface Props {
@@ -140,8 +140,8 @@ Example:
         tags: []
       };
 
-      // Generate comprehensive preview data including system variables and template placeholders
-      const previewData = generatePreviewData(tempTemplate);
+       // Generate comprehensive preview data including system variables and template placeholders
+       const previewData = generatePreviewData();
 
       // Use proper Handlebars rendering
       previewHtml = renderTemplate(tempTemplate, previewData);
@@ -293,12 +293,7 @@ Example:
     <!-- Side Panel -->
     <div class="space-y-6">
       <!-- Variable Reference -->
-      {#if showVariableReference}
-        <VariableReference 
-          showCopyButton={true}
-          maxHeight="400px"
-        />
-      {/if}
+
 
       <!-- Quick Tips -->
       <Card>

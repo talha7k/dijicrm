@@ -1,31 +1,29 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import DashboardLayout from '$lib/components/shared/dashboard-layout.svelte';
-  import TemplateEditDialog from '$lib/components/app/template/template-edit-dialog.svelte';
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-  import { Button } from '$lib/components/ui/button';
-  import { Badge } from '$lib/components/ui/badge';
+   import { onMount } from 'svelte';
+   import { goto } from '$app/navigation';
+   import DashboardLayout from '$lib/components/shared/dashboard-layout.svelte';
+   import TemplateEditDialog from '$lib/components/app/template/template-edit-dialog.svelte';
+   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+   import { Button } from '$lib/components/ui/button';
+   import { Badge } from '$lib/components/ui/badge';
    import { toast } from 'svelte-sonner';
    import Icon from '@iconify/svelte';
    import { requireCompany } from '$lib/utils/auth';
    import { documentTemplatesStore } from '$lib/stores/documentTemplates';
-   import { customTemplateVariablesStore } from '$lib/stores/customTemplateVariables';
    import { auth } from '$lib/firebase';
    import { Timestamp } from '@firebase/firestore';
    import type { DocumentTemplate } from '$lib/types/document';
+   import { sampleTemplates } from '$lib/data/sampleTemplates';
 
-  let mounted = $state(false);
-  let showEditor = $state(false);
-  let selectedTemplate = $state<DocumentTemplate | null>(null);
+   let mounted = $state(false);
+   let showEditor = $state(false);
+   let selectedTemplate = $state<DocumentTemplate | null>(null);
 
-  import { sampleTemplates } from '$lib/data/sampleTemplates';
-
-    onMount(() => {
-      console.log('Create page mounted');
-      mounted = true;
-      // Company access is checked at layout level
-    });
+   onMount(() => {
+     console.log('Create page mounted');
+     mounted = true;
+     // Company access is checked at layout level
+   });
 
    function handleUseSampleTemplate(template: any) {
      console.log('Use template clicked for:', template.name);
@@ -76,73 +74,41 @@
         createdBy: userId
       };
 
-      console.log('Cleaned template data:', templateData);
+       console.log('Cleaned template data:', templateData);
 
-      // If this is a sample template, create custom variables from its placeholders
-      if (template.placeholders && template.placeholders.length > 0) {
-        try {
-          const { analyzeTemplateVariables } = await import('$lib/services/variableDetectionService');
-           const analysis = analyzeTemplateVariables(template.htmlContent, [], template.placeholders || []);
-          
-          // Create custom variables for new variables detected
-          if (analysis.newVariables.length > 0) {
-            console.log('Creating custom variables from sample template:', analysis.newVariables);
-            for (const variable of analysis.newVariables) {
-              try {
-                await customTemplateVariablesStore.createCustomVariable({
-                  key: variable.key,
-                  label: variable.label,
-                  type: variable.type,
-                  description: variable.description,
-                  required: variable.required,
-                  category: 'custom'
-                });
-              } catch (varError) {
-                console.warn('Failed to create custom variable:', variable.key, varError);
-                // Continue even if one variable fails
-              }
-            }
-            toast.success(`Created ${analysis.newVariables.length} custom variables from template`);
-          }
-        } catch (analysisError) {
-          console.warn('Failed to analyze template variables:', analysisError);
-          // Continue with template save even if analysis fails
-        }
+       if (template.id && template.id !== '') {
+         // Update existing template
+         console.log('Updating existing template:', template.id);
+         await documentTemplatesStore.updateTemplate(template.id, templateData);
+         toast.success('Template updated successfully!');
+       } else {
+         // Create new template
+         console.log('Creating new template');
+         const templateId = await documentTemplatesStore.createTemplate(templateData);
+         console.log('Template created with ID:', templateId);
+         toast.success('Template created successfully!');
+       }
+       // Navigate back to templates list
+       goto('/templates');
+     } catch (error) {
+       console.error('Failed to save template:', error);
+       toast.error('Failed to save template: ' + (error instanceof Error ? error.message : 'Unknown error'));
       }
-
-      if (template.id && template.id !== '') {
-        // Update existing template
-        console.log('Updating existing template:', template.id);
-        await documentTemplatesStore.updateTemplate(template.id, templateData);
-        toast.success('Template updated successfully!');
-      } else {
-        // Create new template
-        console.log('Creating new template');
-        const templateId = await documentTemplatesStore.createTemplate(templateData);
-        console.log('Template created with ID:', templateId);
-        toast.success('Template created successfully!');
-      }
-      // Navigate back to templates list
-      goto('/templates');
-    } catch (error) {
-      console.error('Failed to save template:', error);
-      toast.error('Failed to save template: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
-  }
-
-function handleTemplatePreview(template: DocumentTemplate) {
-     // Preview is handled internally by TemplateEditor component
-     console.log('Preview template:', template);
    }
 
-  function handleCancel() {
-    if (showEditor) {
-      showEditor = false;
-      selectedTemplate = null;
-    } else {
-      goto('/templates');
+   function handleCancel() {
+     if (showEditor) {
+       showEditor = false;
+       selectedTemplate = null;
+     } else {
+       goto('/templates');
+     }
+   }
+
+    function handleTemplatePreview(template: DocumentTemplate) {
+      // Preview is handled internally by TemplateEditor component
+      console.log('Preview template:', template);
     }
-  }
 
   function getTypeColor(type: string) {
     switch (type) {
@@ -205,8 +171,9 @@ function handleTemplatePreview(template: DocumentTemplate) {
            onSave={handleTemplateSave}
            onCancel={handleCancel}
          />
-       {/if}
-    </div>
+        {/if}
+      </div>
+
       <!-- Create Blank Template -->
       <Card>
         <CardHeader>
@@ -224,11 +191,11 @@ function handleTemplatePreview(template: DocumentTemplate) {
       <!-- Sample Templates -->
       <div>
         <h2 class="text-xl font-semibold mb-4">Sample Templates</h2>
-           {#if sampleTemplates.length > 0}
-             {console.log('Rendering', sampleTemplates.length, 'sample templates')}
-           {/if}
-           <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-             {#each sampleTemplates as template}
+        {#if sampleTemplates.length > 0}
+          {console.log('Rendering', sampleTemplates.length, 'sample templates')}
+        {/if}
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {#each sampleTemplates as template}
             <Card class="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div class="flex items-start justify-between">
@@ -272,5 +239,5 @@ function handleTemplatePreview(template: DocumentTemplate) {
           {/each}
         </div>
       </div>
-  </DashboardLayout>
-   {/if}
+    </DashboardLayout>
+  {/if}

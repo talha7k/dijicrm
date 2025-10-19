@@ -1,10 +1,9 @@
 import { json, error, type RequestEvent } from "@sveltejs/kit";
 import {
-  validateTemplateData,
+  renderTemplate,
   fetchImageAsDataUrl,
-  injectBrandingIntoHtml,
+  validateTemplateData,
 } from "$lib/utils/template-rendering";
-import { renderTemplate } from "$lib/utils/template-rendering";
 import type { DocumentTemplate } from "$lib/types/document";
 import type { CompanyBranding } from "$lib/types/branding";
 import { getDb } from "$lib/firebase-admin";
@@ -467,7 +466,9 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     );
 
     // Validate template data
-    const validation = validateTemplateData(template, mergedData);
+    const requiredKeys =
+      template.placeholders?.filter((p) => p.required).map((p) => p.key) || [];
+    const validation = validateTemplateData(mergedData, requiredKeys);
     if (!validation.isValid) {
       console.error("Template validation failed:", {
         templateId,
@@ -503,10 +504,7 @@ export const POST = async ({ request, locals }: RequestEvent) => {
     }
 
     // Inject branding into rendered HTML if available
-    if (branding) {
-      renderedHtml = injectBrandingIntoHtml(renderedHtml, branding);
-      console.log("Branding injected into HTML");
-    }
+    // Branding injection removed - templates handle styling directly
 
     if (format === "html") {
       // Return HTML for preview

@@ -29,8 +29,7 @@
      import EmailHistory from '$lib/components/app/client/EmailHistory.svelte';
       import DocumentHistory from '$lib/components/app/client/DocumentHistory.svelte';
       import OrderCard from '$lib/components/app/client/OrderCard.svelte';
-       import CustomVariableManager from '$lib/components/app/template/custom-variable-manager.svelte';
-       import DocumentDataForm from '$lib/components/app/template/document-data-form.svelte';
+
     
     import { emailHistoryStore } from '$lib/stores/emailHistory';
     import { companyContext } from '$lib/stores/companyContext';
@@ -711,9 +710,11 @@ onPreview={(document) => {
         />
       </Tabs.Content>
 
-      <Tabs.Content value="templates" class="space-y-6">
-        <CustomVariableManager />
-      </Tabs.Content>
+       <Tabs.Content value="templates" class="space-y-6">
+         <div class="text-center text-muted-foreground py-8">
+           Template data management coming soon...
+         </div>
+       </Tabs.Content>
     </Tabs.Root>
 
     <!-- Order Creation Modal -->
@@ -829,12 +830,9 @@ onPreview={(document) => {
              </Dialog.Description>
            </Dialog.Header>
            <div class="mt-4">
-             <DocumentDataForm
-               clientId={clientId}
-               clientName={client.displayName || `${client.firstName} ${client.lastName}`}
-               onDataEntryComplete={handleDocumentGenerationComplete}
-               onCancel={() => showDocumentGenerationModal = false}
-             />
+              <div class="text-center text-muted-foreground py-8">
+                Document data form coming soon...
+              </div>
            </div>
          </Dialog.Content>
        </Dialog.Root>

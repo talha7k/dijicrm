@@ -1,400 +1,199 @@
-<script lang="ts">
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
-  import { Button } from "$lib/components/ui/button";
-  import { Input } from "$lib/components/ui/input";
-  import { Label } from "$lib/components/ui/label";
-  import { Textarea } from "$lib/components/ui/textarea";
-  import * as Select from "$lib/components/ui/select/index.js";
-  import { Badge } from "$lib/components/ui/badge";
-  import Icon from "@iconify/svelte";
-  import { validateBasicTemplate } from "$lib/utils/basicTemplateValidation";
-  import type { DocumentTemplate } from "$lib/types/document";
-  import { Timestamp } from "@firebase/firestore";
-  import BasicEditor from "./basic-editor.svelte";
-  import VariableAccordion from "./variable-accordion.svelte";
-  import { customTemplateVariablesStore } from "$lib/stores/customTemplateVariables";
-  import { companyContext } from "$lib/stores/companyContext";
-  import { analyzeTemplateVariables } from "$lib/services/variableDetectionService";
-  import TemplatePreviewDialog from '$lib/components/shared/template-preview-dialog.svelte';
+ <script lang="ts">
+   import { createEventDispatcher } from "svelte";
+   import { Button } from "$lib/components/ui/button";
+   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
+   import { Input } from "$lib/components/ui/input";
+   import { Label } from "$lib/components/ui/label";
+   import { Textarea } from "$lib/components/ui/textarea";
+   import { Badge } from "$lib/components/ui/badge";
+   import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "$lib/components/ui/dialog";
+   import { toast } from "svelte-sonner";
+   import type { DocumentTemplate } from "$lib/types/document";
+   import { Timestamp } from "@firebase/firestore";
+   import BasicEditor from "./basic-editor.svelte";
+   import TemplatePreviewDialog from '$lib/components/shared/template-preview-dialog.svelte';
+   import { companyContext } from "$lib/stores/companyContext";
+   import Icon from '@iconify/svelte';
 
-  interface Props {
-    initialTemplate?: DocumentTemplate | null;
-    showPrintPreview?: boolean;
-    onSave: (template: DocumentTemplate) => void;
-    onCancel: () => void;
-  }
+   interface Props {
+     initialTemplate?: DocumentTemplate | null;
+     showPrintPreview?: boolean;
+     onSave: (template: DocumentTemplate) => void;
+     onCancel: () => void;
+   }
 
-  let { 
-    initialTemplate = null, 
-    showPrintPreview = true,
-    onSave, 
-    onCancel 
-  }: Props = $props();
+   let {
+     initialTemplate = null,
+     showPrintPreview = true,
+     onSave,
+     onCancel
+   }: Props = $props();
 
-  let template = $state<DocumentTemplate>({
-    id: initialTemplate?.id || '',
-    companyId: initialTemplate?.companyId || $companyContext.data?.companyId || '',
-    name: initialTemplate?.name || '',
-    description: initialTemplate?.description || '',
-    type: initialTemplate?.type || 'custom',
-    htmlContent: initialTemplate?.htmlContent || '',
-    placeholders: initialTemplate?.placeholders || [],
-    isActive: initialTemplate?.isActive ?? true,
-    version: initialTemplate?.version || 1,
-    createdBy: initialTemplate?.createdBy || '',
-    createdAt: initialTemplate?.createdAt || Timestamp.now(),
-    updatedAt: initialTemplate?.updatedAt || Timestamp.now(),
-    tags: initialTemplate?.tags || []
-  });
+   const dispatch = createEventDispatcher();
 
-   let validationErrors = $state<string[]>([]);
-   let validationWarnings = $state<string[]>([]);
-   let showVariableAccordion = $state(false);
-   let detectedVariables = $state<any[]>([]);
-   let variableAnalysis = $state<any>(null);
+   // Form state
+   let template: DocumentTemplate = $state(initialTemplate || {
+     id: "",
+     companyId: "",
+     name: "",
+     description: "",
+     type: "custom",
+     isActive: true,
+     version: 1,
+     createdBy: "",
+     createdAt: Timestamp.now(),
+     updatedAt: Timestamp.now(),
+     htmlContent: "",
+     placeholders: [],
+     tags: [],
+   });
+
+   let editorContent = $state(initialTemplate?.htmlContent || "");
+   let validationErrors: string[] = $state([]);
+   let validationWarnings: string[] = $state([]);
    let showTemplatePreviewDialog = $state(false);
    let previewTemplate = $state<DocumentTemplate | null>(null);
 
-   // Reactive validation - validate whenever template content changes
+   // Update template when editor content changes
    $effect(() => {
-     if (template.htmlContent || template.name) {
-       const validation = validateBasicTemplate(template);
-       validationErrors = validation.errors;
-       validationWarnings = validation.warnings;
+     if (editorContent !== template.htmlContent) {
+       template = {
+         ...template,
+         htmlContent: editorContent,
+         updatedAt: Timestamp.now(),
+       };
      }
    });
 
-  // Load client variables for the company
-  $effect(() => {
-    if ($companyContext.data && !$companyContext.loading) {
-      customTemplateVariablesStore.loadCustomVariables();
-    }
-  });
-
-   // Create a reactive binding for the editor content
-   let editorContent = $state(template.htmlContent);
-
-   $effect(() => {
-     template.htmlContent = editorContent;
-     // Analyze variables whenever template content changes
-     analyzeVariables();
-   });
-
-   // Also update editorContent when template.htmlContent changes (for external updates)
-   $effect(() => {
-     editorContent = template.htmlContent;
-   });
-
-   function analyzeVariables() {
-     if (!template.htmlContent.trim()) {
-       detectedVariables = [];
-       variableAnalysis = null;
+   function handleSave() {
+     // Basic validation
+     if (!template.name.trim()) {
+       toast.error("Template name is required");
        return;
      }
 
-     try {
-       // Pass existing variables from the store, not the detected ones
-       // This prevents circular dependency issues
-       const existingVars = $customTemplateVariablesStore.customVariables || [];
-        const analysis = analyzeTemplateVariables(
-          template.htmlContent,
-          existingVars,
-          template.placeholders || []
-        );
-       variableAnalysis = analysis;
-       detectedVariables = analysis.detectedVariables;
-
-       // Show recommendations if there are new variables
-       if (analysis.newVariables.length > 0) {
-         console.log('New variables detected:', analysis.newVariables);
-         console.log('Recommendations:', analysis.recommendations);
-       }
-     } catch (error) {
-       console.error('Error analyzing variables:', error);
+     if (!template.htmlContent.trim()) {
+       toast.error("Template content is required");
+       return;
      }
+
+     // Set company ID from context if available
+     if ($companyContext.data?.companyId) {
+       template.companyId = $companyContext.data.companyId;
+     }
+
+     onSave(template);
    }
 
-  function handleSave() {
-    // Validate template
-    const validation = validateBasicTemplate(template);
+   function handlePreview() {
+     previewTemplate = template;
+     showTemplatePreviewDialog = true;
+   }
+ </script>
 
-    validationErrors = validation.errors;
-    validationWarnings = validation.warnings;
+ <div class="space-y-6">
+   <!-- Template Form -->
+   <Card>
+     <CardHeader>
+       <CardTitle>{initialTemplate ? 'Edit Template' : 'Create Template'}</CardTitle>
+       <CardDescription>
+         Configure your document template with HTML content and variable placeholders.
+       </CardDescription>
+     </CardHeader>
+     <CardContent class="space-y-4">
+       <div class="grid gap-4 md:grid-cols-2">
+         <div>
+           <Label for="template-name">Template Name</Label>
+           <Input
+             id="template-name"
+             bind:value={template.name}
+             placeholder="e.g., Professional Invoice"
+           />
+         </div>
+         <div>
+           <Label for="template-type">Template Type</Label>
+           <select
+             id="template-type"
+             bind:value={template.type}
+             class="w-full px-3 py-2 border rounded-md"
+           >
+             <option value="order">Order/Invoice</option>
+             <option value="legal">Legal Document</option>
+             <option value="business">Business Document</option>
+             <option value="custom">Custom</option>
+           </select>
+         </div>
+       </div>
 
-    if (validation.errors.length > 0) {
-      return;
-    }
+       <div>
+         <Label for="template-description">Description</Label>
+         <Textarea
+           id="template-description"
+           bind:value={template.description}
+           placeholder="Describe what this template is used for..."
+           rows={3}
+         />
+       </div>
 
-    // Prepare template for saving
-    const templateToSave: DocumentTemplate = {
-      ...template,
-      htmlContent: template.htmlContent,
-      updatedAt: Timestamp.now(),
-      version: initialTemplate && initialTemplate.id && initialTemplate.id.trim() !== '' ? template.version + 1 : 1
-    };
+       <div class="flex items-center gap-2">
+         <input
+           type="checkbox"
+           id="template-active"
+           bind:checked={template.isActive}
+         />
+         <Label for="template-active">Active</Label>
+       </div>
+     </CardContent>
+   </Card>
 
-    onSave(templateToSave);
-  }
+   <!-- HTML Editor -->
+   <Card>
+     <CardHeader>
+       <CardTitle>HTML Template Content</CardTitle>
+       <CardDescription>
+         Write your HTML template with variable placeholders. Use {'{{variableName}}'} syntax for dynamic content.
+       </CardDescription>
+     </CardHeader>
+     <CardContent>
+       <BasicEditor
+         initialContent={editorContent}
+         showVariableReference={false}
+         showCssEditor={false}
+         {showPrintPreview}
+         bind:content={editorContent}
+       />
+     </CardContent>
+   </Card>
 
-  function handleVariableInsert(variableKey: string) {
-    // Insert variable at cursor position in HTML content
-    const variableText = `{{${variableKey}}}`;
-    template.htmlContent += variableText;
-  }
-
-  function handleVariableCopy() {
-    // This is handled by the accordion component
-  }
-
-  async function handlePreview() {
-    // Validate that we have the required template data
-    if (!template.name || !template.htmlContent) {
-      console.warn('Template name and content are required for preview');
-      return;
-    }
-
-    // Create a temporary template object with all required properties for preview
-    // Use the current template data but ensure all required fields are present
-    const tempTemplate: DocumentTemplate = {
-      ...template,
-      id: template.id || 'preview',
-      companyId: template.companyId || $companyContext.data?.companyId || '',
-      type: template.type || 'custom',
-      placeholders: template.placeholders || [],
-      isActive: template.isActive ?? true,
-      version: template.version || 1,
-      createdBy: template.createdBy || '',
-      createdAt: template.createdAt || Timestamp.now(),
-      updatedAt: template.updatedAt || Timestamp.now(),
-      tags: template.tags || [],
-    };
-
-    previewTemplate = tempTemplate;
-    showTemplatePreviewDialog = true;
-  }
-
-  function getTypeColor(type: string) {
-    switch (type) {
-      case 'order': return 'bg-blue-100 text-blue-800';
-      case 'legal': return 'bg-red-100 text-red-800';
-      case 'business': return 'bg-green-100 text-green-800';
-      case 'custom': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  }
-</script>
-
-<div class="space-y-6">
-  <!-- Template Header -->
-  <Card>
-    <CardHeader>
-      <CardTitle>{initialTemplate ? 'Edit Template' : 'Create New Template'}</CardTitle>
-      <CardDescription>
-        Design your document template with HTML and dynamic placeholders
-      </CardDescription>
-    </CardHeader>
-    <CardContent class="space-y-4">
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <Label for="template-name">Template Name</Label>
-          <Input
-            id="template-name"
-            bind:value={template.name}
-            placeholder="e.g., Professional Invoice Template"
-          />
-        </div>
-        <div>
-          <Label for="template-type">Template Type</Label>
-          <Select.Root type="single" bind:value={template.type}>
-            <Select.Trigger class="w-full">
-              {template.type ? template.type.charAt(0).toUpperCase() + template.type.slice(1) : "Select template type"}
-            </Select.Trigger>
-            <Select.Content>
-              <Select.Item value="order">Invoice</Select.Item>
-              <Select.Item value="legal">Legal Document</Select.Item>
-              <Select.Item value="business">Business Document</Select.Item>
-              <Select.Item value="custom">Custom</Select.Item>
-            </Select.Content>
-          </Select.Root>
-        </div>
-      </div>
-
-      <div>
-        <Label for="template-description">Description (Optional)</Label>
-        <Textarea
-          id="template-description"
-          bind:value={template.description}
-          placeholder="Brief description of this template"
-          rows={2}
-        />
-      </div>
-
-      <div>
-        <Label for="template-tags">Tags (Optional)</Label>
-        <Input
-          id="template-tags"
-          bind:value={template.tags}
-          placeholder="Enter tags separated by commas"
-        />
-      </div>
-    </CardContent>
-  </Card>
-
-  <!-- Detected Variables -->
-  {#if variableAnalysis && (variableAnalysis.detectedVariables.length > 0 || variableAnalysis.recommendations.length > 0)}
-    <Card>
-      <CardHeader>
-        <CardTitle>Detected Variables</CardTitle>
-        <CardDescription>
-          Variables found in your template and recommendations
-        </CardDescription>
-      </CardHeader>
-      <CardContent class="space-y-4">
-        {#if variableAnalysis.detectedVariables.length > 0}
-          <div>
-            <h4 class="font-medium mb-2">Variables Found ({variableAnalysis.detectedVariables.length})</h4>
-            <div class="flex flex-wrap gap-2">
-              {#each variableAnalysis.detectedVariables as variable}
-                <Badge variant={variable.category === 'system' ? 'default' : 'secondary'}>
-                  {variable.key}
-                  {#if variable.required}
-                    <span class="ml-1 text-red-500">*</span>
-                  {/if}
-                </Badge>
-              {/each}
-            </div>
-          </div>
-        {/if}
-        
-        {#if variableAnalysis.newVariables.length > 0}
-          <div>
-            <h4 class="font-medium mb-2 text-orange-600">New Custom Variables ({variableAnalysis.newVariables.length})</h4>
-            <p class="text-sm text-muted-foreground mb-2">
-              These variables need to be defined in your custom variables manager:
-            </p>
-            <div class="flex flex-wrap gap-2">
-              {#each variableAnalysis.newVariables as variable}
-                <Badge variant="outline" class="border-orange-200 text-orange-700">
-                  {variable.key} ({variable.type})
-                </Badge>
-              {/each}
-            </div>
-          </div>
-        {/if}
-        
-        {#if variableAnalysis.recommendations.length > 0}
-          <div>
-            <h4 class="font-medium mb-2">Recommendations</h4>
-            <ul class="text-sm text-muted-foreground space-y-1">
-              {#each variableAnalysis.recommendations as recommendation}
-                <li>• {recommendation}</li>
-              {/each}
-            </ul>
-          </div>
-        {/if}
-      </CardContent>
-    </Card>
-  {/if}
-
-  <!-- Actions -->
-  <div class="flex justify-end gap-2">
-    <Button variant="outline" onclick={onCancel}>
-      Cancel
-    </Button>
-    <Button variant="outline" onclick={handlePreview}>
-      <Icon icon="lucide:eye" class="h-4 w-4 mr-2" />
-      Preview
-    </Button>
-      <Button onclick={handleSave} disabled={validationErrors.length > 0 || validationWarnings.length > 0}>
-       <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
-       {initialTemplate && initialTemplate.id && initialTemplate.id.trim() !== '' ? 'Update Template' : 'Create Template'}
+   <!-- Actions -->
+   <div class="flex justify-between">
+     <Button variant="outline" onclick={onCancel}>
+       Cancel
      </Button>
-  </div>
+     <div class="flex gap-2">
+       <Button variant="outline" onclick={handlePreview}>
+         <Icon icon="lucide:eye" class="h-4 w-4 mr-2" />
+         Preview
+       </Button>
+       <Button onclick={handleSave}>
+         <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
+         {initialTemplate ? 'Update' : 'Create'} Template
+       </Button>
+     </div>
+   </div>
+ </div>
 
-  <!-- Variable Reference -->
-  <Card>
-    <CardHeader>
-      <div class="flex items-center justify-between">
-        <div>
-          <CardTitle>Template Variables</CardTitle>
-          <CardDescription>
-            Insert dynamic variables into your template using {'{{variableName}}'} syntax
-          </CardDescription>
-        </div>
-        <Button
-          variant="outline"
-          onclick={() => showVariableAccordion = !showVariableAccordion}
-        >
-          <Icon icon="lucide:variable" class="h-4 w-4 mr-2" />
-          {showVariableAccordion ? 'Hide' : 'Show'} Variables
-        </Button>
-      </div>
-    </CardHeader>
-    {#if showVariableAccordion}
-      <CardContent>
-        <VariableAccordion
-          customVariables={$customTemplateVariablesStore.customVariables || []}
-          onVariableInsert={handleVariableInsert}
-        />
-      </CardContent>
-    {/if}
-  </Card>
-
-  <!-- HTML Editor -->
-  <Card>
-    <CardHeader>
-      <CardTitle>HTML Template Content</CardTitle>
-      <CardDescription>
-        Write your HTML template with variable placeholders. Use {'{{variableName}}'} syntax for dynamic content.
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-        <BasicEditor
-          initialContent={editorContent}
-          showVariableReference={false}
-          showCssEditor={false}
-          {showPrintPreview}
-          bind:content={editorContent}
-        />
-    </CardContent>
-  </Card>
-
-  <!-- Validation Messages -->
-  {#if validationErrors.length > 0 || validationWarnings.length > 0}
-    <Card>
-      <CardHeader>
-        <CardTitle class="text-destructive">Validation Issues</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {#if validationErrors.length > 0}
-          <div class="space-y-2 mb-4">
-            <h4 class="font-medium text-destructive">Errors:</h4>
-            {#each validationErrors as error}
-              <div class="text-sm text-destructive flex items-start gap-2">
-                <Icon icon="lucide:alert-circle" class="h-4 w-4 mt-0.5 flex-shrink-0" />
-                {error}
-              </div>
-            {/each}
-          </div>
-        {/if}
-        {#if validationWarnings.length > 0}
-          <div class="space-y-2">
-            <h4 class="font-medium text-yellow-600">Warnings:</h4>
-            {#each validationWarnings as warning}
-              <div class="text-sm text-yellow-600 flex items-start gap-2">
-                <Icon icon="lucide:alert-triangle" class="h-4 w-4 mt-0.5 flex-shrink-0" />
-                {warning}
-              </div>
-            {/each}
-          </div>
-        {/if}
-      </CardContent>
-    </Card>
-  {/if}
-
-  <!-- Template Preview Dialog -->
-  <TemplatePreviewDialog
-    bind:open={showTemplatePreviewDialog}
-    template={previewTemplate}
-  />
-</div>
+ <!-- Template Preview Dialog -->
+ <Dialog open={showTemplatePreviewDialog}>
+   <DialogContent class="max-w-6xl max-h-[90vh] overflow-auto">
+     <DialogHeader>
+       <DialogTitle>Template Preview</DialogTitle>
+       <DialogDescription>
+         Preview how your template will look when rendered with sample data.
+       </DialogDescription>
+     </DialogHeader>
+     {#if previewTemplate}
+       <TemplatePreviewDialog open={showTemplatePreviewDialog} template={previewTemplate} />
+     {/if}
+   </DialogContent>
+ </Dialog>

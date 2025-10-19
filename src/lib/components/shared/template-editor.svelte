@@ -8,7 +8,8 @@
   import * as Select from '$lib/components/ui/select/index.js';
   import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
   import Icon from '@iconify/svelte';
-  import { validateTemplate, generatePreviewData, renderTemplate } from '$lib/utils/template-validation';
+  import { validateTemplate, renderTemplate } from '$lib/utils/template-validation';
+  import { generatePreviewData } from '$lib/utils/template-rendering';
   import AlertDialog from './alert-dialog.svelte';
   import ConfirmDialog from './confirm-dialog.svelte';
   import TemplatePreviewDialog from './template-preview-dialog.svelte';
@@ -106,7 +107,7 @@
     };
 
     try {
-      const previewData = await generatePreviewData(previewTemplate);
+      const previewData = await generatePreviewData();
       previewHtml = renderTemplate(previewTemplate, previewData);
     } catch (error) {
       console.error('Error generating preview:', error);

@@ -18,12 +18,15 @@
   let previewHtml = $state("");
 
   async function generatePreviewHtml(template: DocumentTemplate) {
-    try {
-      const { generatePreviewData, renderTemplate } = await import(
-        "$lib/utils/template-validation"
-      );
-      const previewData = await generatePreviewData(template);
-      const renderedHtml = renderTemplate(template, previewData);
+     try {
+       const { generatePreviewData } = await import(
+         "$lib/utils/template-rendering"
+       );
+       const { renderTemplate } = await import(
+         "$lib/utils/template-validation"
+       );
+       const previewData = await generatePreviewData();
+       const renderedHtml = renderTemplate(template, previewData);
 
        // Create isolated HTML document for preview - use template's styles
        previewHtml = `<!DOCTYPE html>

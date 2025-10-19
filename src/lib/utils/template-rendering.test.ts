@@ -41,8 +41,11 @@ describe("Template Data Validation", () => {
         },
       ]);
 
-      const minimalData = { companyName: "Test Company" };
-      const result = validateTemplateData(template, minimalData);
+      const result = validateTemplateData({}, [
+        "Items",
+        "Total",
+        "Order Number",
+      ]);
 
       expect(result.isValid).toBe(false);
       expect(result.missingFields).toContain("Items");
@@ -83,11 +86,13 @@ describe("Template Data Validation", () => {
         },
       ]);
 
-      const minimalData = {
-        companyName: "Test Company",
-        clientName: "Test Client",
-      };
-      const result = validateTemplateData(template, minimalData);
+      const result = validateTemplateData({}, [
+        "Items",
+        "Subtotal",
+        "Tax Amount",
+        "Total",
+        "Date",
+      ]);
 
       expect(result.isValid).toBe(false);
       expect(result.missingFields).toContain("Items");
@@ -129,8 +134,11 @@ describe("Template Data Validation", () => {
         { key: "attorneys", label: "Attorneys", type: "text", required: true },
       ]);
 
-      const minimalData = { companyName: "Test Company" };
-      const result = validateTemplateData(template, minimalData);
+      const result = validateTemplateData({}, [
+        "Items",
+        "Total",
+        "Order Number",
+      ]);
 
       expect(result.isValid).toBe(false);
       expect(result.missingFields).toContain("Principal Name");
@@ -198,8 +206,11 @@ describe("Template Data Validation", () => {
         { key: "attorneys", label: "Attorneys", type: "text", required: true },
       ]);
 
-      const minimalData = { companyName: "Test Company" };
-      const result = validateTemplateData(template, minimalData);
+      const result = validateTemplateData({}, [
+        "Items",
+        "Total",
+        "Order Number",
+      ]);
 
       expect(result.isValid).toBe(false);
       expect(result.missingFields).toContain("Principal Name");
@@ -237,8 +248,11 @@ describe("Template Data Validation", () => {
         },
       ]);
 
-      const minimalData = { companyName: "Test Company" };
-      const result = validateTemplateData(template, minimalData);
+      const result = validateTemplateData({}, [
+        "Items",
+        "Total",
+        "Order Number",
+      ]);
 
       expect(result.isValid).toBe(false);
       expect(result.missingFields).toContain("Current Date");
@@ -263,8 +277,11 @@ describe("Template Data Validation", () => {
         },
       ]);
 
-      const minimalData = { companyName: "Test Company" };
-      const result = validateTemplateData(template, minimalData);
+      const result = validateTemplateData({}, [
+        "Items",
+        "Total",
+        "Order Number",
+      ]);
 
       expect(result.isValid).toBe(false);
       expect(result.missingFields).toContain("Current Date");
@@ -300,8 +317,11 @@ describe("Template Data Validation", () => {
         },
       ]);
 
-      const minimalData = { companyName: "Test Company" };
-      const result = validateTemplateData(template, minimalData);
+      const result = validateTemplateData({}, [
+        "Items",
+        "Total",
+        "Order Number",
+      ]);
 
       expect(result.isValid).toBe(true);
       expect(result.missingFields).toHaveLength(0);
@@ -326,8 +346,7 @@ describe("Template Data Validation", () => {
         { key: "total", label: "Total", type: "number", required: true },
       ]);
 
-      const incompleteData = { companyName: "Test Company" }; // Missing clientName
-      const result = validateTemplateData(template, incompleteData);
+      const result = validateTemplateData({}, ["Client Name"]);
 
       expect(result.isValid).toBe(false);
       expect(result.missingFields).toContain("Client Name");

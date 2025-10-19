@@ -8,6 +8,7 @@ import { generateZATCAQRCode } from "./zatca";
 import { userProfile } from "$lib/stores/user";
 import { companyContext } from "$lib/stores/companyContext";
 import { get } from "svelte/store";
+import { generatePreviewData } from "./template-rendering";
 import QRCode from "qrcode";
 
 export interface ValidationResult {
@@ -200,66 +201,6 @@ function validatePlaceholders(template: DocumentTemplate): ValidationResult {
   });
 
   return { isValid: errors.length === 0, errors, warnings };
-}
-
-export async function generatePreviewData(
-  template: DocumentTemplate,
-): Promise<Record<string, any>> {
-  const previewData: Record<string, any> = {};
-
-  // Get current user and company context
-  const userStore = get(userProfile);
-  const companyStore = get(companyContext);
-  let branding = null;
-  let company = null;
-
-  if (userStore?.role === "company") {
-    try {
-      const brandingResult = await brandingService.loadBranding(userStore.uid);
-      if (brandingResult.success && brandingResult.branding) {
-        branding = brandingResult.branding;
-      }
-    } catch (error) {
-      console.warn("Could not load branding for preview:", error);
-    }
-  }
-
-  // Get company data for name and VAT number
-  if (companyStore.data?.company) {
-    company = companyStore.data.company;
-  }
-
-  // Generate basic system variables only
-  switch (template.type) {
-    case "order":
-      previewData.currentDate = new Date().toISOString().split("T")[0];
-      previewData.orderNumber = "INV-" + Date.now();
-      break;
-
-    case "legal":
-      previewData.currentDate = new Date().toISOString().split("T")[0];
-      break;
-
-    case "business":
-      previewData.currentDate = new Date().toISOString().split("T")[0];
-      break;
-
-    case "custom":
-      previewData.currentDate = new Date().toISOString().split("T")[0];
-      break;
-  }
-
-  // Generate individual placeholder values for any remaining placeholders
-  for (const placeholder of template.placeholders) {
-    if (!previewData[placeholder.key]) {
-      previewData[placeholder.key] = await getSampleValue(
-        placeholder,
-        branding,
-      );
-    }
-  }
-
-  return previewData;
 }
 
 /**
