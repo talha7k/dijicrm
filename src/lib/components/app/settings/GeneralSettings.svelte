@@ -88,7 +88,8 @@
   }
 
   async function updateCompanyCurrency() {
-    if (!selectedCurrency || selectedCurrency === currentCompanyCurrency) return;
+    // Prevent double-clicking if already processing
+    if (updatingCurrency || !selectedCurrency || selectedCurrency === currentCompanyCurrency) return;
 
     updatingCurrency = true;
     try {
@@ -133,7 +134,8 @@
   }
 
   async function updateCompanyVat() {
-    if (!vatAmount || vatAmount === currentVatAmount) return;
+    // Prevent double-clicking if already processing
+    if (updatingVat || !vatAmount || vatAmount === currentVatAmount) return;
 
     updatingVat = true;
     try {
@@ -178,6 +180,9 @@
   }
 
    async function handleSaveCompanyInfo() {
+     // Prevent double-clicking if already processing
+     if (savingCompanyInfo) return;
+     
      // Get company context
      const companyContextValue = get(companyContext);
      if (!companyContextValue.data) {

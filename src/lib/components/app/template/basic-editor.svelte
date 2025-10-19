@@ -16,6 +16,7 @@
     initialPrintCss?: string;
     showVariableReference?: boolean;
     showCssEditor?: boolean;
+    showPrintPreview?: boolean;
     content?: string;
   }
 
@@ -25,6 +26,7 @@
     initialPrintCss = '',
     showVariableReference = true,
     showCssEditor = false, // Disabled by default since styles are now internal to templates
+    showPrintPreview = true, // Show print preview button by default
     content = $bindable(initialContent)
   }: Props = $props();
 
@@ -180,10 +182,12 @@ Example:
             <Icon icon="lucide:eye" class="h-4 w-4 mr-2" />
             {previewMode ? 'Edit' : 'Preview'}
           </Button>
+          {#if showPrintPreview}
           <Button variant="outline" size="sm" onclick={togglePrintPreview}>
             <Icon icon="lucide:printer" class="h-4 w-4 mr-2" />
             {printPreviewMode ? 'Edit' : 'Print Preview'}
           </Button>
+          {/if}
         </div>
       </div>
     </CardHeader>

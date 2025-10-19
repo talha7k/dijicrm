@@ -7,7 +7,7 @@
   import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import * as Select from "$lib/components/ui/select";
-   import { documentTemplatesStore } from "$lib/stores/documentTemplates";
+   import { documentTemplatesStore, getDocumentTemplate } from "$lib/stores/documentTemplates";
    import { clientDocumentsStore } from "$lib/stores/clientDocuments";
    import { documentGenerationStore } from "$lib/stores/documentGeneration";
    import { clientManagementStore } from "$lib/stores/clientManagement";
@@ -19,10 +19,12 @@
    import { authenticatedFetch } from "$lib/utils/authUtils";
    import { downloadFileAsBase64 } from "$lib/services/firebaseStorage";
    import type { UserProfile } from "$lib/types/user";
+   import type { DocumentTemplate } from "$lib/types/document";
    import { toast } from "svelte-sonner";
    import { emailService } from "$lib/services/emailService";
    import { onMount } from "svelte";
    import Icon from '@iconify/svelte';
+   import TemplatePreviewDialog from '$lib/components/shared/template-preview-dialog.svelte';
 
   interface Props {
     clientId: string;
@@ -65,6 +67,10 @@
   } | null>(null);
   let showPreview = $state(false);
   let previewLoading = $state(false);
+  
+  // Template preview dialog state
+  let previewTemplate = $state<DocumentTemplate | null>(null);
+  let showTemplatePreviewDialog = $state(false);
 
   // Template data from store
   let availableTemplates = $state<
@@ -179,8 +185,12 @@
 
     previewLoading = true;
     try {
-      const template = availableTemplates.find((t) => t.id === templateId);
-      if (!template) return;
+      // Get the full template object from the store, not just the basic data
+      const fullTemplate = await getDocumentTemplate(templateId);
+      if (!fullTemplate) {
+        toast.error("Template not found");
+        return;
+      }
 
       // Get company information
       const companyId = get(companyContext).data?.companyId;
@@ -213,12 +223,11 @@
          selectedOrderId || undefined,
        );
 
-      previewDocument = {
-        id: templateId,
-        name: template.name,
-        content: result.content,
-      };
-      showPreview = true;
+      // Use the full template object which has all required properties
+      previewTemplate = fullTemplate;
+      // Update the htmlContent with the generated preview
+      previewTemplate.htmlContent = result.content;
+      showTemplatePreviewDialog = true;
     } catch (error) {
       console.error("Error generating preview:", error);
       toast.error("Failed to generate preview");
@@ -230,6 +239,8 @@
   function closePreview() {
     showPreview = false;
     previewDocument = null;
+    showTemplatePreviewDialog = false;
+    previewTemplate = null;
   }
 
   async function generateSampleTemplates() {
@@ -528,6 +539,8 @@
     generatedDocuments = [];
     generationProgress = { current: 0, total: 0, currentDocument: "" };
     closePreview();
+    showTemplatePreviewDialog = false;
+    previewTemplate = null;
     open = false;
   }
 </script>
@@ -716,54 +729,11 @@
         </Card.Content>
       </Card.Root>
 
-      <!-- Document Preview Modal -->
-      {#if showPreview && previewDocument}
-        <Card.Root>
-          <Card.Header>
-            <div class="flex items-center justify-between">
-              <Card.Title class="text-base"
-                >Preview: {previewDocument.name}</Card.Title
-              >
-              <div class="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onclick={() =>
-                    previewDocument &&
-                    downloadDocument(
-                      previewDocument.id,
-                      previewDocument.name,
-                      "html",
-                    )}
-                >
-                  Download HTML
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onclick={() =>
-                    previewDocument &&
-                    downloadDocument(
-                      previewDocument.id,
-                      previewDocument.name,
-                      "pdf",
-                    )}
-                >
-                  Download PDF
-                </Button>
-                <Button variant="outline" size="sm" onclick={closePreview}>
-                  Close Preview
-                </Button>
-              </div>
-            </div>
-          </Card.Header>
-          <Card.Content>
-            <div class="max-h-96 overflow-y-auto border rounded p-4 bg-white">
-              {@html previewDocument.content}
-            </div>
-          </Card.Content>
-        </Card.Root>
-      {/if}
+      <!-- Template Preview Dialog -->
+      <TemplatePreviewDialog 
+        bind:open={showTemplatePreviewDialog} 
+        template={previewTemplate} 
+      />
 
       <!-- Send Preview -->
       {#if selectedTemplates.length > 0 || selectedCustomDocs.length > 0}

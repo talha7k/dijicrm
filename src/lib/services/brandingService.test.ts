@@ -138,7 +138,6 @@ describe("BrandingService", () => {
   const mockBranding: CompanyBranding = {
     logoUrl: "https://example.com/logo.png",
     stampImageUrl: "https://example.com/stamp.png",
-    stampPosition: "bottom-right",
     primaryColor: "#007bff",
     secondaryColor: "#6c757d",
   };
@@ -159,7 +158,6 @@ describe("BrandingService", () => {
           companyId: "company-1",
           logoUrl: "https://example.com/logo.png",
           stampImageUrl: "https://example.com/stamp.png",
-          stampPosition: "bottom-right",
           primaryColor: "#007bff",
           secondaryColor: "#6c757d",
           createdAt: expect.any(Object),
@@ -372,10 +370,7 @@ describe("BrandingService", () => {
             "- Stamp URL:",
             result.branding.stampImageUrl ? "Present" : "Missing",
           );
-          console.log(
-            "- Stamp Position:",
-            result.branding.stampPosition || "Not set",
-          );
+          
           console.log(
             "- Primary Color:",
             result.branding.primaryColor || "Not set",
@@ -398,15 +393,7 @@ describe("BrandingService", () => {
           }
 
           // Verify stamp position is valid
-          if (result.branding.stampPosition) {
-            expect([
-              "top-left",
-              "top-right",
-              "bottom-left",
-              "bottom-right",
-            ]).toContain(result.branding.stampPosition);
-            console.log("✅ Stamp position is valid");
-          }
+          
 
           // Verify colors are valid hex codes
           if (result.branding.primaryColor) {

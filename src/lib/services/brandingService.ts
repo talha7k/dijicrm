@@ -25,7 +25,7 @@ import { ImageProcessor } from "$lib/utils/imageCompression";
  * Document Structure (companies/{companyId}/branding):
  * - logoUrl?: string (Firebase Storage download URL)
  * - stampText?: string
- * - stampPosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right"
+ 
  * - stampFontSize?: number
  * - stampColor?: string
  * - primaryColor?: string

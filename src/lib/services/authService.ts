@@ -66,6 +66,22 @@ export const authError = derived(authStore, ($auth) => $auth.error);
 export const currentUser = derived(authStore, ($auth) => $auth.user);
 export const userProfile = derived(authStore, ($auth) => $auth.profile);
 
+// Auth state transition helpers
+function setAuthState(
+  status: AuthStatus,
+  user: User | null = null,
+  profile: UserProfile | null = null,
+  error: string | null = null,
+) {
+  authStore.update((state) => ({
+    ...state,
+    status,
+    user,
+    profile,
+    error,
+  }));
+}
+
 /**
  * [FIX] Performs a one-time write to create a profile or update `lastLoginAt`.
  * This is now separate from the real-time listener to prevent loops.

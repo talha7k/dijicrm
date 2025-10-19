@@ -201,6 +201,7 @@ function handleTemplatePreview(template: DocumentTemplate) {
        {#if showEditor}
          <TemplateEditDialog
            initialTemplate={selectedTemplate}
+           showPrintPreview={false}
            onSave={handleTemplateSave}
            onCancel={handleCancel}
          />

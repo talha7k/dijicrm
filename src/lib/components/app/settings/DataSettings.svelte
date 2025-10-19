@@ -2,13 +2,12 @@
   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "$lib/components/ui/card";
   import { Button } from "$lib/components/ui/button";
   import Icon from "@iconify/svelte";
-  import { companyContext } from "$lib/stores/companyContext";
-  import { get } from "svelte/store";
   import { authenticatedFetch } from "$lib/utils/authUtils";
   import type { CompanyBranding } from "$lib/types/branding";
 
   interface Props {
     data?: {
+      companyId?: string;
       company?: {
         name?: string;
         vatNumber?: string;
@@ -61,6 +60,9 @@
   }
 
   async function handleGenerateSampleData() {
+    // Prevent double-clicking if already processing
+    if (isGeneratingSampleData) return;
+    
     showConfirm(
       "Generate Sample Data",
       "This will generate sample data including companies, clients, orders, and payments. This action cannot be easily undone. Are you sure you want to continue?",
@@ -69,17 +71,23 @@
         sampleDataResult = null;
 
         try {
-          // Get current company ID
-          const companyContextValue = get(companyContext);
-          const companyId = companyContextValue.data?.companyId;
+          // Get current company ID from props - it should be available as data.companyId
+          const companyId = data?.companyId;
 
           console.log('Generating sample data for company:', companyId);
-          console.log('Company context:', companyContextValue);
+          console.log('Data prop:', data);
+
+          if (!companyId) {
+            throw new Error('Company ID is not available');
+          }
 
           const response = await authenticatedFetch("/api/sample-data", {
             method: "POST",
+            headers: {
+              'Content-Type': 'application/json',
+            },
             body: JSON.stringify({
-              companyId: companyId || undefined
+              companyId: companyId
             }),
           });
 
@@ -87,11 +95,15 @@
             const result = await response.json();
             sampleDataResult = { success: true, message: result.message || "Sample data generated successfully!" };
           } else {
-            sampleDataResult = { success: false, message: "Failed to generate sample data" };
+            const errorResult = await response.json().catch(() => ({}));
+            sampleDataResult = { 
+              success: false, 
+              message: errorResult.message || `Failed to generate sample data: ${response.status} ${response.statusText}` 
+            };
           }
         } catch (error) {
           console.error("Sample data generation error:", error);
-          sampleDataResult = { success: false, message: "Network error occurred" };
+          sampleDataResult = { success: false, message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}` };
         } finally {
           isGeneratingSampleData = false;
         }
@@ -169,3 +181,74 @@
     </div>
   </CardContent>
 </Card>
+
+<!-- Alert Dialog -->
+{#if showAlertDialog}
+  <div class="fixed inset-0 z-50 flex items-center justify-center">
+    <div 
+      class="fixed inset-0 bg-black/50" 
+      onclick={() => showAlertDialog = false}
+      onkeydown={(e) => { if (e.key === 'Escape') showAlertDialog = false; }}
+      role="button"
+      tabindex="0"
+      aria-label="Close dialog"
+    ></div>
+    <div class="relative bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+      <div class="flex items-start space-x-3">
+        <div class="flex-shrink-0">
+          {#if alertType === 'error'}
+            <Icon icon="lucide:x-circle" class="h-6 w-6 text-destructive" />
+          {:else if alertType === 'success'}
+            <Icon icon="lucide:check-circle" class="h-6 w-6 text-green-600" />
+          {:else if alertType === 'warning'}
+            <Icon icon="lucide:alert-triangle" class="h-6 w-6 text-amber-600" />
+          {:else}
+            <Icon icon="lucide:info" class="h-6 w-6 text-blue-600" />
+          {/if}
+        </div>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-lg font-semibold text-foreground">{alertTitle}</h3>
+          <p class="text-sm text-muted-foreground mt-1">{alertMessage}</p>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end">
+        <Button type="button" onclick={() => showAlertDialog = false}>
+          OK
+        </Button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Confirm Dialog -->
+{#if showConfirmDialog}
+  <div class="fixed inset-0 z-50 flex items-center justify-center">
+    <div 
+      class="fixed inset-0 bg-black/50" 
+      onclick={() => showConfirmDialog = false}
+      onkeydown={(e) => { if (e.key === 'Escape') showConfirmDialog = false; }}
+      role="button"
+      tabindex="0"
+      aria-label="Close dialog"
+    ></div>
+    <div class="relative bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+      <div class="flex items-start space-x-3">
+        <div class="flex-shrink-0">
+          <Icon icon="lucide:help-circle" class="h-6 w-6 text-amber-600" />
+        </div>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-lg font-semibold text-foreground">{confirmTitle}</h3>
+          <p class="text-sm text-muted-foreground mt-1">{confirmMessage}</p>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end space-x-3">
+        <Button type="button" variant="outline" onclick={() => showConfirmDialog = false}>
+          Cancel
+        </Button>
+        <Button type="button" onclick={handleConfirm}>
+          Confirm
+        </Button>
+      </div>
+    </div>
+  </div>
+{/if}

@@ -32,12 +32,24 @@ export function formatDate(date: Date) {
   }).format(date);
 }
 
-export function formatDateTime(date: Date) {
+export function formatDateTime(date: Date | string | null | undefined): string {
+  if (!date) {
+    return "N/A";
+  }
+
+  // Handle string input by converting to Date object
+  const dateObj = typeof date === "string" ? new Date(date) : date;
+  
+  // Check if the date is valid
+  if (isNaN(dateObj.getTime())) {
+    return "Invalid Date";
+  }
+  
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(date);
+  }).format(dateObj);
 }

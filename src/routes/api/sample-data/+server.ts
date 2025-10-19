@@ -42,7 +42,6 @@ async function generateBrandingData(
     companyId,
     logoUrl: sampleLogoUrl,
     stampImageUrl: sampleStampUrl,
-    stampPosition: "bottom-right",
     primaryColor: "#3b82f6",
     secondaryColor: "#64748b",
     createdAt: Timestamp.now() as any,

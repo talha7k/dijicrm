@@ -250,13 +250,15 @@ export const POST = async ({ request, locals }: RequestEvent) => {
           const brandingData = companyData?.brandingConfig;
           if (brandingData) {
             branding = {
-            logoUrl: brandingData?.logoUrl,
-            stampImageUrl: brandingData?.stampImageUrl,
-            stampPosition: brandingData?.stampPosition,
-            primaryColor: brandingData?.primaryColor,
-            secondaryColor: brandingData?.secondaryColor,
-          };
-          console.log("Branding loaded successfully via admin SDK");
+              logoUrl: brandingData?.logoUrl,
+              stampImageUrl: brandingData?.stampImageUrl,
+              primaryColor: brandingData?.primaryColor,
+              secondaryColor: brandingData?.secondaryColor,
+            };
+            console.log("Branding loaded successfully via admin SDK");
+          } else {
+            console.log("No branding document found for company");
+          }
         } else {
           console.log("No branding document found for company");
         }
@@ -548,9 +550,6 @@ export const POST = async ({ request, locals }: RequestEvent) => {
       throw err; // Re-throw SvelteKit errors
     }
 
-     throw error(500, "Failed to generate document");
-   } catch (mainError) {
-     console.error("Main document generation error:", mainError);
-     throw error(500, "Failed to generate document");
-   }
- };
+    throw error(500, "Failed to generate document");
+  }
+};

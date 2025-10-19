@@ -32,7 +32,7 @@ async function checkBranding() {
         "- Stamp URL:",
         brandingData.stampImageUrl ? "Present" : "Missing",
       );
-      console.log("- Stamp Position:", brandingData.stampPosition || "Not set");
+      
       console.log("- Primary Color:", brandingData.primaryColor || "Not set");
       console.log(
         "- Secondary Color:",

@@ -17,6 +17,7 @@
 
   interface Props {
     data?: {
+      companyId?: string;
       company?: {
         name?: string;
         vatNumber?: string;
@@ -87,10 +88,15 @@
   }
 
   async function loadInvitations() {
+    // Get company ID from props data
     const companyContextValue = get(companyContext);
-    if (!companyContextValue.data) return;
+    const companyId = data?.companyId || companyContextValue.data?.companyId;
 
-    const companyId = companyContextValue.data.companyId;
+    if (!companyId) {
+      console.error('No company ID available');
+      return;
+    }
+
     console.log('🔍 Loading invitations for companyId:', companyId);
     isLoadingInvitations = true;
 
@@ -124,13 +130,17 @@
   }
 
   async function handleCreateInvitation() {
+    // Prevent double-clicking if already processing
+    if (isCreatingInvitation) return;
+    
+    // Get company ID from props data
     const companyContextValue = get(companyContext);
-    if (!companyContextValue.data) {
-      showAlert("Authentication Error", "Company context not available.", "error");
+    const companyId = data?.companyId || companyContextValue.data?.companyId;
+
+    if (!companyId) {
+      showAlert("Authentication Error", "Company ID not available.", "error");
       return;
     }
-
-    const companyId = companyContextValue.data.companyId;
 
     // Validate email if provided
     if (newInvitationEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newInvitationEmail)) {
@@ -554,3 +564,74 @@
     </div>
   </CardContent>
 </Card>
+
+<!-- Alert Dialog -->
+{#if showAlertDialog}
+  <div class="fixed inset-0 z-50 flex items-center justify-center">
+    <div 
+      class="fixed inset-0 bg-black/50" 
+      onclick={() => showAlertDialog = false}
+      onkeydown={(e) => { if (e.key === 'Escape') showAlertDialog = false; }}
+      role="button"
+      tabindex="0"
+      aria-label="Close dialog"
+    ></div>
+    <div class="relative bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+      <div class="flex items-start space-x-3">
+        <div class="flex-shrink-0">
+          {#if alertType === 'error'}
+            <Icon icon="lucide:x-circle" class="h-6 w-6 text-destructive" />
+          {:else if alertType === 'success'}
+            <Icon icon="lucide:check-circle" class="h-6 w-6 text-green-600" />
+          {:else if alertType === 'warning'}
+            <Icon icon="lucide:alert-triangle" class="h-6 w-6 text-amber-600" />
+          {:else}
+            <Icon icon="lucide:info" class="h-6 w-6 text-blue-600" />
+          {/if}
+        </div>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-lg font-semibold text-foreground">{alertTitle}</h3>
+          <p class="text-sm text-muted-foreground mt-1">{alertMessage}</p>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end">
+        <Button type="button" onclick={() => showAlertDialog = false}>
+          OK
+        </Button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Confirm Dialog -->
+{#if showConfirmDialog}
+  <div class="fixed inset-0 z-50 flex items-center justify-center">
+    <div 
+      class="fixed inset-0 bg-black/50" 
+      onclick={() => showConfirmDialog = false}
+      onkeydown={(e) => { if (e.key === 'Escape') showConfirmDialog = false; }}
+      role="button"
+      tabindex="0"
+      aria-label="Close dialog"
+    ></div>
+    <div class="relative bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+      <div class="flex items-start space-x-3">
+        <div class="flex-shrink-0">
+          <Icon icon="lucide:help-circle" class="h-6 w-6 text-amber-600" />
+        </div>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-lg font-semibold text-foreground">{confirmTitle}</h3>
+          <p class="text-sm text-muted-foreground mt-1">{confirmMessage}</p>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end space-x-3">
+        <Button type="button" variant="outline" onclick={() => showConfirmDialog = false}>
+          Cancel
+        </Button>
+        <Button type="button" onclick={handleConfirm}>
+          Confirm
+        </Button>
+      </div>
+    </div>
+  </div>
+{/if}

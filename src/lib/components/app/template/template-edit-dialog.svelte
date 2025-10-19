@@ -15,15 +15,18 @@
   import { customTemplateVariablesStore } from "$lib/stores/customTemplateVariables";
   import { companyContext } from "$lib/stores/companyContext";
   import { analyzeTemplateVariables } from "$lib/services/variableDetectionService";
+  import TemplatePreviewDialog from '$lib/components/shared/template-preview-dialog.svelte';
 
   interface Props {
     initialTemplate?: DocumentTemplate | null;
+    showPrintPreview?: boolean;
     onSave: (template: DocumentTemplate) => void;
     onCancel: () => void;
   }
 
   let { 
     initialTemplate = null, 
+    showPrintPreview = true,
     onSave, 
     onCancel 
   }: Props = $props();
@@ -49,6 +52,8 @@
    let showVariableAccordion = $state(false);
    let detectedVariables = $state<any[]>([]);
    let variableAnalysis = $state<any>(null);
+   let showTemplatePreviewDialog = $state(false);
+   let previewTemplate = $state<DocumentTemplate | null>(null);
 
    // Reactive validation - validate whenever template content changes
    $effect(() => {
@@ -139,6 +144,33 @@
 
   function handleVariableCopy() {
     // This is handled by the accordion component
+  }
+
+  async function handlePreview() {
+    // Validate that we have the required template data
+    if (!template.name || !template.htmlContent) {
+      console.warn('Template name and content are required for preview');
+      return;
+    }
+
+    // Create a temporary template object with all required properties for preview
+    // Use the current template data but ensure all required fields are present
+    const tempTemplate: DocumentTemplate = {
+      ...template,
+      id: template.id || 'preview',
+      companyId: template.companyId || $companyContext.data?.companyId || '',
+      type: template.type || 'custom',
+      placeholders: template.placeholders || [],
+      isActive: template.isActive ?? true,
+      version: template.version || 1,
+      createdBy: template.createdBy || '',
+      createdAt: template.createdAt || Timestamp.now(),
+      updatedAt: template.updatedAt || Timestamp.now(),
+      tags: template.tags || [],
+    };
+
+    previewTemplate = tempTemplate;
+    showTemplatePreviewDialog = true;
   }
 
   function getTypeColor(type: string) {
@@ -264,6 +296,21 @@
     </Card>
   {/if}
 
+  <!-- Actions -->
+  <div class="flex justify-end gap-2">
+    <Button variant="outline" onclick={onCancel}>
+      Cancel
+    </Button>
+    <Button variant="outline" onclick={handlePreview}>
+      <Icon icon="lucide:eye" class="h-4 w-4 mr-2" />
+      Preview
+    </Button>
+      <Button onclick={handleSave} disabled={validationErrors.length > 0 || validationWarnings.length > 0}>
+       <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
+       {initialTemplate && initialTemplate.id && initialTemplate.id.trim() !== '' ? 'Update Template' : 'Create Template'}
+     </Button>
+  </div>
+
   <!-- Variable Reference -->
   <Card>
     <CardHeader>
@@ -306,6 +353,7 @@
           initialContent={editorContent}
           showVariableReference={false}
           showCssEditor={false}
+          {showPrintPreview}
           bind:content={editorContent}
         />
     </CardContent>
@@ -344,14 +392,9 @@
     </Card>
   {/if}
 
-  <!-- Actions -->
-  <div class="flex justify-end gap-2">
-    <Button variant="outline" onclick={onCancel}>
-      Cancel
-    </Button>
-      <Button onclick={handleSave} disabled={validationErrors.length > 0 || validationWarnings.length > 0}>
-       <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
-       {initialTemplate && initialTemplate.id && initialTemplate.id.trim() !== '' ? 'Update Template' : 'Create Template'}
-     </Button>
-  </div>
+  <!-- Template Preview Dialog -->
+  <TemplatePreviewDialog
+    bind:open={showTemplatePreviewDialog}
+    template={previewTemplate}
+  />
 </div>

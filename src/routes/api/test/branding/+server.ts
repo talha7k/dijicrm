@@ -41,7 +41,7 @@ export const GET = async ({ url }: { url: URL }) => {
         ? {
             hasLogo: !!adminBrandingData.logoUrl,
             hasStamp: !!adminBrandingData.stampImageUrl,
-            stampPosition: adminBrandingData.stampPosition,
+            
             primaryColor: adminBrandingData.primaryColor,
             secondaryColor: adminBrandingData.secondaryColor,
           }

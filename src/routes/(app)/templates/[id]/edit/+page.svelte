@@ -165,6 +165,7 @@
         <!-- Template Editor -->
         <TemplateEditDialog
           initialTemplate={template}
+          showPrintPreview={true}
           onSave={handleTemplateSave}
           onCancel={handleCancel}
         />

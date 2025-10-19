@@ -41,7 +41,7 @@
     let settingsLoading = $derived(false);
 
     // Timeout handling for loading states
-    let loadingTimeout = $state<number | null>(null);
+    let loadingTimeout = $state<NodeJS.Timeout | number | null>(null);
     let showTimeoutError = $state(false);
 
     // Clear timeout when loading completes

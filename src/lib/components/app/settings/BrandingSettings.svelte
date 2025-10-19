@@ -13,6 +13,7 @@
 
    interface Props {
      data?: {
+       companyId?: string;
        company?: {
          name?: string;
          vatNumber?: string;
@@ -33,7 +34,6 @@
   let branding = $state<CompanyBranding>({
     logoUrl: "",
     stampImageUrl: "",
-    stampPosition: "bottom-right",
     primaryColor: "#007bff",
     secondaryColor: "#6c757d",
   });
@@ -47,6 +47,9 @@
   let selectedStampFile = $state<File | null>(null);
   let isUploadingStamp = $state(false);
   let stampPreview = $state<string | null>(null);
+
+  // Branding save state
+  let isSavingBranding = $state(false);
 
   // Dialog state
   let showAlertDialog = $state(false);
@@ -199,18 +202,23 @@
   }
 
    async function handleLogoUpload() {
+     // Prevent double-clicking if already processing
+     if (isUploadingLogo || !selectedLogoFile) return;
+     
      if (!selectedLogoFile) {
        showAlert("Validation Error", "Please select a logo file first.", "error");
        return;
      }
 
-     // Get company context
+     // Get company ID from props data
      const companyContextValue = get(companyContext);
-     if (!companyContextValue.data) {
-       showAlert("Authentication Error", "Company context not available.", "error");
+     const companyId = data?.companyId || companyContextValue.data?.companyId;
+
+     if (!companyId) {
+       showAlert("Authentication Error", "Company ID not available.", "error");
        return;
      }
-     const companyId = companyContextValue.data.companyId;
+
      isUploadingLogo = true;
 
      try {
@@ -247,18 +255,23 @@
    }
 
    async function handleStampUpload() {
+     // Prevent double-clicking if already processing
+     if (isUploadingStamp || !selectedStampFile) return;
+     
      if (!selectedStampFile) {
        showAlert("Validation Error", "Please select a stamp image file first.", "error");
        return;
      }
 
-     // Get company context
+     // Get company ID from props data
      const companyContextValue = get(companyContext);
-     if (!companyContextValue.data) {
-       showAlert("Authentication Error", "Company context not available.", "error");
+     const companyId = data?.companyId || companyContextValue.data?.companyId;
+
+     if (!companyId) {
+       showAlert("Authentication Error", "Company ID not available.", "error");
        return;
      }
-     const companyId = companyContextValue.data.companyId;
+
      isUploadingStamp = true;
 
      try {
@@ -295,14 +308,20 @@
    }
 
   async function handleSaveBranding() {
-    // Get company context
+    // Prevent double-clicking if already processing
+    if (isSavingBranding) return;
+    
+    // Get company ID from props data
     const companyContextValue = get(companyContext);
-    if (!companyContextValue.data) {
-      showAlert("Authentication Error", "Company context not available.", "error");
+    const companyId = data?.companyId || companyContextValue.data?.companyId;
+
+    if (!companyId) {
+      showAlert("Authentication Error", "Company ID not available.", "error");
       return;
     }
-    const companyId = companyContextValue.data.companyId;
 
+    isSavingBranding = true;
+    
     try {
       const result = await brandingService.saveBranding(companyId, branding);
 
@@ -314,6 +333,8 @@
     } catch (error) {
       console.error("Save branding error:", error);
       showAlert("Save Failed", "Failed to save branding configuration. Please try again.", "error");
+    } finally {
+      isSavingBranding = false;
     }
   }
 
@@ -322,13 +343,14 @@
       "Delete Logo",
       "Are you sure you want to delete the current logo? This action cannot be undone.",
       async () => {
-        // Get company context
+        // Get company ID from props data
         const companyContextValue = get(companyContext);
-        if (!companyContextValue.data) {
-          showAlert("Authentication Error", "Company context not available.", "error");
+        const companyId = data?.companyId || companyContextValue.data?.companyId;
+
+        if (!companyId) {
+          showAlert("Authentication Error", "Company ID not available.", "error");
           return;
         }
-        const companyId = companyContextValue.data.companyId;
 
         try {
           // Update branding to remove logo URL
@@ -354,13 +376,14 @@
       "Delete Stamp Image",
       "Are you sure you want to delete the current stamp image? This action cannot be undone.",
       async () => {
-        // Get company context
+        // Get company ID from props data
         const companyContextValue = get(companyContext);
-        if (!companyContextValue.data) {
-          showAlert("Authentication Error", "Company context not available.", "error");
+        const companyId = data?.companyId || companyContextValue.data?.companyId;
+
+        if (!companyId) {
+          showAlert("Authentication Error", "Company ID not available.", "error");
           return;
         }
-        const companyId = companyContextValue.data.companyId;
 
         try {
           // Update branding to remove stamp image URL
@@ -400,7 +423,7 @@
     <CardTitle>Company Branding</CardTitle>
     <CardDescription>Customize your company's logo and document branding</CardDescription>
   </CardHeader>
-  <CardContent class="grid grid-cols-1 lg:grid-cols-2 lg:items-start gap-8">
+  <CardContent class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <div class="space-y-4">
       <h4 class="text-sm font-medium">Document Stamp Image</h4>
       <div class="flex items-center space-x-4 p-4 border rounded-lg min-h-[100px]">
@@ -446,23 +469,7 @@
       {/if}
     </div>
 
-    <div class="space-y-4 border-t pt-4">
-      <h4 class="text-sm font-medium">Document Stamp Position</h4>
-      <div>
-        <Label for="stamp-position">Stamp Position</Label>
-        <Select.Root type="single" bind:value={branding.stampPosition}>
-          <Select.Trigger class="w-full">
-            {branding.stampPosition ? branding.stampPosition.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : "Select position"}
-          </Select.Trigger>
-          <Select.Content>
-            <Select.Item value="top-left">Top Left</Select.Item>
-            <Select.Item value="top-right">Top Right</Select.Item>
-            <Select.Item value="bottom-left">Bottom Left</Select.Item>
-            <Select.Item value="bottom-right">Bottom Right</Select.Item>
-          </Select.Content>
-        </Select.Root>
-      </div>
-    </div>
+    
 
     <div class="space-y-4">
       <div class="space-y-4">
@@ -526,10 +533,86 @@
     </div>
 
     <div class="flex justify-end border-t pt-4 lg:col-span-2">
-      <Button onclick={handleSaveBranding}>
-        <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
-        Save Branding
+      <Button onclick={handleSaveBranding} disabled={isSavingBranding}>
+        {#if isSavingBranding}
+          <Icon icon="lucide:loader" class="h-4 w-4 mr-2 animate-spin" />
+          Saving...
+        {:else}
+          <Icon icon="lucide:save" class="h-4 w-4 mr-2" />
+          Save Branding
+        {/if}
       </Button>
     </div>
   </CardContent>
 </Card>
+
+<!-- Alert Dialog -->
+{#if showAlertDialog}
+  <div class="fixed inset-0 z-50 flex items-center justify-center">
+    <div 
+      class="fixed inset-0 bg-black/50" 
+      onclick={() => showAlertDialog = false}
+      onkeydown={(e) => { if (e.key === 'Escape') showAlertDialog = false; }}
+      role="button"
+      tabindex="0"
+      aria-label="Close dialog"
+    ></div>
+    <div class="relative bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+      <div class="flex items-start space-x-3">
+        <div class="flex-shrink-0">
+          {#if alertType === 'error'}
+            <Icon icon="lucide:x-circle" class="h-6 w-6 text-destructive" />
+          {:else if alertType === 'success'}
+            <Icon icon="lucide:check-circle" class="h-6 w-6 text-green-600" />
+          {:else if alertType === 'warning'}
+            <Icon icon="lucide:alert-triangle" class="h-6 w-6 text-amber-600" />
+          {:else}
+            <Icon icon="lucide:info" class="h-6 w-6 text-blue-600" />
+          {/if}
+        </div>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-lg font-semibold text-foreground">{alertTitle}</h3>
+          <p class="text-sm text-muted-foreground mt-1">{alertMessage}</p>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end">
+        <Button type="button" onclick={() => showAlertDialog = false}>
+          OK
+        </Button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Confirm Dialog -->
+{#if showConfirmDialog}
+  <div class="fixed inset-0 z-50 flex items-center justify-center">
+    <div 
+      class="fixed inset-0 bg-black/50" 
+      onclick={() => showConfirmDialog = false}
+      onkeydown={(e) => { if (e.key === 'Escape') showConfirmDialog = false; }}
+      role="button"
+      tabindex="0"
+      aria-label="Close dialog"
+    ></div>
+    <div class="relative bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+      <div class="flex items-start space-x-3">
+        <div class="flex-shrink-0">
+          <Icon icon="lucide:help-circle" class="h-6 w-6 text-amber-600" />
+        </div>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-lg font-semibold text-foreground">{confirmTitle}</h3>
+          <p class="text-sm text-muted-foreground mt-1">{confirmMessage}</p>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end space-x-3">
+        <Button type="button" variant="outline" onclick={() => showConfirmDialog = false}>
+          Cancel
+        </Button>
+        <Button type="button" onclick={handleConfirm}>
+          Confirm
+        </Button>
+      </div>
+    </div>
+  </div>
+{/if}

@@ -147,7 +147,11 @@ export function formatDateShort(date: Date | any): string {
  * Formats a date or Firebase Timestamp with date and time for display
  * Handles both Date objects and Firebase Timestamps
  */
-export function formatDateTime(date: Date | any): string {
+export function formatDateTime(date: Date | string | null | undefined | any): string {
+  if (!date) {
+    return "N/A";
+  }
+
   let dateToFormat: Date;
 
   if (date && typeof date === "object" && "toDate" in date) {
@@ -157,6 +161,11 @@ export function formatDateTime(date: Date | any): string {
     dateToFormat = date;
   } else {
     dateToFormat = new Date(date);
+  }
+
+  // Check if the date is valid
+  if (isNaN(dateToFormat.getTime())) {
+    return "Invalid Date";
   }
 
   return dateToFormat.toLocaleDateString("en-US", {

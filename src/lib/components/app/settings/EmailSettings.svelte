@@ -14,6 +14,7 @@
 
   interface Props {
     data?: {
+      companyId?: string;
       company?: {
         name?: string;
         vatNumber?: string;
@@ -67,13 +68,19 @@
   }
 
   async function handleSaveSMTP() {
-    // Get company context
+    // Prevent double-clicking if already processing
+    if (smtpConfig.enabled && !smtpConfig.host.trim()) {
+      return; // Don't start if validation will fail anyway
+    }
+    
+    // Get company ID from props data
     const companyContextValue = get(companyContext);
-    if (!companyContextValue.data) {
-      showAlert("Authentication Error", "Company context not available.", "error");
+    const companyId = data?.companyId || companyContextValue.data?.companyId;
+
+    if (!companyId) {
+      showAlert("Authentication Error", "Company ID not available.", "error");
       return;
     }
-    const companyId = companyContextValue.data.companyId;
 
     // Basic validation
     if (smtpConfig.enabled) {
@@ -126,8 +133,20 @@
   }
 
   async function handleTestEmail() {
+    // Prevent double-clicking if already processing
+    if (isTesting) return;
+    
     if (!testEmail) {
       showAlert("Validation Error", "Please enter a test email address", "error");
+      return;
+    }
+
+    // Get company ID from props data
+    const companyContextValue = get(companyContext);
+    const companyId = data?.companyId || companyContextValue.data?.companyId;
+
+    if (!companyId) {
+      showAlert("Authentication Error", "Company ID not available.", "error");
       return;
     }
 
@@ -146,7 +165,7 @@
         body: JSON.stringify({
           to: testEmail,
           smtpConfig: configForTest,
-          companyId: get(companyContext).data?.companyId || '',
+          companyId: companyId,
         }),
       });
 
@@ -373,3 +392,41 @@
     {/if}
   </CardContent>
 </Card>
+
+<!-- Alert Dialog -->
+{#if showAlertDialog}
+  <div class="fixed inset-0 z-50 flex items-center justify-center">
+    <div 
+      class="fixed inset-0 bg-black/50" 
+      onclick={() => showAlertDialog = false}
+      onkeydown={(e) => { if (e.key === 'Escape') showAlertDialog = false; }}
+      role="button"
+      tabindex="0"
+      aria-label="Close dialog"
+    ></div>
+    <div class="relative bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+      <div class="flex items-start space-x-3">
+        <div class="flex-shrink-0">
+          {#if alertType === 'error'}
+            <Icon icon="lucide:x-circle" class="h-6 w-6 text-destructive" />
+          {:else if alertType === 'success'}
+            <Icon icon="lucide:check-circle" class="h-6 w-6 text-green-600" />
+          {:else if alertType === 'warning'}
+            <Icon icon="lucide:alert-triangle" class="h-6 w-6 text-amber-600" />
+          {:else}
+            <Icon icon="lucide:info" class="h-6 w-6 text-blue-600" />
+          {/if}
+        </div>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-lg font-semibold text-foreground">{alertTitle}</h3>
+          <p class="text-sm text-muted-foreground mt-1">{alertMessage}</p>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end">
+        <Button type="button" onclick={() => showAlertDialog = false}>
+          OK
+        </Button>
+      </div>
+    </div>
+  </div>
+{/if}

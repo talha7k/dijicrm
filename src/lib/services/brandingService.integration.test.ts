@@ -23,10 +23,7 @@ describe("BrandingService - Integration Tests", () => {
           "- Stamp URL:",
           result.branding.stampImageUrl ? "Present" : "Missing",
         );
-        console.log(
-          "- Stamp Position:",
-          result.branding.stampPosition || "Not set",
-        );
+        console.log("Result branding stampPosition: Removed from schema");
         console.log(
           "- Primary Color:",
           result.branding.primaryColor || "Not set",
@@ -82,16 +79,7 @@ describe("BrandingService - Integration Tests", () => {
           }
         }
 
-        // Verify stamp position is valid
-        if (result.branding.stampPosition) {
-          expect([
-            "top-left",
-            "top-right",
-            "bottom-left",
-            "bottom-right",
-          ]).toContain(result.branding.stampPosition);
-          console.log("✅ Stamp position is valid");
-        }
+        
 
         // Verify colors are valid hex codes
         if (result.branding.primaryColor) {
