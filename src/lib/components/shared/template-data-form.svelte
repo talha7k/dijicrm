@@ -59,8 +59,9 @@
       description: 'Legal document templates may require additional information'
     },
     business: {
-      requiresOrder: false,
-      description: 'Business document templates may require additional information'
+      requiresOrder: true,
+      orderType: 'general' as const,
+      description: 'Business document templates require order selection for order amount information'
     },
     custom: {
       requiresOrder: false,

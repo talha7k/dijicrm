@@ -30,7 +30,7 @@ export const invoiceTemplate: DocumentTemplate = {
            justify-content: space-between;
            align-items: center;
            margin-bottom: 40px;
-           border-bottom: 3px solid #2563eb;
+            border-bottom: 3px solid #14532d;
            padding-bottom: 30px;
            gap: 20px;
          }
@@ -77,7 +77,7 @@ export const invoiceTemplate: DocumentTemplate = {
          .invoice-title h1 {
            font-size: 36px;
            font-weight: 700;
-           color: #2563eb;
+            color: #14532d;
            margin: 0;
            text-transform: uppercase;
            letter-spacing: 2px;
@@ -89,12 +89,12 @@ export const invoiceTemplate: DocumentTemplate = {
            font-size: 14px;
          }
 
-         .company-info h2 {
-           font-size: 24px;
-           font-weight: 600;
-           color: #1f2937;
-           margin: 0 0 15px 0;
-         }
+          .company-info h2 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #14532d;
+            margin: 0 0 15px 0;
+          }
 
          .company-info p {
            margin: 5px 0;
@@ -112,17 +112,17 @@ export const invoiceTemplate: DocumentTemplate = {
           background: #f8fafc;
           padding: 25px;
           border-radius: 12px;
-          border-left: 4px solid #2563eb;
+          border-left: 4px solid #14532d;
         }
 
-        .info-section h3 {
-          font-size: 16px;
-          font-weight: 600;
-          color: #2563eb;
-          margin: 0 0 15px 0;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
+         .info-section h3 {
+           font-size: 16px;
+           font-weight: 600;
+           color: #22c55e;
+           margin: 0 0 15px 0;
+           text-transform: uppercase;
+           letter-spacing: 1px;
+         }
 
         .info-section p {
           margin: 8px 0;
@@ -141,7 +141,7 @@ export const invoiceTemplate: DocumentTemplate = {
         }
 
         .order-table thead {
-          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+          background: linear-gradient(135deg, #14532d, #15803d);
           color: white;
         }
 
@@ -185,11 +185,11 @@ export const invoiceTemplate: DocumentTemplate = {
           border: none;
         }
 
-        .order-table td:last-child {
-          text-align: right;
-          font-weight: 600;
-          color: #1f2937;
-        }
+         .order-table td:last-child {
+           text-align: right;
+           font-weight: 600;
+           color: #14532d;
+         }
 
         .order-table tbody tr:nth-child(even) {
           background-color: #fafbfc;
@@ -216,14 +216,14 @@ export const invoiceTemplate: DocumentTemplate = {
           color: #4b5563;
         }
 
-        .total-row.total {
-          border-top: 2px solid #2563eb;
-          margin-top: 15px;
-          padding-top: 20px;
-          font-size: 18px;
-          font-weight: 700;
-          color: #1f2937;
-        }
+         .total-row.total {
+           border-top: 2px solid #14532d;
+           margin-top: 15px;
+           padding-top: 20px;
+           font-size: 18px;
+           font-weight: 700;
+           color: #14532d;
+         }
 
         .total-row span:first-child {
           flex: 1;
@@ -279,7 +279,7 @@ export const invoiceTemplate: DocumentTemplate = {
          .thank-you-message {
            font-size: 18px;
            font-weight: 600;
-           color: #2563eb;
+            color: #14532d;
            margin-bottom: 20px;
          }
 

@@ -85,6 +85,7 @@ export function mapClientDataToTemplate(
     taxRate: 15, // Default VAT rate
     taxAmount: (order?.totalAmount || 1000) * 0.15, // 15% of subtotal
     totalAmount: (order?.totalAmount || 1000) * 1.15, // Subtotal + tax
+    orderAmount: (order?.totalAmount || 1000) * 1.15, // Alias for totalAmount
   };
 
   return clientData;
@@ -162,5 +163,6 @@ export function getClientPlaceholderKeys(): string[] {
     "taxRate",
     "taxAmount",
     "totalAmount",
+    "orderAmount",
   ];
 }

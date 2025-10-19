@@ -106,6 +106,14 @@ export const SYSTEM_VARIABLE_CATALOG: SystemVariable[] = [
     isCommon: true,
   },
   {
+    key: "orderAmount",
+    label: "Order Amount",
+    type: "currency",
+    description: "Total order amount (alias for totalAmount)",
+    exampleValue: 1150.0,
+    isCommon: true,
+  },
+  {
     key: "total",
     label: "Total Amount (alias)",
     type: "currency",
